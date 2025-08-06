@@ -1,5 +1,4 @@
 import requests
-from bs4 import BeautifulSoup
 import pgeocode
 
 postal_code = "97224"
@@ -22,8 +21,8 @@ def locationer(postal_code, iso_code= "us"):
     lon = query.get("longitude")
     city = query.get("place_name")
 
-    ne_lat, sw_lat = round(lat + 0.06, 7), round(lat - 0.06, 7)
-    ne_lon, sw_lon = round(lon + 0.06, 7), round(lon - 0.06, 7)
+    ne_lat, sw_lat = round(lat + 0.14, 7), round(lat - 0.14, 7)
+    ne_lon, sw_lon = round(lon + 0.14, 7), round(lon - 0.14, 7)
 
     #print(f"The latitude is {lat} and the longitude is {lon} for the city {city}")
     #print(f"The northeast bound is at {ne_lat}, {ne_lon} and the southwest bound is at {sw_lat}, {sw_lon}")
