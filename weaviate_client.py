@@ -241,7 +241,7 @@ class WeaviateClient(BaseModel):
         df["UUID"] = uuids
         return df
 
-    def remove_collection_items(
+    def remove_collection_listings(
         self,
         listing_id: str,
         collection_name: str,
