@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "521e32828d611af382407728d3388fb43120bf9baa32f5806740afd478021e0b"
+            "sha256": "a3828f52c9a69bcd69cc966a19f767eb774ec97a711cd57ac07a85e776038c87"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -681,6 +681,15 @@
             "index": "pypi",
             "markers": "python_version >= '3.9'",
             "version": "==2.3.1"
+        },
+        "pgeocode": {
+            "hashes": [
+                "sha256:37d6caf74e9f2b1e69762811953df5b43fe7f1806833c83bf85a60dd784dff9e",
+                "sha256:de24a5997524ef557a29a1b22443cc1bf5d02c098e0c7a8dd9ea9caf01a6a72a"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.10'",
+            "version": "==0.5.0"
         },
         "protobuf": {
             "hashes": [

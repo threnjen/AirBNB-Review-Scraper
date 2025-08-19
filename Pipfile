@@ -17,6 +17,7 @@ weaviate-client = "*"
 openai = "*"
 nltk = "*"
 awswrangler = "*"
+pgeocode = "*"
 
 [dev-packages]
 black = "*"
