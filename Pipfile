@@ -19,6 +19,7 @@ nltk = "*"
 awswrangler = "*"
 
 [dev-packages]
+black = "*"
 
 [requires]
 python_version = "3.13"
