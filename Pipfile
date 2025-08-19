@@ -6,6 +6,17 @@ name = "pypi"
 [packages]
 bs4 = "*"
 pyairbnb = "*"
+numpy = "*"
+pydantic = "*"
+pandas = "*"
+weaviate = "*"
+requests = "*"
+regex = "*"
+boto3 = "*"
+weaviate-client = "*"
+openai = "*"
+nltk = "*"
+awswrangler = "*"
 
 [dev-packages]
 
