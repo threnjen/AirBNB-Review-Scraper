@@ -72,14 +72,14 @@ class RagDescription(BaseModel):
         current_prompt: str,
         listing_mean: str,
         overall_mean: str,
-        cleaned_ratings: list[str],
+        # cleaned_ratings: list[str],
     ) -> str:
         # Add more replacements to fill out the entire prompt
         current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", postal_code)
         current_prompt = current_prompt.replace("{ISO_CODE_HERE}", iso_code)
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
-        current_prompt = current_prompt.replace("{review_text}", str(cleaned_ratings))
+        # current_prompt = current_prompt.replace("{review_text}", str(cleaned_ratings))
         return current_prompt
 
     def clean_single_item_reviews(self, ratings: dict) -> list:
@@ -103,7 +103,7 @@ class RagDescription(BaseModel):
         generated_prompt: str,
     ):
         reviews = self.clean_single_item_reviews(ratings=ratings)
-        # print(f"Reviews looks like this: {reviews[:5]} with type {type(reviews)}")
+        print(f"Reviews looks like this: {reviews[:2]} with type {type(reviews)}")
 
         weaviate_client.add_reviews_collection_batch(
             collection_name=self.collection_name,
@@ -120,6 +120,8 @@ class RagDescription(BaseModel):
         weaviate_client.remove_collection_listings(
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
+
+        print(summary.generated)
 
         return summary
 
@@ -153,7 +155,7 @@ class RagDescription(BaseModel):
 
         weaviate_client.create_reviews_collection(collection_name=self.collection_name)
 
-        for listing_id in unprocessed_reviews_ids[:2]:
+        for listing_id in unprocessed_reviews_ids[3:4]:
             print(
                 f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {num_to_process}"
             )
@@ -161,17 +163,22 @@ class RagDescription(BaseModel):
             listing_mean_rating = self.get_listing_id_mean_rating(
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
+            print(listing_mean_rating)
+
             listing_ratings = self.get_listing_ratings_and_reviews(
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
+
             cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
+            print(cleaned_ratings[:1])
 
             updated_prompt = self.prompt_replacement(
                 current_prompt=generated_prompt,
                 listing_mean=str(listing_mean_rating),
                 overall_mean=str(overall_mean),
-                cleaned_ratings=cleaned_ratings,
+                # cleaned_ratings=cleaned_ratings,
             )
+            print(updated_prompt)
 
             self.process_single_listing(
                 weaviate_client,

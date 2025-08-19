@@ -41,19 +41,6 @@ class WeaviateClient(BaseModel):
             },
         )
 
-    def fetch_single_object(self, collection_name: str, uuid: str):
-        collection = self.weaviate_client.collections.get(collection_name)
-        return collection.query.fetch_object_by_id(uuid)
-
-    def find_near_objects(self, collection_name, uuid, limit: int = 20):
-        collection = self.weaviate_client.collections.get(collection_name)
-        response = collection.query.near_object(
-            near_object=uuid,
-            limit=limit,
-            return_metadata=MetadataQuery(distance=True),
-        )
-        return response.objects
-
     def check_collection_exists(self, collection_name: str, reset: bool = True) -> bool:
         if self.weaviate_client.collections.exists(collection_name):
             print(f"Collection {collection_name} already exists for this block")
@@ -67,6 +54,7 @@ class WeaviateClient(BaseModel):
         if not self.check_collection_exists(collection_name, reset):
             self.weaviate_client.collections.create(
                 name=collection_name,
+                vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_transformers(),
                 generative_config=wvc.config.Configure.Generative.openai(
                     model="gpt-4o-mini"
                 ),
@@ -74,7 +62,6 @@ class WeaviateClient(BaseModel):
                     wvc.config.Property(
                         name="review_text",
                         data_type=wvc.config.DataType.TEXT,
-                        skip_vectorization=True,
                         vectorize_property_name=False,
                     ),
                     wvc.config.Property(
@@ -109,137 +96,6 @@ class WeaviateClient(BaseModel):
                     batch.add_object(properties=review_item, uuid=uuid)
 
         print(f"Reviews added for item {listing_id}")
-
-    def create_attributes_collection(
-        self,
-        collection_name: str,
-        reset: bool = True,
-    ) -> None:
-        if not self.check_collection_exists(collection_name, reset):
-            self.weaviate_client.collections.create(
-                name=collection_name,
-                properties=[
-                    wvc.config.Property(
-                        name="attribute_name",
-                        data_type=wvc.config.DataType.TEXT,
-                        skip_vectorization=True,
-                        vectorize_property_name=False,
-                    ),
-                    wvc.config.Property(
-                        name="attribute",
-                        data_type=wvc.config.DataType.TEXT,
-                        vectorize_property_name=False,
-                    ),
-                ],
-            )
-
-    def add_attributes_collection_batch(
-        self, attributes: list, collection_name: str
-    ) -> dict:
-        collection = self.weaviate_client.collections.get(collection_name)
-        attributes_store = {}
-
-        with collection.batch.dynamic() as batch:
-            for attribute in attributes:
-                print(f"Adding data for attribute {attribute}")
-
-                attribute_object = {
-                    "attribute_name": attribute,
-                    "attribute": attribute,
-                }
-
-                uuid = generate_uuid5(attribute_object)
-                attributes_store[attribute] = uuid
-
-                if collection.data.exists(uuid):
-                    continue
-                else:
-                    batch.add_object(properties=attribute_object, uuid=uuid)
-
-        return attributes_store
-
-    def create_bgg_collection(
-        self,
-        collection_name: str,
-        reset: bool = True,
-        use_about: bool = False,
-        use_description: bool = False,
-        attributes: list = [],
-    ) -> None:
-        if not self.check_collection_exists(collection_name, reset):
-            build_properties = [
-                wvc.config.Property(
-                    name="bggid",
-                    data_type=wvc.config.DataType.TEXT,
-                    skip_vectorization=True,
-                    vectorize_property_name=False,
-                )
-            ]
-            if use_about:
-                build_properties.append(
-                    wvc.config.Property(
-                        name="about", data_type=wvc.config.DataType.TEXT
-                    )
-                )
-            if use_description:
-                build_properties.append(
-                    wvc.config.Property(
-                        name="description", data_type=wvc.config.DataType.TEXT
-                    )
-                )
-            if len(attributes):
-                build_properties += [
-                    wvc.config.Property(
-                        name=x,
-                        data_type=wvc.config.DataType.NUMBER,
-                        vectorize_property_name=False,
-                        skip_vectorization=True,
-                    )
-                    for x in attributes
-                ]
-
-            self.weaviate_client.collections.create(
-                name=collection_name,
-                properties=build_properties,
-            )
-
-    def add_bgg_collection_batch(
-        self,
-        df: pd.DataFrame,
-        collection_name: str,
-        use_about=False,
-        use_description=False,
-        attributes: list = [],
-    ) -> None:
-        collection = self.weaviate_client.collections.get(collection_name)
-        uuids = []
-
-        with collection.batch.dynamic() as batch:
-            for index, item in df.iterrows():
-                item_object = {
-                    "bggid": str(item["bggid"]),
-                    # "name": str(item["name"]).lower(),
-                }
-                if use_about:
-                    item_object.update({"about": str(item["about"]).lower()})
-                if use_description:
-                    item_object.update(
-                        {"description": str(item["description"]).lower()}
-                    )
-
-                if len(attributes):
-                    item_object.update({x: float(item[x]) for x in attributes})
-
-                uuid = generate_uuid5(item_object)
-                uuids.append(uuid)
-
-                if collection.data.exists(uuid):
-                    continue
-                else:
-                    batch.add_object(properties=item_object, uuid=uuid)
-
-        df["UUID"] = uuids
-        return df
 
     def remove_collection_listings(
         self,
