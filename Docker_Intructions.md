@@ -17,3 +17,9 @@ docker run --name rag --env-file weaviate.env --network weaviate-network rag:lat
 Check docker containers running:
 
 docker container ls
+
+Test open api is working: docker exec -it weaviate sh -c "wget -qO- --header='Authorization: Bearer $OPENAI_API_KEY' https://api.openai.com/v1/models"
+
+docker exec -it weaviate printenv | grep OPENAI
+
+docker logs -f weaviate

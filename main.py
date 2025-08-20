@@ -119,25 +119,22 @@ class RagDescription(BaseModel):
             collection_name=self.collection_name,
             generate_prompt=generated_prompt,
         )
-        """
+
         weaviate_client.verify_reviews(
-            collection_name=self.collection_name,
-            listing_id=listing_id
+            collection_name=self.collection_name, listing_id=listing_id
         )
-        """
-        
+
         weaviate_client.remove_collection_listings(
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
 
         print(f"The summary is {summary.generated}")
 
-        print(f"My api key is {os.environ["OPENAI_API_KEY"]}")
+        print(f"My api key is {os.environ['OPENAI_API_KEY']}")
 
         return summary
 
     def rag_description_generation_chain(self):
-
         with open("reviews.json", "r") as file:
             unprocessed_reviews = json.load(file)
 
