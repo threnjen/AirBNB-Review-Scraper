@@ -53,6 +53,7 @@ class WeaviateClient(BaseModel):
     def create_reviews_collection(self, collection_name: str, reset: bool = True):
         if not self.check_collection_exists(collection_name, reset):
             self.weaviate_client.collections.create(
+                vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_transformers(),
                 name=collection_name,
                 vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_transformers(),
                 generative_config=wvc.config.Configure.Generative.openai(
