@@ -113,12 +113,18 @@ class WeaviateClient(BaseModel):
         # Fetch reviews that belong to this product
         results = collection.query.fetch_objects(
             filters=wvc.query.Filter.by_property("product_id").equal(listing_id),
-            limit=10  # you can increase this if needed
+            limit=10,  # you can increase this if needed
+            # return_metadata=MetadataQuery.VECTOR,
         )
 
         print(f"Found {len(results.objects)} reviews for listing {listing_id}:")
         for obj in results.objects:
             print(obj.properties)
+            # print(
+            #     "Vector (length={}): {}".format(
+            #         len(obj.metadata.vector), obj.metadata.vector[:5]
+            #     )
+            # )
 
     def remove_collection_listings(
         self,
@@ -164,7 +170,7 @@ class WeaviateClient(BaseModel):
             )
         except Exception as e:
             print(f"Error during generate.near_text(): {e}")
-        
+
         print(f"Summary looks like this: {summary}")
         print(f"Summary type is {type(summary)}")
 
@@ -184,9 +190,9 @@ class WeaviateClient(BaseModel):
 
         print(f"Generated summary for item {listing_id}: {summary.generated}")
 
-        for attribute in dir(summary):
-            if not attribute.startswith("objects") and not attribute.startswith("__dict__"):
-                print(f"{attribute}: {getattr(summary, attribute)}")
+        # for attribute in dir(summary):
+        #     if not attribute.startswith("objects") and not attribute.startswith("__dict__"):
+        #         print(f"{attribute}: {getattr(summary, attribute)}")
 
         return summary
 
