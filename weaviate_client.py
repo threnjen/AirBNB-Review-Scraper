@@ -114,17 +114,13 @@ class WeaviateClient(BaseModel):
         results = collection.query.fetch_objects(
             filters=wvc.query.Filter.by_property("product_id").equal(listing_id),
             limit=10,  # you can increase this if needed
-            # return_metadata=MetadataQuery.VECTOR,
+            include_vector=True,
         )
 
         print(f"Found {len(results.objects)} reviews for listing {listing_id}:")
         for obj in results.objects:
             print(obj.properties)
-            # print(
-            #     "Vector (length={}): {}".format(
-            #         len(obj.metadata.vector), obj.metadata.vector[:5]
-            #     )
-            # )
+            print(obj.vector)
 
     def remove_collection_listings(
         self,
