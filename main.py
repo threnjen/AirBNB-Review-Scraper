@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import os
 
 from pydantic import BaseModel, ConfigDict
 
@@ -46,6 +47,7 @@ class RagDescription(BaseModel):
         # print(f"Listing data is of type {type(listing_data)} with length {len(listing_data)}")
         if len(listing_data) > 0:
             mean_rating /= len(listing_data)
+            mean_rating = round(mean_rating, 4)
         else:
             # print(f"No reviews found for listing {listing_id}")
             mean_rating = 0
@@ -59,7 +61,8 @@ class RagDescription(BaseModel):
                 unprocessed_reviews=unprocessed_reviews, listing_id=listing_id
             )
         overall_mean /= len(unprocessed_reviews)
-        print(f"The overall mean rating is {round(overall_mean,4)}")
+        overall_mean = round(overall_mean, 4)
+        # print(f"The overall mean rating is {overall_mean}")
         return overall_mean
 
     def load_prompt(self):
@@ -103,7 +106,7 @@ class RagDescription(BaseModel):
         generated_prompt: str,
     ):
         reviews = self.clean_single_item_reviews(ratings=ratings)
-        print(f"Reviews looks like this: {reviews[:2]} with type {type(reviews)}")
+        # print(f"Reviews looks like this: {reviews[:2]} with type {type(reviews)}")
 
         weaviate_client.add_reviews_collection_batch(
             collection_name=self.collection_name,
@@ -117,16 +120,21 @@ class RagDescription(BaseModel):
             generate_prompt=generated_prompt,
         )
 
+        # weaviate_client.verify_reviews(
+        #     collection_name=self.collection_name, listing_id=listing_id
+        # )
+
         weaviate_client.remove_collection_listings(
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
 
-        print(summary.generated)
+        print(f"The summary is {summary.generated}")
+
+        # print(f"My api key is {os.environ['OPENAI_API_KEY']}")
 
         return summary
 
     def rag_description_generation_chain(self):
-
         with open("reviews.json", "r") as file:
             unprocessed_reviews = json.load(file)
 
@@ -138,7 +146,7 @@ class RagDescription(BaseModel):
 
         # print(f"Listings are of type {type(unprocessed_reviews)}")
 
-        print(f"Number of listings to process: {num_to_process}")
+        # print(f"Number of listings to process: {num_to_process}")
         # print(f"Prompt to use: {generated_prompt}")
 
         # print(list(unprocessed_reviews.keys())[0])
@@ -155,7 +163,7 @@ class RagDescription(BaseModel):
 
         weaviate_client.create_reviews_collection(collection_name=self.collection_name)
 
-        for listing_id in unprocessed_reviews_ids[3:4]:
+        for listing_id in unprocessed_reviews_ids[:1]:
             print(
                 f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {num_to_process}"
             )
@@ -163,14 +171,14 @@ class RagDescription(BaseModel):
             listing_mean_rating = self.get_listing_id_mean_rating(
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
-            print(listing_mean_rating)
+            # print(listing_mean_rating)
 
             listing_ratings = self.get_listing_ratings_and_reviews(
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
 
             cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
-            print(cleaned_ratings[:1])
+            # print(cleaned_ratings[:1])
 
             updated_prompt = self.prompt_replacement(
                 current_prompt=generated_prompt,
@@ -178,7 +186,7 @@ class RagDescription(BaseModel):
                 overall_mean=str(overall_mean),
                 # cleaned_ratings=cleaned_ratings,
             )
-            print(updated_prompt)
+            # print(updated_prompt)
 
             self.process_single_listing(
                 weaviate_client,
