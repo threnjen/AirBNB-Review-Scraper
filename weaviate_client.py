@@ -4,6 +4,7 @@ import pandas as pd
 import json
 import weaviate
 import weaviate.classes as wvc
+from weaviate.classes.generate import GenerativeConfig
 from pydantic import BaseModel, ConfigDict, SkipValidation
 
 # from weaviate.classes.config import Configure
@@ -157,12 +158,9 @@ class WeaviateClient(BaseModel):
             return ""
 
         try:
-            print("Prompt:", generate_prompt)
-            print("Config:", collection.config.generative_config)
-
             summary = collection.generate.near_text(
                 query="aggregate_review",
-                limit=1000,  # how many reviews to consider
+                limit=1000,
                 return_properties=["review_text", "product_id"],
                 filters=Filter.by_property("product_id").equal(listing_id),
                 grouped_task=generate_prompt,
