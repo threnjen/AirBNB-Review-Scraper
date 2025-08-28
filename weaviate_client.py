@@ -115,8 +115,9 @@ class WeaviateClient(BaseModel):
 
         print(f"Found {len(results.objects)} reviews for listing {listing_id}:")
         for obj in results.objects:
-            print(obj.properties)
-            print(obj.vector)
+            # print(obj.properties)
+            # print(obj.vector)
+            pass
 
     def remove_collection_listings(
         self,
@@ -147,7 +148,7 @@ class WeaviateClient(BaseModel):
         # print the collection configuration
         reviews = self.weaviate_client.collections.get("reviews")
         reviews_config = reviews.config.get()
-        print(reviews_config)
+        # print(reviews_config)
 
         print(f"Generating aggregated review for item {listing_id}")
 

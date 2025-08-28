@@ -1,12 +1,11 @@
 import json
 import pandas as pd
 import os
+import datetime
 
 from pydantic import BaseModel, ConfigDict
 
 from weaviate_client import WeaviateClient
-
-from location_calculator import postal_code, iso_code
 
 from utils.nlp_functions import filter_stopwords
 
@@ -20,6 +19,11 @@ class RagDescription(BaseModel):
     listing_ids: list = []
     generate_prompt: str = "None"
     weaviate: WeaviateClient = None
+
+    def open_config(self):
+        with open("config.json", "r") as f:
+            config = json.load(f)
+        return config
 
     def get_number_of_listings_to_process(self, unprocessed_reviews: dict) -> int:
         # placeholder function to count the number of listing ids.
@@ -69,23 +73,27 @@ class RagDescription(BaseModel):
         with open("prompt.json", "r") as f:
             data = json.load(f)
         return data["gpt4o_mini_generate_prompt_structured"]
+    
+    def load_zipcode_prompt(self):
+        with open("zipcode_prompt.json", "r") as f:
+            data = json.load(f)
+        return data["gpt4o_mini_generate_prompt_structured_zipcode"]
 
     def prompt_replacement(
         self,
         current_prompt: str,
         listing_mean: str,
         overall_mean: str,
-        # cleaned_ratings: list[str],
     ) -> str:
         # Add more replacements to fill out the entire prompt
-        current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", postal_code)
-        current_prompt = current_prompt.replace("{ISO_CODE_HERE}", iso_code)
+        current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.open_config().get("zipcode", "00501"))
+        current_prompt = current_prompt.replace("{ISO_CODE_HERE}", self.open_config().get("iso_code", "us"))
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
-        # current_prompt = current_prompt.replace("{review_text}", str(cleaned_ratings))
         return current_prompt
 
     def clean_single_item_reviews(self, ratings: dict) -> list:
+        # print(f"Ratings is {ratings} with type {type(ratings)}")
         df = pd.DataFrame(ratings)[["rating", "review"]]
 
         # print(df)
@@ -128,14 +136,14 @@ class RagDescription(BaseModel):
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
 
-        print(f"The summary is {summary.generated}")
+        # print(f"The summary is {summary.generated}")
 
         # print(f"My api key is {os.environ['OPENAI_API_KEY']}")
 
-        return summary
+        return summary.generated
 
     def rag_description_generation_chain(self):
-        with open("reviews.json", "r") as file:
+        with open(f"reviews_{self.open_config().get("zipcode", "00501")}.json", "r") as file:
             unprocessed_reviews = json.load(file)
 
         num_to_process = self.get_number_of_listings_to_process(
@@ -163,7 +171,11 @@ class RagDescription(BaseModel):
 
         weaviate_client.create_reviews_collection(collection_name=self.collection_name)
 
-        for listing_id in unprocessed_reviews_ids[:1]:
+        generated_summaries = {}
+
+        for listing_id in unprocessed_reviews_ids[0:10]:
+            # print(f"Listing id is {listing_id} of type {type(listing_id)}")
+
             print(
                 f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {num_to_process}"
             )
@@ -177,7 +189,11 @@ class RagDescription(BaseModel):
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
 
-            cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
+            if listing_ratings is None or len(listing_ratings) == 0:
+                print(f"No ratings found for listing {listing_id}, skipping.")
+                continue
+
+            # cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
             # print(cleaned_ratings[:1])
 
             updated_prompt = self.prompt_replacement(
@@ -187,8 +203,8 @@ class RagDescription(BaseModel):
                 # cleaned_ratings=cleaned_ratings,
             )
             # print(updated_prompt)
-
-            self.process_single_listing(
+            
+            generated_summaries[listing_id] = self.process_single_listing(
                 weaviate_client,
                 listing_id,
                 listing_ratings,
@@ -196,6 +212,11 @@ class RagDescription(BaseModel):
             )
 
             self.num_completed_listings += 1
+
+        with open(f"generated_summaries_{datetime.datetime.now().strftime("%Y%m%d%H%M")}.json", "w", encoding="utf-8") as f:
+            f.write(
+                json.dumps(generated_summaries, ensure_ascii=False)
+            )
 
         weaviate_client.close_client()
 
