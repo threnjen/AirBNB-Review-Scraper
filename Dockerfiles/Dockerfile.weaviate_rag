@@ -1,5 +1,5 @@
 # Dockerfile.weaviate_rag
-FROM cr.weaviate.io/semitechnologies/weaviate:1.27.7
+FROM cr.weaviate.io/semitechnologies/weaviate:latest
 
 # Set environment variables
 ENV QUERY_DEFAULTS_LIMIT=25
