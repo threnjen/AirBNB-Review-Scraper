@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import json
 import weaviate
 import weaviate.classes as wvc
 from pydantic import BaseModel, ConfigDict, SkipValidation
@@ -24,7 +25,7 @@ class WeaviateClient(BaseModel):
         if not IS_LOCAL:
             client = weaviate.connect_to_local(
                 host="127.0.0.1",
-                port=8081,
+                port=8080,
                 grpc_port=50051,
                 headers={
                     "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
@@ -35,7 +36,7 @@ class WeaviateClient(BaseModel):
 
         print("\nConnected to Weaviate instance on local machine")
         return weaviate.connect_to_local(
-            port=8081,
+            port=8080,
             headers={
                 "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
             },
@@ -57,6 +58,7 @@ class WeaviateClient(BaseModel):
                 name=collection_name,
                 generative_config=wvc.config.Configure.Generative.openai(
                     model="gpt-4o-mini"
+                    # model="gpt-3.5-turbo"
                 ),
                 properties=[
                     wvc.config.Property(
@@ -84,18 +86,11 @@ class WeaviateClient(BaseModel):
 
         with collection.batch.dynamic() as batch:
             for review in reviews:
-                # print(f"Review looks like {review}")
-                # print(f"Listing ID is {listing_id}")
                 review_item = {
                     "review_text": review,
                     "product_id": listing_id,
                 }
-                # print(f"Review item is {review_item}")
                 uuid = generate_uuid5(review_item)
-
-                if collection.data.exists(uuid):
-                    print("Gobbledeegook")
-                    continue
 
                 result = batch.add_object(properties=review_item, uuid=uuid)
 
@@ -130,7 +125,7 @@ class WeaviateClient(BaseModel):
     ) -> None:
         collection = self.weaviate_client.collections.get(collection_name)
 
-        print(f"Removing embeddings for item {listing_id}")
+        # print(f"Removing embeddings for item {listing_id}")
 
         for review in reviews:
             review_item = {
@@ -148,6 +143,11 @@ class WeaviateClient(BaseModel):
         collection_name: str,
         generate_prompt: str,
     ) -> str:
+        # print the collection configuration
+        reviews = self.weaviate_client.collections.get("reviews")
+        reviews_config = reviews.config.get()
+        print(reviews_config)
+
         print(f"Generating aggregated review for item {listing_id}")
 
         try:
@@ -157,6 +157,9 @@ class WeaviateClient(BaseModel):
             return ""
 
         try:
+            print("Prompt:", generate_prompt)
+            print("Config:", collection.config.generative_config)
+
             summary = collection.generate.near_text(
                 query="aggregate_review",
                 limit=1000,  # how many reviews to consider
@@ -166,9 +169,6 @@ class WeaviateClient(BaseModel):
             )
         except Exception as e:
             print(f"Error during generate.near_text(): {e}")
-
-        print(f"Summary looks like this: {summary}")
-        print(f"Summary type is {type(summary)}")
 
         # Ensure we got results back
         if not summary.objects:
@@ -182,13 +182,7 @@ class WeaviateClient(BaseModel):
         # for obj in summary.objects:
         #     print("-", obj.properties.get("review_text"))
 
-        print("\nGenerated summary:")
-
         print(f"Generated summary for item {listing_id}: {summary.generated}")
-
-        # for attribute in dir(summary):
-        #     if not attribute.startswith("objects") and not attribute.startswith("__dict__"):
-        #         print(f"{attribute}: {getattr(summary, attribute)}")
 
         return summary
 

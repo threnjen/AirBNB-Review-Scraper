@@ -62,7 +62,7 @@ class RagDescription(BaseModel):
             )
         overall_mean /= len(unprocessed_reviews)
         overall_mean = round(overall_mean, 4)
-        print(f"The overall mean rating is {overall_mean}")
+        # print(f"The overall mean rating is {overall_mean}")
         return overall_mean
 
     def load_prompt(self):
@@ -106,7 +106,7 @@ class RagDescription(BaseModel):
         generated_prompt: str,
     ):
         reviews = self.clean_single_item_reviews(ratings=ratings)
-        print(f"Reviews looks like this: {reviews[:2]} with type {type(reviews)}")
+        # print(f"Reviews looks like this: {reviews[:2]} with type {type(reviews)}")
 
         weaviate_client.add_reviews_collection_batch(
             collection_name=self.collection_name,
@@ -120,9 +120,9 @@ class RagDescription(BaseModel):
             generate_prompt=generated_prompt,
         )
 
-        weaviate_client.verify_reviews(
-            collection_name=self.collection_name, listing_id=listing_id
-        )
+        # weaviate_client.verify_reviews(
+        #     collection_name=self.collection_name, listing_id=listing_id
+        # )
 
         weaviate_client.remove_collection_listings(
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
@@ -130,7 +130,7 @@ class RagDescription(BaseModel):
 
         print(f"The summary is {summary.generated}")
 
-        print(f"My api key is {os.environ['OPENAI_API_KEY']}")
+        # print(f"My api key is {os.environ['OPENAI_API_KEY']}")
 
         return summary
 
@@ -146,7 +146,7 @@ class RagDescription(BaseModel):
 
         # print(f"Listings are of type {type(unprocessed_reviews)}")
 
-        print(f"Number of listings to process: {num_to_process}")
+        # print(f"Number of listings to process: {num_to_process}")
         # print(f"Prompt to use: {generated_prompt}")
 
         # print(list(unprocessed_reviews.keys())[0])
@@ -171,14 +171,14 @@ class RagDescription(BaseModel):
             listing_mean_rating = self.get_listing_id_mean_rating(
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
-            print(listing_mean_rating)
+            # print(listing_mean_rating)
 
             listing_ratings = self.get_listing_ratings_and_reviews(
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
 
             cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
-            print(cleaned_ratings[:1])
+            # print(cleaned_ratings[:1])
 
             updated_prompt = self.prompt_replacement(
                 current_prompt=generated_prompt,
