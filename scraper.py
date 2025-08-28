@@ -3,10 +3,11 @@ import json
 import time
 import random
 import location_calculator
+import sys
 
 
-def airbnb_scraper():
-    ne_lat, sw_lat, ne_lon, sw_lon = location_calculator.locationer(97067)
+def airbnb_scraper(zipcode, iso_code = "us", num_listings = 0):
+    ne_lat, sw_lat, ne_lon, sw_lon = location_calculator.locationer(postal_code = zipcode, iso_code = iso_code)
 
     def boxed_search(ne_lat, sw_lat, ne_lon, sw_lon, dimensions=2):
 
@@ -50,7 +51,7 @@ def airbnb_scraper():
         time.sleep(random.uniform(1, 5))
 
     # Save the search results as a JSON file
-    with open("search_results.json", "w", encoding="utf-8") as f:
+    with open(f"search_results_{zipcode}.json", "w", encoding="utf-8") as f:
         f.write(
             json.dumps(search_results, ensure_ascii=False)
         )  # Convert results to JSON and write to file
@@ -65,7 +66,7 @@ def airbnb_scraper():
     review_results = {}
     total_reviews = 0
 
-    for id in room_ids:
+    for id in room_ids[:num_listings if num_listings > 0 else None]:
 
         room_url = f"https://www.airbnb.com/rooms/{id}"  # Listing URL
         print(f"Retrieving reviews for listing ID {id}")
@@ -93,13 +94,12 @@ def airbnb_scraper():
     print(f"I scraped a total of {total_reviews} reviews across all listings")
 
     # Save the reviews data to a JSON file
-    with open("reviews.json", "w", encoding="utf-8") as f:
+    with open(f"reviews_{zipcode}.json", "w", encoding="utf-8") as f:
         f.write(
             json.dumps(review_results, ensure_ascii=False)
         )  # Extract reviews and save them to a file
 
-
-airbnb_scraper()
+# airbnb_scraper(zipcode = sys.argv[1], iso_code = sys.argv[2])
 
 # Scraper steps:
 # Make a zip code variable to locate an area - Done
