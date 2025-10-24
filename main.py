@@ -15,7 +15,7 @@ class RagDescription(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
     num_overall_ids: int = 100
-    collection_name: str = "reviews"
+    collection_name: str = "Reviews"
     overall_stats: dict = {}
     listing_ids: list = []
     generate_prompt: str = "None"
@@ -74,7 +74,7 @@ class RagDescription(BaseModel):
         with open("prompt.json", "r") as f:
             data = json.load(f)
         return data["gpt4o_mini_generate_prompt_structured"]
-    
+
     def load_zipcode_prompt(self):
         with open("zipcode_prompt.json", "r") as f:
             data = json.load(f)
@@ -87,8 +87,12 @@ class RagDescription(BaseModel):
         overall_mean: str,
     ) -> str:
         # Add more replacements to fill out the entire prompt
-        current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.open_config().get("zipcode", "00501"))
-        current_prompt = current_prompt.replace("{ISO_CODE_HERE}", self.open_config().get("iso_code", "us"))
+        current_prompt = current_prompt.replace(
+            "{ZIP_CODE_HERE}", self.open_config().get("zipcode", "00501")
+        )
+        current_prompt = current_prompt.replace(
+            "{ISO_CODE_HERE}", self.open_config().get("iso_code", "us")
+        )
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
         return current_prompt
@@ -128,7 +132,7 @@ class RagDescription(BaseModel):
             collection_name=self.collection_name,
             generate_prompt=generated_prompt,
             filter_field="product_id",
-            return_properties=["review_text", "product_id"],
+            return_properties=["review_text"],
         )
 
         # weaviate_client.verify_reviews(
@@ -146,7 +150,9 @@ class RagDescription(BaseModel):
         return summary.generated
 
     def rag_description_generation_chain(self):
-        with open(f"reviews_{self.open_config().get("zipcode", "00501")}.json", "r") as file:
+        with open(
+            f"reviews_{self.open_config().get('zipcode', '00501')}.json", "r"
+        ) as file:
             unprocessed_reviews = json.load(file)
 
         num_to_process = self.get_number_of_listings_to_process(
@@ -171,13 +177,25 @@ class RagDescription(BaseModel):
         # self.process_single_listing(weaviate_client=weaviate_client, listing_id=list(unprocessed_reviews.keys())[0], ratings=list(unprocessed_reviews.values())[0], generated_prompt=generated_prompt)
 
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
-        
+
         weaviate_properties = [
-            {"name": "review_text", "data_type": wvc.config.DataType.TEXT, "vectorize_property_name": False},
-            {"name": "product_id", "data_type": wvc.config.DataType.TEXT, "skip_vectorization": True, "vectorize_property_name": False},
+            {
+                "name": "review_text",
+                "data_type": wvc.config.DataType.TEXT,
+                "vectorize_property_name": False,
+            },
+            {
+                "name": "product_id",
+                "data_type": wvc.config.DataType.TEXT,
+                "skip_vectorization": True,
+                "vectorize_property_name": False,
+            },
         ]
 
-        weaviate_client.create_general_collection(collection_name=self.collection_name, incoming_properties=weaviate_properties)
+        weaviate_client.create_general_collection(
+            collection_name=self.collection_name,
+            incoming_properties=weaviate_properties,
+        )
 
         generated_summaries = {}
 
@@ -211,7 +229,7 @@ class RagDescription(BaseModel):
                 # cleaned_ratings=cleaned_ratings,
             )
             # print(updated_prompt)
-            
+
             generated_summaries[listing_id] = self.process_single_listing(
                 weaviate_client,
                 listing_id,
@@ -221,10 +239,12 @@ class RagDescription(BaseModel):
 
             self.num_completed_listings += 1
 
-        with open(f"generated_summaries_{datetime.datetime.now().strftime("%Y%m%d%H%M")}.json", "w", encoding="utf-8") as f:
-            f.write(
-                json.dumps(generated_summaries, ensure_ascii=False)
-            )
+        with open(
+            f"generated_summaries_{datetime.datetime.now().strftime('%Y%m%d%H%M')}.json",
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(json.dumps(generated_summaries, ensure_ascii=False))
 
         weaviate_client.close_client()
 
