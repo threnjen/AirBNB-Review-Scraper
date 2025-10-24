@@ -31,7 +31,10 @@ class WeaviateClient(BaseModel):
                 headers={
                     "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
                 },
-                timeout=120
+                timeout_config=(
+                    30,
+                    600,
+                ),  # (connect_timeout_seconds, read_timeout_seconds)
             )
             print("\nConnected to Weaviate instance on Fargate ECS")
             return client
@@ -53,9 +56,13 @@ class WeaviateClient(BaseModel):
                 return False
             return True
 
-    def create_general_collection(self, collection_name: str, reset: bool = True, incoming_properties: list[dict] = None):
+    def create_general_collection(
+        self,
+        collection_name: str,
+        reset: bool = True,
+        incoming_properties: list[dict] = None,
+    ):
         if not self.check_collection_exists(collection_name, reset):
-
             properties_list = []
 
             for prop in incoming_properties:
@@ -63,7 +70,9 @@ class WeaviateClient(BaseModel):
                     wvc.config.Property(
                         name=prop["name"],
                         data_type=prop["data_type"],
-                        vectorize_property_name=prop.get("vectorize_property_name", False),
+                        vectorize_property_name=prop.get(
+                            "vectorize_property_name", False
+                        ),
                         skip_vectorization=prop.get("skip_vectorization", False),
                     )
                 )
@@ -82,6 +91,7 @@ class WeaviateClient(BaseModel):
     ) -> None:
         print(f"Adding reviews for item {listing_id}")
         collection = self.weaviate_client.collections.get(collection_name)
+        print(f"Using collection {collection_name}")
 
         with collection.batch.dynamic() as batch:
             for review in reviews:
@@ -136,33 +146,49 @@ class WeaviateClient(BaseModel):
 
             if collection.data.exists(uuid):
                 collection.data.delete_by_id(uuid=uuid)
-    
+
     def generate_aggregate(
-            self,
-            id: str,
-            collection_name: str,
-            generate_prompt: str,
-            filter_field: str,
-            return_properties: list[str] = [],
-        ) -> str:
+        self,
+        id: str,
+        collection_name: str,
+        generate_prompt: str,
+        filter_field: str,
+        return_properties: list[str] = [],
+    ) -> str:
         print(f"Generating aggregate for item {id}")
 
         try:
             collection = self.weaviate_client.collections.get(collection_name)
+            print(collection)
         except Exception as e:
             print(f"Failed to get collection '{collection_name}': {e}")
             return ""
-        
+
+        objs = collection.query.fetch_objects(
+            filters=Filter.by_property(filter_field).equal(id),
+            limit=3,
+            return_properties=["review_text"],
+        )
+        print(f"Successfully retrieved 3 items: {objs}")
+
+        test_fetch = collection.generate.fetch_objects(
+            filters=Filter.by_property(filter_field).equal(id),
+            return_properties=["review_text"],
+            grouped_task="Summarize these in one sentence.",
+            limit=3,
+        )
+        print(test_fetch.generated)
+        print("Successfully summarized 3 items")
+
         try:
-            aggregate = collection.generate.near_text(
-                query="aggregate",
-                limit=1000,
-                return_properties=return_properties,
+            aggregate = collection.generate.fetch_objects(
                 filters=Filter.by_property(filter_field).equal(id),
+                return_properties=return_properties,
                 grouped_task=generate_prompt,
+                limit=10,
             )
         except Exception as e:
-            print(f"Error during generate.near_text(): {e}")
+            print(f"Error during generate.fetch_objects(): {e}")
 
         print(f"Aggregate is {aggregate} of type {type(aggregate)}")
 
