@@ -31,6 +31,7 @@ class WeaviateClient(BaseModel):
                 headers={
                     "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
                 },
+                timeout=120
             )
             print("\nConnected to Weaviate instance on Fargate ECS")
             return client
