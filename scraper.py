@@ -9,7 +9,7 @@ import sys
 def airbnb_scraper(zipcode, iso_code = "us", num_listings = 0):
     ne_lat, sw_lat, ne_lon, sw_lon = location_calculator.locationer(postal_code = zipcode, iso_code = iso_code)
 
-    def boxed_search(ne_lat, sw_lat, ne_lon, sw_lon, dimensions=2):
+    def boxed_search(ne_lat, sw_lat, ne_lon, sw_lon, dimensions = 2):
 
         boxes = []
 
@@ -66,7 +66,8 @@ def airbnb_scraper(zipcode, iso_code = "us", num_listings = 0):
     review_results = {}
     total_reviews = 0
 
-    for id in room_ids[:num_listings if num_listings > 0 else None]:
+    #for id in room_ids[:num_listings if num_listings > 0 else None]:
+    for id in room_ids[:5]:
 
         room_url = f"https://www.airbnb.com/rooms/{id}"  # Listing URL
         print(f"Retrieving reviews for listing ID {id}")
@@ -99,7 +100,7 @@ def airbnb_scraper(zipcode, iso_code = "us", num_listings = 0):
             json.dumps(review_results, ensure_ascii=False)
         )  # Extract reviews and save them to a file
 
-# airbnb_scraper(zipcode = sys.argv[1], iso_code = sys.argv[2])
+airbnb_scraper(zipcode = sys.argv[1], iso_code = sys.argv[2])
 
 # Scraper steps:
 # Make a zip code variable to locate an area - Done

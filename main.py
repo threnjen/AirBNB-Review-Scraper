@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import os
 import datetime
+import weaviate.classes as wvc
 
 from pydantic import BaseModel, ConfigDict
 
@@ -122,10 +123,12 @@ class RagDescription(BaseModel):
             reviews=reviews,
         )
 
-        summary = weaviate_client.generate_aggregated_review(
-            listing_id=listing_id,
+        summary = weaviate_client.generate_aggregate(
+            id=listing_id,
             collection_name=self.collection_name,
             generate_prompt=generated_prompt,
+            filter_field="product_id",
+            return_properties=["review_text", "product_id"],
         )
 
         # weaviate_client.verify_reviews(
@@ -168,8 +171,13 @@ class RagDescription(BaseModel):
         # self.process_single_listing(weaviate_client=weaviate_client, listing_id=list(unprocessed_reviews.keys())[0], ratings=list(unprocessed_reviews.values())[0], generated_prompt=generated_prompt)
 
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
+        
+        weaviate_properties = [
+            {"name": "review_text", "data_type": wvc.config.DataType.TEXT, "vectorize_property_name": False},
+            {"name": "product_id", "data_type": wvc.config.DataType.TEXT, "skip_vectorization": True, "vectorize_property_name": False},
+        ]
 
-        weaviate_client.create_reviews_collection(collection_name=self.collection_name)
+        weaviate_client.create_general_collection(collection_name=self.collection_name, incoming_properties=weaviate_properties)
 
         generated_summaries = {}
 
