@@ -1,4 +1,5 @@
-If resetting the containers entirely, first prune any old container builds and caches: docker system prune -a --volumes --force 
+If resetting the containers entirely, first prune any old container builds and caches: 
+docker system prune -a --volumes --force 
 
 
 # Next step if you have reset the cache
