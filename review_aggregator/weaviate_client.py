@@ -48,7 +48,7 @@ class WeaviateClient(BaseModel):
                 "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
             },
             additional_config=AdditionalConfig(
-                timeout=Timeout(init=30, query=600, insert=120)  # Values in seconds
+                timeout=Timeout(init=30, query=600, insert=600)  # Values in seconds
             ),
         )
 
@@ -178,7 +178,7 @@ class WeaviateClient(BaseModel):
             return_properties=return_properties,
         )
 
-        print(f"Successfully retrieved {len(objs.objects)} items")
+        print(f"Successfully retrieved total of {len(objs.objects)} items")
 
         # test_fetch = collection.generate.fetch_objects(
         #     filters=Filter.by_property(filter_field).equal(id),
