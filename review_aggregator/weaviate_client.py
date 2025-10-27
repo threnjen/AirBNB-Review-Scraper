@@ -32,7 +32,7 @@ class WeaviateClient(BaseModel):
                     "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
                 },
                 timeout_config=(
-                    30,
+                    600,
                     600,
                 ),  # (connect_timeout_seconds, read_timeout_seconds)
             )
@@ -164,7 +164,6 @@ class WeaviateClient(BaseModel):
                     model="gpt-5-nano"  # pick any supported model
                 )
             )
-            print(collection)
         except Exception as e:
             print(f"Failed to get collection '{collection_name}': {e}")
             return ""
@@ -174,7 +173,7 @@ class WeaviateClient(BaseModel):
             limit=3,
             return_properties=["review_text"],
         )
-        print(f"Successfully retrieved 3 items: {objs}")
+        print(f"Successfully retrieved 3 items")
 
         test_fetch = collection.generate.fetch_objects(
             filters=Filter.by_property(filter_field).equal(id),
@@ -182,8 +181,7 @@ class WeaviateClient(BaseModel):
             grouped_task="Summarize these in one sentence.",
             limit=3,
         )
-        print(test_fetch.generated)
-        print("Successfully summarized 3 items")
+        print(f"\nSuccessfully summarized 3 items: {test_fetch.generated}")
 
         try:
             aggregate = collection.generate.fetch_objects(
