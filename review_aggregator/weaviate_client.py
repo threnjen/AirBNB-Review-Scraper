@@ -6,6 +6,7 @@ import weaviate
 import weaviate.classes as wvc
 from weaviate.classes.config import Configure
 from pydantic import BaseModel, ConfigDict, SkipValidation
+from weaviate.classes.init import AdditionalConfig, Timeout
 
 # from weaviate.classes.config import Configure
 from weaviate.classes.query import Filter
@@ -27,14 +28,15 @@ class WeaviateClient(BaseModel):
             client = weaviate.connect_to_local(
                 host="127.0.0.1",
                 port=8080,
-                grpc_port=50051,
+                # grpc_port=50051,
+                grpc_port=None,
                 headers={
                     "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
                 },
                 timeout_config=(
-                    600,
-                    600,
-                ),  # (connect_timeout_seconds, read_timeout_seconds)
+                    30,
+                    1200,
+                ),
             )
             print("\nConnected to Weaviate instance on Fargate ECS")
             return client
@@ -45,6 +47,9 @@ class WeaviateClient(BaseModel):
             headers={
                 "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
             },
+            additional_config=AdditionalConfig(
+                timeout=Timeout(init=30, query=600, insert=120)  # Values in seconds
+            ),
         )
 
     def check_collection_exists(self, collection_name: str, reset: bool = True) -> bool:
@@ -170,18 +175,28 @@ class WeaviateClient(BaseModel):
 
         objs = collection.query.fetch_objects(
             filters=Filter.by_property(filter_field).equal(id),
-            limit=3,
-            return_properties=["review_text"],
+            return_properties=return_properties,
         )
-        print(f"Successfully retrieved 3 items")
 
-        test_fetch = collection.generate.fetch_objects(
-            filters=Filter.by_property(filter_field).equal(id),
-            return_properties=["review_text"],
-            grouped_task="Summarize these in one sentence.",
-            limit=3,
-        )
-        print(f"\nSuccessfully summarized 3 items: {test_fetch.generated}")
+        print(f"Successfully retrieved {len(objs.objects)} items")
+
+        # test_fetch = collection.generate.fetch_objects(
+        #     filters=Filter.by_property(filter_field).equal(id),
+        #     return_properties=return_properties,
+        #     grouped_task="Summarize these in one sentence.",
+        #     limit=3,
+        # )
+        # print(f"\nSuccessfully summarized 3 items: {test_fetch.generated}")
+
+        # test_fetch = collection.generate.fetch_objects(
+        #     filters=Filter.by_property(filter_field).equal(id),
+        #     return_properties=return_properties,
+        #     grouped_task="Summarize these in one sentence.",
+        #     limit=25,
+        # )
+        # print(f"\nSuccessfully summarized 25 items: {test_fetch.generated}")
+
+        # print(f"\n{generate_prompt}")
 
         try:
             aggregate = collection.generate.fetch_objects(
