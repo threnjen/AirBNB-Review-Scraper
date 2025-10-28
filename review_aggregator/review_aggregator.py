@@ -239,12 +239,12 @@ class RagDescription(BaseModel):
 
             self.num_completed_listings += 1
 
-        with open(
-            f"results/generated_summaries_{datetime.datetime.now().strftime('%Y%m%d%H%M')}.json",
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write(json.dumps(generated_summaries, ensure_ascii=False))
+            with open(
+                f"results/generated_summaries_{datetime.datetime.now().strftime('%Y%m%d')}.json",
+                "w",
+                encoding="utf-8",
+            ) as f:
+                f.write(json.dumps(generated_summaries, ensure_ascii=False))
 
         weaviate_client.close_client()
 
