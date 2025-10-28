@@ -25,7 +25,7 @@ if __name__ == "__main__":
         )
 
     if aggregate_reviews:
-        rag_description = RagDescription()
+        rag_description = RagDescription(num_listings=number_of_listings_to_process)
         rag_description.rag_description_generation_chain()
         print(
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."

@@ -12,6 +12,7 @@ from utils.nlp_functions import filter_stopwords
 
 
 class RagDescription(BaseModel):
+    num_listings: int = 3
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
     num_overall_ids: int = 100
@@ -28,7 +29,13 @@ class RagDescription(BaseModel):
 
     def get_number_of_listings_to_process(self, unprocessed_reviews: dict) -> int:
         # placeholder function to count the number of listing ids.
-        return len(unprocessed_reviews)
+        total_listings = len(unprocessed_reviews)
+        if self.num_listings < total_listings:
+            listings_to_process = self.num_listings
+        else:
+            listings_to_process = total_listings
+
+        return listings_to_process
 
     def get_listing_ratings_and_reviews(
         self, unprocessed_reviews: dict, listing_id: str
@@ -143,10 +150,6 @@ class RagDescription(BaseModel):
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
 
-        # print(f"The summary is {summary.generated}")
-
-        # print(f"My api key is {os.environ['OPENAI_API_KEY']}")
-
         return summary.generated
 
     def rag_description_generation_chain(self):
@@ -155,7 +158,7 @@ class RagDescription(BaseModel):
         ) as file:
             unprocessed_reviews = json.load(file)
 
-        num_to_process = self.get_number_of_listings_to_process(
+        listings_to_process = self.get_number_of_listings_to_process(
             unprocessed_reviews=unprocessed_reviews
         )
 
@@ -199,11 +202,11 @@ class RagDescription(BaseModel):
 
         generated_summaries = {}
 
-        for listing_id in unprocessed_reviews_ids[0:10]:
+        for listing_id in unprocessed_reviews_ids[:listings_to_process]:
             # print(f"Listing id is {listing_id} of type {type(listing_id)}")
 
             print(
-                f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {num_to_process}"
+                f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {listings_to_process}"
             )
 
             listing_mean_rating = self.get_listing_id_mean_rating(
@@ -247,9 +250,3 @@ class RagDescription(BaseModel):
                 f.write(json.dumps(generated_summaries, ensure_ascii=False))
 
         weaviate_client.close_client()
-
-
-if __name__ == "__main__":
-    rag_description = RagDescription()
-
-    rag_description.rag_description_generation_chain()
