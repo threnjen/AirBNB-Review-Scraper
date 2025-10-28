@@ -20,10 +20,10 @@ class WeaviateClient(BaseModel):
     weaviate_client: SkipValidation[weaviate.Client] = None
     ec2: bool = False
 
-    def model_post_init(self, __context):
-        self.weaviate_client = self.connect_weaviate_client_docker()
+    # def model_post_init(self, __context):
+    #     self.weaviate_client = self.connect_weaviate_client()
 
-    def connect_weaviate_client_docker(self) -> weaviate.client:
+    def connect_weaviate_client(self) -> weaviate.client:
         if not IS_LOCAL:
             client = weaviate.connect_to_local(
                 host="127.0.0.1",
@@ -38,28 +38,34 @@ class WeaviateClient(BaseModel):
                     1200,
                 ),
             )
-            print("\nConnected to Weaviate instance on Fargate ECS")
+            # print("Connected to Weaviate instance on Fargate ECS")
             return client
 
-        print("\nConnected to Weaviate instance on local machine")
+        # print("Connected to Weaviate instance on local machine")
         return weaviate.connect_to_local(
             port=8080,
+            grpc_port=50051,
             headers={
                 "X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"],
             },
             additional_config=AdditionalConfig(
-                timeout=Timeout(init=30, query=600, insert=600)  # Values in seconds
+                timeout=Timeout(init=60, query=600, insert=600)  # Values in seconds
             ),
         )
 
     def check_collection_exists(self, collection_name: str, reset: bool = True) -> bool:
-        if self.weaviate_client.collections.exists(collection_name):
+        weaviate_client = self.connect_weaviate_client()
+        if weaviate_client.collections.exists(collection_name):
             print(f"Collection {collection_name} already exists for this block")
             if reset:
-                self.weaviate_client.collections.delete(collection_name)
+                weaviate_client.collections.delete(collection_name)
                 print(f"Deleted and recreating collection {collection_name}")
+                weaviate_client.close()
                 return False
+            weaviate_client.close()
             return True
+        weaviate_client.close()
+        return False
 
     def create_general_collection(
         self,
@@ -67,6 +73,7 @@ class WeaviateClient(BaseModel):
         reset: bool = True,
         incoming_properties: list[dict] = None,
     ):
+        weaviate_client = self.connect_weaviate_client()
         if not self.check_collection_exists(collection_name, reset):
             properties_list = []
 
@@ -81,12 +88,13 @@ class WeaviateClient(BaseModel):
                         skip_vectorization=prop.get("skip_vectorization", False),
                     )
                 )
-
-            self.weaviate_client.collections.create(
+            weaviate_client = self.connect_weaviate_client()
+            weaviate_client.collections.create(
                 vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_transformers(),
                 name=collection_name,
                 properties=properties_list,
             )
+            weaviate_client.close()
 
     def add_reviews_collection_batch(
         self,
@@ -95,7 +103,8 @@ class WeaviateClient(BaseModel):
         reviews: list[str],
     ) -> None:
         print(f"Adding reviews for item {listing_id}")
-        collection = self.weaviate_client.collections.get(collection_name)
+        weaviate_client = self.connect_weaviate_client()
+        collection = weaviate_client.collections.get(collection_name)
 
         with collection.batch.dynamic() as batch:
             for review in reviews:
@@ -114,6 +123,7 @@ class WeaviateClient(BaseModel):
                     pass
 
         print(f"Reviews added for item {listing_id}")
+        weaviate_client.close()
 
     # def verify_reviews(self, collection_name: str, listing_id: str):
     #     collection = self.weaviate_client.collections.get(collection_name)
@@ -137,7 +147,9 @@ class WeaviateClient(BaseModel):
         collection_name: str,
         reviews: list[str],
     ) -> None:
-        collection = self.weaviate_client.collections.get(collection_name)
+        weaviate_client = self.connect_weaviate_client()
+
+        collection = weaviate_client.collections.get(collection_name)
 
         # print(f"Removing embeddings for item {listing_id}")
 
@@ -151,6 +163,8 @@ class WeaviateClient(BaseModel):
             if collection.data.exists(uuid):
                 collection.data.delete_by_id(uuid=uuid)
 
+        weaviate_client.close()
+
     def generate_aggregate(
         self,
         id: str,
@@ -161,8 +175,10 @@ class WeaviateClient(BaseModel):
     ) -> str:
         print(f"Generating aggregate for item {id}")
 
+        weaviate_client = self.connect_weaviate_client()
+
         try:
-            collection = self.weaviate_client.collections.get(collection_name)
+            collection = weaviate_client.collections.get(collection_name)
             collection.config.update(
                 generative_config=Configure.Generative.openai(
                     model="gpt-5-nano"  # pick any supported model
@@ -170,32 +186,21 @@ class WeaviateClient(BaseModel):
             )
         except Exception as e:
             print(f"Failed to get collection '{collection_name}': {e}")
+            weaviate_client.close()
             return ""
 
-        objs = collection.query.fetch_objects(
-            filters=Filter.by_property(filter_field).equal(id),
-            return_properties=return_properties,
-        )
-
-        print(f"Successfully retrieved total of {len(objs.objects)} items")
-
-        # test_fetch = collection.generate.fetch_objects(
-        #     filters=Filter.by_property(filter_field).equal(id),
-        #     return_properties=return_properties,
-        #     grouped_task="Summarize these in one sentence.",
-        #     limit=3,
-        # )
-        # print(f"\nSuccessfully summarized 3 items: {test_fetch.generated}")
-
-        # test_fetch = collection.generate.fetch_objects(
-        #     filters=Filter.by_property(filter_field).equal(id),
-        #     return_properties=return_properties,
-        #     grouped_task="Summarize these in one sentence.",
-        #     limit=25,
-        # )
-        # print(f"\nSuccessfully summarized 25 items: {test_fetch.generated}")
-
-        # print(f"\n{generate_prompt}")
+        try:
+            objs = collection.query.fetch_objects(
+                filters=Filter.by_property(filter_field).equal(id),
+                return_properties=return_properties,
+            )
+            print(f"Successfully retrieved total of {len(objs.objects)} items")
+        except Exception as e:
+            print(
+                f"Failed to fetch objects for id '{id}' in collection '{collection_name}': {e}"
+            )
+            weaviate_client.close()
+            return ""
 
         try:
             aggregate = collection.generate.fetch_objects(
@@ -204,20 +209,27 @@ class WeaviateClient(BaseModel):
                 grouped_task=generate_prompt,
                 limit=1000,
             )
+            print(f"Aggregate is {aggregate} of type {type(aggregate)}")
+
+            if not aggregate.objects:
+                print("No objects found for this id.")
+                weaviate_client.close()
+                return ""
+
+            if not getattr(aggregate, "generated", None):
+                print("No aggregate was generated.")
+                weaviate_client.close()
+                return ""
+
+            print(f"Generated aggregate for item {id}: {aggregate.generated}")
+
+            weaviate_client.close()
+
+            return aggregate.generated
         except Exception as e:
             print(f"Error during generate.fetch_objects(): {e}")
+            weaviate_client.close()
+            return ""
 
-        print(f"Aggregate is {aggregate} of type {type(aggregate)}")
-
-        if not aggregate.objects:
-            print("No objects found for this id.")
-
-        if not getattr(aggregate, "generated", None):
-            print("No aggregate was generated.")
-
-        print(f"Generated aggregate for item {id}: {aggregate.generated}")
-
-        return aggregate
-
-    def close_client(self):
-        self.weaviate_client.close()
+    # def close_client(self):
+    #     self.weaviate_client.close()

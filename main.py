@@ -11,6 +11,7 @@ if __name__ == "__main__":
     scrape_reviews = config.get("scrape_reviews", False)
     aggregate_reviews = config.get("agggregate_reviews", False)
     number_of_listings_to_process = config.get("number_of_listings_to_process", 3)
+    review_threshold = config.get("review_threshold", 5)
 
     print(f"Configuration loaded: {config}")
 
@@ -25,7 +26,10 @@ if __name__ == "__main__":
         )
 
     if aggregate_reviews:
-        rag_description = RagDescription(num_listings=number_of_listings_to_process)
+        rag_description = RagDescription(
+            num_listings=number_of_listings_to_process,
+            review_threshold=review_threshold,
+        )
         rag_description.rag_description_generation_chain()
         print(
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."
