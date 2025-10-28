@@ -71,6 +71,9 @@ def retrieve_reviews(zipcode, search_results, num_listings):
     review_results = {}
     total_reviews = 0
 
+    if num_listings > len(property_ids):
+        num_listings = len(property_ids)
+
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for id in property_ids[:num_listings]:
         room_url = f"https://www.airbnb.com/rooms/{id}"  # Listing URL
