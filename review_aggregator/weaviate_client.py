@@ -119,27 +119,10 @@ class WeaviateClient(BaseModel):
                 if "error" in result:
                     print(f"Failed to insert {uuid}: {result['error']}")
                 else:
-                    # print(f"Inserted review with uuid={uuid}")
                     pass
 
         print(f"Reviews added for item {listing_id}")
         weaviate_client.close()
-
-    # def verify_reviews(self, collection_name: str, listing_id: str):
-    #     collection = self.weaviate_client.collections.get(collection_name)
-
-    #     # Fetch reviews that belong to this product
-    #     results = collection.query.fetch_objects(
-    #         filters=wvc.query.Filter.by_property("product_id").equal(listing_id),
-    #         limit=10,  # you can increase this if needed
-    #         include_vector=True,
-    #     )
-
-    #     print(f"Found {len(results.objects)} reviews for listing {listing_id}:")
-    #     for obj in results.objects:
-    #         # print(obj.properties)
-    #         # print(obj.vector)
-    #         pass
 
     def remove_collection_listings(
         self,
@@ -150,8 +133,6 @@ class WeaviateClient(BaseModel):
         weaviate_client = self.connect_weaviate_client()
 
         collection = weaviate_client.collections.get(collection_name)
-
-        # print(f"Removing embeddings for item {listing_id}")
 
         for review in reviews:
             review_item = {
@@ -190,19 +171,6 @@ class WeaviateClient(BaseModel):
             return ""
 
         try:
-            objs = collection.query.fetch_objects(
-                filters=Filter.by_property(filter_field).equal(id),
-                return_properties=return_properties,
-            )
-            print(f"Successfully retrieved total of {len(objs.objects)} items")
-        except Exception as e:
-            print(
-                f"Failed to fetch objects for id '{id}' in collection '{collection_name}': {e}"
-            )
-            weaviate_client.close()
-            return ""
-
-        try:
             aggregate = collection.generate.fetch_objects(
                 filters=Filter.by_property(filter_field).equal(id),
                 return_properties=return_properties,
@@ -230,6 +198,3 @@ class WeaviateClient(BaseModel):
             print(f"Error during generate.fetch_objects(): {e}")
             weaviate_client.close()
             return ""
-
-    # def close_client(self):
-    #     self.weaviate_client.close()
