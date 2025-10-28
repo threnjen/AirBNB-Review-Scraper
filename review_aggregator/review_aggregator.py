@@ -43,7 +43,6 @@ class RagDescription(BaseModel):
         self, unprocessed_reviews: dict, listing_id: str
     ) -> list:
         listing_ratings_and_reviews = unprocessed_reviews.get(listing_id)
-        # print(f"The type of listing_ratings_and_reviews is {type(listing_ratings_and_reviews)}")
         return listing_ratings_and_reviews
 
     def get_listing_id_mean_rating(self, unprocessed_reviews, listing_id) -> float:
@@ -52,20 +51,15 @@ class RagDescription(BaseModel):
             unprocessed_reviews, listing_id
         )
         for review in listing_data:
-            # print(f"Review is equal to {review}")
             if review.get("rating") is None:
-                # print(f"Review {review} has no rating, skipping.")
                 pass
             else:
                 mean_rating += review.get("rating")
-        # print(f"Listing data is of type {type(listing_data)} with length {len(listing_data)}")
         if len(listing_data) > 0:
             mean_rating /= len(listing_data)
             mean_rating = round(mean_rating, 4)
         else:
-            # print(f"No reviews found for listing {listing_id}")
             mean_rating = 0
-        # print(f"The mean rating for listing {listing_id} is {mean_rating}")
         return mean_rating
 
     def get_overall_mean_rating(self, unprocessed_reviews: dict) -> float:
@@ -105,10 +99,7 @@ class RagDescription(BaseModel):
         return current_prompt
 
     def clean_single_item_reviews(self, ratings: dict) -> list:
-        # print(f"Ratings is {ratings} with type {type(ratings)}")
         df = pd.DataFrame(ratings)[["rating", "review"]]
-
-        # print(df)
 
         df["review"] = df["review"].replace(r"[^A-Za-z0-9 ]+", "", regex=True)
         df["review"] = df["review"].str.lower().apply(lambda x: filter_stopwords(x))
@@ -126,7 +117,6 @@ class RagDescription(BaseModel):
         generated_prompt: str,
     ):
         reviews = self.clean_single_item_reviews(ratings=ratings)
-        # print(f"Reviews looks like this: {reviews[:2]} with type {type(reviews)}")
 
         weaviate_client.add_reviews_collection_batch(
             collection_name=self.collection_name,
@@ -142,10 +132,6 @@ class RagDescription(BaseModel):
             return_properties=["review_text"],
         )
 
-        # weaviate_client.verify_reviews(
-        #     collection_name=self.collection_name, listing_id=listing_id
-        # )
-
         weaviate_client.remove_collection_listings(
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
@@ -156,8 +142,13 @@ class RagDescription(BaseModel):
         with open(f"results/reviews_{self.zipcode}.json", "r") as file:
             unprocessed_reviews = json.load(file)
 
-        with open(f"results/generated_summaries_{self.zipcode}.json", "r") as file:
-            already_aggregated = json.load(file)
+        try:
+            existing_file = open(
+                f"results/generated_summaries_{self.zipcode}.json"
+            ).read()
+            already_aggregated = json.loads(existing_file)
+        except FileNotFoundError:
+            already_aggregated = {}
 
         print(f"Total reviews loaded: {len(unprocessed_reviews)}")
 
@@ -179,20 +170,11 @@ class RagDescription(BaseModel):
 
         generated_prompt = self.load_prompt()
 
-        # print(f"Listings are of type {type(unprocessed_reviews)}")
-
-        # print(f"Number of listings to process: {num_to_process}")
-        # print(f"Prompt to use: {generated_prompt}")
-
-        # print(list(unprocessed_reviews.keys())[0])
-
         weaviate_client = WeaviateClient()
 
         overall_mean = self.get_overall_mean_rating(
             unprocessed_reviews=unprocessed_reviews
         )
-
-        # self.process_single_listing(weaviate_client=weaviate_client, listing_id=list(unprocessed_reviews.keys())[0], ratings=list(unprocessed_reviews.values())[0], generated_prompt=generated_prompt)
 
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
 
@@ -220,7 +202,7 @@ class RagDescription(BaseModel):
                 f"results/generated_summaries_{self.zipcode}.json"
             ).read()
             generated_summaries = json.loads(existing_file)
-        except Exception:
+        except FileNotFoundError:
             generated_summaries = {}
 
         for listing_id in unprocessed_reviews_ids[:listings_to_process]:
@@ -249,16 +231,11 @@ class RagDescription(BaseModel):
                 )
                 continue
 
-            # cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
-            # print(cleaned_ratings[:1])
-
             updated_prompt = self.prompt_replacement(
                 current_prompt=generated_prompt,
                 listing_mean=str(listing_mean_rating),
                 overall_mean=str(overall_mean),
-                # cleaned_ratings=cleaned_ratings,
             )
-            # print(updated_prompt)
 
             generated_summaries[listing_id] = self.process_single_listing(
                 weaviate_client,
@@ -275,5 +252,3 @@ class RagDescription(BaseModel):
                 encoding="utf-8",
             ) as f:
                 f.write(json.dumps(generated_summaries, ensure_ascii=False))
-
-        weaviate_client.close_client()
