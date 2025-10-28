@@ -12,6 +12,7 @@ from utils.nlp_functions import filter_stopwords
 
 
 class RagDescription(BaseModel):
+    review_threshold: int = 5
     num_listings: int = 3
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
@@ -150,7 +151,7 @@ class RagDescription(BaseModel):
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
 
-        return summary.generated
+        return summary
 
     def rag_description_generation_chain(self):
         with open(
@@ -218,8 +219,14 @@ class RagDescription(BaseModel):
                 listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
             )
 
-            if listing_ratings is None or len(listing_ratings) == 0:
-                print(f"No ratings found for listing {listing_id}, skipping.")
+            if (
+                listing_ratings is None
+                or len(listing_ratings) == 0
+                or len(listing_ratings) < self.review_threshold
+            ):
+                print(
+                    f"No ratings found for listing {listing_id} or number under threshold; skipping."
+                )
                 continue
 
             # cleaned_ratings = self.clean_single_item_reviews(ratings=listing_ratings)
