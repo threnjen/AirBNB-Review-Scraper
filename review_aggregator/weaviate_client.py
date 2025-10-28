@@ -96,7 +96,6 @@ class WeaviateClient(BaseModel):
     ) -> None:
         print(f"Adding reviews for item {listing_id}")
         collection = self.weaviate_client.collections.get(collection_name)
-        print(f"Using collection {collection_name}")
 
         with collection.batch.dynamic() as batch:
             for review in reviews:
