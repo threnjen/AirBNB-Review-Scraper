@@ -62,17 +62,17 @@ def airbnb_searcher(zipcode, iso_code="us"):
     return search_results
 
 
-def retrieve_reviews(zipcode, search_results):
-    room_ids = [listing["room_id"] for listing in search_results]
+def retrieve_reviews(zipcode, search_results, num_listings):
+    property_ids = [listing["room_id"] for listing in search_results]
 
-    # print(room_ids)
-    print(f"There are {len(room_ids)} listings in the area")
+    # print(property_ids)
+    print(f"There are {len(property_ids)} listings in the area")
 
     review_results = {}
     total_reviews = 0
 
-    # for id in room_ids[:num_listings if num_listings > 0 else None]:
-    for id in room_ids[:3]:
+    # for id in property_ids[:num_listings if num_listings > 0 else None]:
+    for id in property_ids[:num_listings]:
         room_url = f"https://www.airbnb.com/rooms/{id}"  # Listing URL
         print(f"Retrieving reviews for listing ID {id}")
         # Retrieve reviews for the specified listing
@@ -105,10 +105,12 @@ def retrieve_reviews(zipcode, search_results):
         )  # Extract reviews and save them to a file
 
 
-def airbnb_scraper(zipcode="97067", iso_code="us"):
+def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
     search_results = airbnb_searcher(zipcode, iso_code)
     print(f"Search results data looks like: {search_results[:1]}")
-    retrieve_reviews(zipcode=zipcode, search_results=search_results)
+    retrieve_reviews(
+        zipcode=zipcode, search_results=search_results, num_listings=num_listings
+    )
 
 
 # Scraper steps:

@@ -10,7 +10,7 @@ if __name__ == "__main__":
     iso_code = config.get("iso_code", "us")
     scrape_reviews = config.get("scrape_reviews", False)
     aggregate_reviews = config.get("agggregate_reviews", False)
-    number_of_listings_to_process = config.get("number_of_listings_to_process", 0)
+    number_of_listings_to_process = config.get("number_of_listings_to_process", 3)
 
     print(f"Configuration loaded: {config}")
 
@@ -18,7 +18,7 @@ if __name__ == "__main__":
         airbnb_scraper(
             zipcode=zipcode,
             iso_code=iso_code,
-            # num_listings=number_of_listings_to_process,
+            num_listings=number_of_listings_to_process,
         )
         print(
             f"Scraping reviews for zipcode {zipcode} in country {iso_code} completed."
