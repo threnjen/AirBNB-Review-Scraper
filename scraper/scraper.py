@@ -81,35 +81,43 @@ def retrieve_reviews(zipcode, search_results, num_listings):
         print(
             f"Retrieving reviews for listing ID {id}; property {properties_scraped + 1} of {num_listings}"
         )
-        # Retrieve reviews for the specified listing
-        single_property_reviews = pyairbnb.get_reviews(room_url=room_url)
-        single_property_formatted_reviews = []
 
-        for review in single_property_reviews:
-            single_property_formatted_reviews.append(
-                {
-                    "review": review.get("comments", ""),
-                    "rating": review.get("rating", 0),
-                }
+        try:
+            # Retrieve reviews for the specified listing
+            single_property_reviews = pyairbnb.get_reviews(room_url=room_url)
+            single_property_formatted_reviews = []
+
+            for review in single_property_reviews:
+                single_property_formatted_reviews.append(
+                    {
+                        "review": review.get("comments", ""),
+                        "rating": review.get("rating", 0),
+                    }
+                )
+
+            review_results[id] = single_property_formatted_reviews
+
+            print(
+                f"I scraped {len(single_property_formatted_reviews)} reviews for this listing"
             )
+            total_reviews += len(single_property_formatted_reviews)
+            properties_scraped += 1
 
-        review_results[id] = single_property_formatted_reviews
+            # Save the reviews data to a JSON file
+            with open(f"results/reviews_{zipcode}.json", "w", encoding="utf-8") as f:
+                f.write(
+                    json.dumps(review_results, ensure_ascii=False)
+                )  # Extract reviews and save them to a file
 
-        print(
-            f"I scraped {len(single_property_formatted_reviews)} reviews for this listing"
-        )
-        total_reviews += len(single_property_formatted_reviews)
-        properties_scraped += 1
+            time.sleep(random.uniform(1, 3))
 
-        time.sleep(random.uniform(1, 3))
+        except Exception as e:
+            print(
+                f"An error occurred while retrieving reviews for listing ID {id}: {e}"
+            )
+            continue
 
     print(f"I scraped a total of {total_reviews} reviews across all listings")
-
-    # Save the reviews data to a JSON file
-    with open(f"results/reviews_{zipcode}.json", "w", encoding="utf-8") as f:
-        f.write(
-            json.dumps(review_results, ensure_ascii=False)
-        )  # Extract reviews and save them to a file
 
 
 def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
