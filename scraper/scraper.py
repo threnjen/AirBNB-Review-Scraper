@@ -70,6 +70,7 @@ def retrieve_reviews(zipcode, search_results, num_listings):
 
     review_results = {}
     total_reviews = 0
+    properties_scraped = 0
 
     if num_listings > len(property_ids):
         num_listings = len(property_ids)
@@ -77,7 +78,9 @@ def retrieve_reviews(zipcode, search_results, num_listings):
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for id in property_ids[:num_listings]:
         room_url = f"https://www.airbnb.com/rooms/{id}"  # Listing URL
-        print(f"Retrieving reviews for listing ID {id}")
+        print(
+            f"Retrieving reviews for listing ID {id}; property {properties_scraped + 1} of {num_listings}"
+        )
         # Retrieve reviews for the specified listing
         single_property_reviews = pyairbnb.get_reviews(room_url=room_url)
         single_property_formatted_reviews = []
@@ -96,6 +99,7 @@ def retrieve_reviews(zipcode, search_results, num_listings):
             f"I scraped {len(single_property_formatted_reviews)} reviews for this listing"
         )
         total_reviews += len(single_property_formatted_reviews)
+        properties_scraped += 1
 
         time.sleep(random.uniform(1, 3))
 
