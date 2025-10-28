@@ -29,6 +29,7 @@ if __name__ == "__main__":
         rag_description = RagDescription(
             num_listings=number_of_listings_to_process,
             review_threshold=review_threshold,
+            zipcode=zipcode,
         )
         rag_description.rag_description_generation_chain()
         print(

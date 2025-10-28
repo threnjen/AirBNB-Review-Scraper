@@ -22,6 +22,7 @@ class RagDescription(BaseModel):
     listing_ids: list = []
     generate_prompt: str = "None"
     weaviate: WeaviateClient = None
+    zipcode: str = "00501"
 
     def open_config(self):
         with open("config.json", "r") as f:
@@ -95,9 +96,7 @@ class RagDescription(BaseModel):
         overall_mean: str,
     ) -> str:
         # Add more replacements to fill out the entire prompt
-        current_prompt = current_prompt.replace(
-            "{ZIP_CODE_HERE}", self.open_config().get("zipcode", "00501")
-        )
+        current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.zipcode)
         current_prompt = current_prompt.replace(
             "{ISO_CODE_HERE}", self.open_config().get("iso_code", "us")
         )
@@ -154,10 +153,25 @@ class RagDescription(BaseModel):
         return summary
 
     def rag_description_generation_chain(self):
-        with open(
-            f"results/reviews_{self.open_config().get('zipcode', '00501')}.json", "r"
-        ) as file:
+        with open(f"results/reviews_{self.zipcode}.json", "r") as file:
             unprocessed_reviews = json.load(file)
+
+        with open(f"results/generated_summaries_{self.zipcode}.json", "r") as file:
+            already_aggregated = json.load(file)
+
+        print(f"Total reviews loaded: {len(unprocessed_reviews)}")
+
+        already_aggregated_ids = list(already_aggregated.keys())
+
+        print(f"Already aggregated ids: {len(already_aggregated_ids)}")
+
+        unprocessed_reviews = {
+            x: y
+            for x, y in unprocessed_reviews.items()
+            if x not in already_aggregated_ids
+        }
+
+        print(f"Reviews to process after filtering: {len(unprocessed_reviews)}")
 
         listings_to_process = self.get_number_of_listings_to_process(
             unprocessed_reviews=unprocessed_reviews
@@ -201,7 +215,13 @@ class RagDescription(BaseModel):
             incoming_properties=weaviate_properties,
         )
 
-        generated_summaries = {}
+        try:
+            existing_file = open(
+                f"results/generated_summaries_{self.zipcode}.json"
+            ).read()
+            generated_summaries = json.loads(existing_file)
+        except Exception:
+            generated_summaries = {}
 
         for listing_id in unprocessed_reviews_ids[:listings_to_process]:
             # print(f"Listing id is {listing_id} of type {type(listing_id)}")
@@ -250,7 +270,7 @@ class RagDescription(BaseModel):
             self.num_completed_listings += 1
 
             with open(
-                f"results/generated_summaries_{datetime.datetime.now().strftime('%Y%m%d')}.json",
+                f"results/generated_summaries_{self.zipcode}.json",
                 "w",
                 encoding="utf-8",
             ) as f:
