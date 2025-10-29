@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import datetime
 import weaviate.classes as wvc
+from utils.tiny_file_handler import load_json_file, save_json_file
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,7 +13,7 @@ from review_aggregator.weaviate_client import WeaviateClient
 from utils.nlp_functions import filter_stopwords
 
 
-class RagDescription(BaseModel):
+class AreaRagAggregator(BaseModel):
     review_threshold: int = 5
     num_listings: int = 3
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -46,11 +47,6 @@ class RagDescription(BaseModel):
                 },
             ],
         )
-
-    def open_config(self):
-        with open("config.json", "r") as f:
-            config = json.load(f)
-        return config
 
     def adjust_list_length_upper_bound_for_config(
         self, unprocessed_reviews: dict
@@ -94,16 +90,6 @@ class RagDescription(BaseModel):
         # print(f"The overall mean rating is {overall_mean}")
         return overall_mean
 
-    def load_prompt(self):
-        with open("prompt.json", "r") as f:
-            data = json.load(f)
-        return data["prompt"]
-
-    def load_zipcode_prompt(self):
-        with open("zipcode_prompt.json", "r") as f:
-            data = json.load(f)
-        return data["prompt_zipcode"]
-
     def prompt_replacement(
         self,
         current_prompt: str,
@@ -113,7 +99,7 @@ class RagDescription(BaseModel):
         # Add more replacements to fill out the entire prompt
         current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.zipcode)
         current_prompt = current_prompt.replace(
-            "{ISO_CODE_HERE}", self.open_config().get("iso_code", "us")
+            "{ISO_CODE_HERE}", load_json_file("config.json").get("iso_code", "us")
         )
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
@@ -153,7 +139,7 @@ class RagDescription(BaseModel):
             )
             return
 
-        generated_prompt = self.load_prompt()
+        generated_prompt = load_json_file("prompt.json")["prompt"]
 
         updated_prompt = self.prompt_replacement(
             current_prompt=generated_prompt,
@@ -181,18 +167,6 @@ class RagDescription(BaseModel):
         )
 
         return summary
-
-    def load_json_file(self, filename):
-        try:
-            existing_file = open(filename).read()
-            data = json.loads(existing_file)
-            return data
-        except FileNotFoundError:
-            return {}
-
-    def save_json_file(self, filename, data):
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(json.dumps(data, ensure_ascii=False))
 
     def filter_out_processed_reviews(
         self, reviews: dict, already_processed_reviews: dict
@@ -232,19 +206,20 @@ class RagDescription(BaseModel):
         for empty_id in empty_aggregated_reviews:
             del generated_summaries[empty_id]
 
-        self.save_json_file(
+        save_json_file(
             filename=f"results/generated_summaries_{self.zipcode}.json",
             data=generated_summaries,
         )
         return generated_summaries
 
     def rag_description_generation_chain(self):
-        reviews = self.load_json_file(filename=f"results/reviews_{self.zipcode}.json")
+        # Load reviews along with any existing aggregated summaries to determine what still needs processing
+        reviews = load_json_file(filename=f"results/reviews_{self.zipcode}.json")
         print(f"Total reviews loaded: {len(reviews)}")
 
         self.overall_mean = self.get_overall_mean_rating(reviews=reviews)
 
-        generated_summaries = self.load_json_file(
+        generated_summaries = load_json_file(
             filename=f"results/generated_summaries_{self.zipcode}.json"
         )
         print(f"Already processed reviews loaded: {len(generated_summaries)}")
@@ -266,6 +241,7 @@ class RagDescription(BaseModel):
             )
         )
 
+        # First pass: process each unprocessed listing up to the configured limit
         for listing_id in unprocessed_reviews_ids[: self.number_of_listings_to_process]:
             generated_summaries[listing_id] = self.process_single_listing(
                 reviews=unprocessed_reviews,
@@ -274,18 +250,18 @@ class RagDescription(BaseModel):
 
             self.num_completed_listings += 1
 
-            self.save_json_file(
+            save_json_file(
                 filename=f"results/generated_summaries_{self.zipcode}.json",
                 data=generated_summaries,
             )
 
+        # Second pass: Remove any listings that resulted in empty summaries
         generated_summaries = self.remove_empty_reviews(generated_summaries)
 
+        # Third pass: Re-process any listings that resulted in incomplete summaries where the model indicated uncertainty
         self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
             generated_summaries
         )
-
-        print(self.review_ids_need_more_processing)
 
         for listing_id in self.review_ids_need_more_processing:
             print(listing_id)
@@ -296,7 +272,7 @@ class RagDescription(BaseModel):
 
             self.num_completed_listings += 1
 
-            self.save_json_file(
+            save_json_file(
                 filename=f"results/generated_summaries_{self.zipcode}.json",
                 data=generated_summaries,
             )
