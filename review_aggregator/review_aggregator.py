@@ -1,10 +1,11 @@
 import json
+from typing import ClassVar, Any
 import pandas as pd
 import os
 import datetime
 import weaviate.classes as wvc
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.weaviate_client import WeaviateClient
 
@@ -18,38 +19,58 @@ class RagDescription(BaseModel):
     num_completed_listings: int = 0
     num_overall_ids: int = 100
     collection_name: str = "Reviews"
-    overall_stats: dict = {}
-    listing_ids: list = []
-    generate_prompt: str = "None"
-    weaviate: WeaviateClient = None
+    overall_stats: dict = Field(default_factory=dict)
+    listing_ids: list = Field(default_factory=list)
+    generate_prompt: str = "None"  # consider Optional[str] = None
     zipcode: str = "00501"
+    overall_mean: float = 0.0
+    number_of_listings_to_process: int = 0
+    empty_aggregated_reviews: list = Field(default_factory=list)
+    review_ids_need_more_processing: list = Field(default_factory=list)
+    weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
+
+    def model_post_init(self, __context: Any) -> None:
+        self.weaviate_client.create_general_collection(
+            collection_name=self.collection_name,
+            incoming_properties=[
+                {
+                    "name": "review_text",
+                    "data_type": wvc.config.DataType.TEXT,
+                    "vectorize_property_name": False,
+                },
+                {
+                    "name": "product_id",
+                    "data_type": wvc.config.DataType.TEXT,
+                    "skip_vectorization": True,
+                    "vectorize_property_name": False,
+                },
+            ],
+        )
 
     def open_config(self):
         with open("config.json", "r") as f:
             config = json.load(f)
         return config
 
-    def get_number_of_listings_to_process(self, unprocessed_reviews: dict) -> int:
+    def adjust_list_length_upper_bound_for_config(
+        self, unprocessed_reviews: dict
+    ) -> int:
         # placeholder function to count the number of listing ids.
         total_listings = len(unprocessed_reviews)
         if self.num_listings < total_listings:
-            listings_to_process = self.num_listings
+            number_of_listings_to_process = self.num_listings
         else:
-            listings_to_process = total_listings
+            number_of_listings_to_process = total_listings
 
-        return listings_to_process
+        return number_of_listings_to_process
 
-    def get_listing_ratings_and_reviews(
-        self, unprocessed_reviews: dict, listing_id: str
-    ) -> list:
-        listing_ratings_and_reviews = unprocessed_reviews.get(listing_id)
+    def get_listing_ratings_and_reviews(self, reviews: dict, listing_id: str) -> list:
+        listing_ratings_and_reviews = reviews.get(listing_id)
         return listing_ratings_and_reviews
 
-    def get_listing_id_mean_rating(self, unprocessed_reviews, listing_id) -> float:
+    def get_listing_id_mean_rating(self, reviews, listing_id) -> float:
         mean_rating = 0
-        listing_data = self.get_listing_ratings_and_reviews(
-            unprocessed_reviews, listing_id
-        )
+        listing_data = self.get_listing_ratings_and_reviews(reviews, listing_id)
         for review in listing_data:
             if review.get("rating") is None:
                 pass
@@ -62,13 +83,13 @@ class RagDescription(BaseModel):
             mean_rating = 0
         return mean_rating
 
-    def get_overall_mean_rating(self, unprocessed_reviews: dict) -> float:
+    def get_overall_mean_rating(self, reviews: dict) -> float:
         overall_mean = 0
-        for listing_id in unprocessed_reviews:
+        for listing_id in reviews:
             overall_mean += self.get_listing_id_mean_rating(
-                unprocessed_reviews=unprocessed_reviews, listing_id=listing_id
+                reviews=reviews, listing_id=listing_id
             )
-        overall_mean /= len(unprocessed_reviews)
+        overall_mean /= len(reviews)
         overall_mean = round(overall_mean, 4)
         # print(f"The overall mean rating is {overall_mean}")
         return overall_mean
@@ -109,146 +130,174 @@ class RagDescription(BaseModel):
 
         return df["combined_review"].to_list()
 
-    def process_single_listing(
-        self,
-        weaviate_client: WeaviateClient,
-        listing_id: str,
-        ratings: dict,
-        generated_prompt: str,
-    ):
-        reviews = self.clean_single_item_reviews(ratings=ratings)
+    def process_single_listing(self, reviews, listing_id):
+        print(
+            f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.number_of_listings_to_process}"
+        )
 
-        weaviate_client.add_reviews_collection_batch(
+        listing_mean_rating = self.get_listing_id_mean_rating(
+            listing_id=listing_id, reviews=reviews
+        )
+
+        listing_ratings = self.get_listing_ratings_and_reviews(
+            listing_id=listing_id, reviews=reviews
+        )
+
+        if (
+            listing_ratings is None
+            or len(listing_ratings) == 0
+            or len(listing_ratings) < self.review_threshold
+        ):
+            print(
+                f"No ratings found for listing {listing_id} or number under threshold; skipping."
+            )
+            return
+
+        generated_prompt = self.load_prompt()
+
+        updated_prompt = self.prompt_replacement(
+            current_prompt=generated_prompt,
+            listing_mean=str(listing_mean_rating),
+            overall_mean=str(self.overall_mean),
+        )
+        reviews = self.clean_single_item_reviews(ratings=listing_ratings)
+
+        self.weaviate_client.add_reviews_collection_batch(
             collection_name=self.collection_name,
             listing_id=listing_id,
             reviews=reviews,
         )
 
-        summary = weaviate_client.generate_aggregate(
+        summary = self.weaviate_client.generate_aggregate(
             id=listing_id,
             collection_name=self.collection_name,
-            generate_prompt=generated_prompt,
+            generate_prompt=updated_prompt,
             filter_field="product_id",
             return_properties=["review_text"],
         )
 
-        weaviate_client.remove_collection_listings(
+        self.weaviate_client.remove_collection_listings(
             listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
         )
 
         return summary
 
-    def rag_description_generation_chain(self):
-        with open(f"results/reviews_{self.zipcode}.json", "r") as file:
-            unprocessed_reviews = json.load(file)
-
+    def load_json_file(self, filename):
         try:
-            existing_file = open(
-                f"results/generated_summaries_{self.zipcode}.json"
-            ).read()
-            already_aggregated = json.loads(existing_file)
+            existing_file = open(filename).read()
+            data = json.loads(existing_file)
+            return data
         except FileNotFoundError:
-            already_aggregated = {}
+            return {}
 
-        print(f"Total reviews loaded: {len(unprocessed_reviews)}")
+    def save_json_file(self, filename, data):
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(json.dumps(data, ensure_ascii=False))
 
-        already_aggregated_ids = list(already_aggregated.keys())
+    def filter_out_processed_reviews(
+        self, reviews: dict, already_processed_reviews: dict
+    ) -> dict:
+        already_processed_reviews_ids = list(already_processed_reviews.keys())
 
-        print(f"Already aggregated ids: {len(already_aggregated_ids)}")
+        print(f"Already aggregated ids: {len(already_processed_reviews_ids)}")
 
         unprocessed_reviews = {
-            x: y
-            for x, y in unprocessed_reviews.items()
-            if x not in already_aggregated_ids
+            x: y for x, y in reviews.items() if x not in already_processed_reviews_ids
         }
 
         print(f"Reviews to process after filtering: {len(unprocessed_reviews)}")
 
-        listings_to_process = self.get_number_of_listings_to_process(
-            unprocessed_reviews=unprocessed_reviews
+        return unprocessed_reviews
+
+    def get_unfinished_aggregated_reviews(self, generated_summaries) -> list[str]:
+        incomplete_keys = []
+        for key, value in generated_summaries.items():
+            if "?" in value:
+                incomplete_keys.append(key)
+
+        print(f"Listings needing more processing: {len(incomplete_keys)}")
+        return incomplete_keys
+
+    def get_empty_aggregated_reviews(self, generated_summaries) -> list[str]:
+        incomplete_keys = []
+        for key, value in generated_summaries.items():
+            if value == "" or value is None:
+                incomplete_keys.append(key)
+        return incomplete_keys
+
+    def remove_empty_reviews(self, generated_summaries) -> dict:
+        empty_aggregated_reviews = self.get_empty_aggregated_reviews(
+            generated_summaries
+        )
+        for empty_id in empty_aggregated_reviews:
+            del generated_summaries[empty_id]
+
+        self.save_json_file(
+            filename=f"results/generated_summaries_{self.zipcode}.json",
+            data=generated_summaries,
+        )
+        return generated_summaries
+
+    def rag_description_generation_chain(self):
+        reviews = self.load_json_file(filename=f"results/reviews_{self.zipcode}.json")
+        print(f"Total reviews loaded: {len(reviews)}")
+
+        self.overall_mean = self.get_overall_mean_rating(reviews=reviews)
+
+        generated_summaries = self.load_json_file(
+            filename=f"results/generated_summaries_{self.zipcode}.json"
+        )
+        print(f"Already processed reviews loaded: {len(generated_summaries)}")
+
+        unprocessed_reviews = self.filter_out_processed_reviews(
+            reviews=reviews, already_processed_reviews=generated_summaries
         )
 
-        generated_prompt = self.load_prompt()
-
-        weaviate_client = WeaviateClient()
-
-        overall_mean = self.get_overall_mean_rating(
-            unprocessed_reviews=unprocessed_reviews
-        )
+        if not unprocessed_reviews:
+            print("No unprocessed reviews found; exiting.")
+            return
 
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
+        print(f"Number of reviews to aggregate: {len(unprocessed_reviews_ids)}")
 
-        weaviate_properties = [
-            {
-                "name": "review_text",
-                "data_type": wvc.config.DataType.TEXT,
-                "vectorize_property_name": False,
-            },
-            {
-                "name": "product_id",
-                "data_type": wvc.config.DataType.TEXT,
-                "skip_vectorization": True,
-                "vectorize_property_name": False,
-            },
-        ]
-
-        weaviate_client.create_general_collection(
-            collection_name=self.collection_name,
-            incoming_properties=weaviate_properties,
+        self.number_of_listings_to_process = (
+            self.adjust_list_length_upper_bound_for_config(
+                unprocessed_reviews=unprocessed_reviews
+            )
         )
 
-        try:
-            existing_file = open(
-                f"results/generated_summaries_{self.zipcode}.json"
-            ).read()
-            generated_summaries = json.loads(existing_file)
-        except FileNotFoundError:
-            generated_summaries = {}
-
-        for listing_id in unprocessed_reviews_ids[:listings_to_process]:
-            # print(f"Listing id is {listing_id} of type {type(listing_id)}")
-
-            print(
-                f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {listings_to_process}"
-            )
-
-            listing_mean_rating = self.get_listing_id_mean_rating(
-                listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
-            )
-            # print(listing_mean_rating)
-
-            listing_ratings = self.get_listing_ratings_and_reviews(
-                listing_id=listing_id, unprocessed_reviews=unprocessed_reviews
-            )
-
-            if (
-                listing_ratings is None
-                or len(listing_ratings) == 0
-                or len(listing_ratings) < self.review_threshold
-            ):
-                print(
-                    f"No ratings found for listing {listing_id} or number under threshold; skipping."
-                )
-                continue
-
-            updated_prompt = self.prompt_replacement(
-                current_prompt=generated_prompt,
-                listing_mean=str(listing_mean_rating),
-                overall_mean=str(overall_mean),
-            )
-
+        for listing_id in unprocessed_reviews_ids[: self.number_of_listings_to_process]:
             generated_summaries[listing_id] = self.process_single_listing(
-                weaviate_client,
-                listing_id,
-                listing_ratings,
-                updated_prompt,
+                reviews=unprocessed_reviews,
+                listing_id=listing_id,
             )
 
             self.num_completed_listings += 1
 
-            with open(
-                f"results/generated_summaries_{self.zipcode}.json",
-                "w",
-                encoding="utf-8",
-            ) as f:
-                f.write(json.dumps(generated_summaries, ensure_ascii=False))
+            self.save_json_file(
+                filename=f"results/generated_summaries_{self.zipcode}.json",
+                data=generated_summaries,
+            )
+
+        generated_summaries = self.remove_empty_reviews(generated_summaries)
+
+        self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
+            generated_summaries
+        )
+
+        print(self.review_ids_need_more_processing)
+
+        for listing_id in self.review_ids_need_more_processing:
+            print(listing_id)
+            generated_summaries[listing_id] = self.process_single_listing(
+                reviews=reviews,
+                listing_id=listing_id,
+            )
+
+            self.num_completed_listings += 1
+
+            self.save_json_file(
+                filename=f"results/generated_summaries_{self.zipcode}.json",
+                data=generated_summaries,
+            )
+        print("RAG description generation chain completed.")
