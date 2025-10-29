@@ -1,7 +1,7 @@
 import json
 import sys
 from scraper.scraper import airbnb_scraper
-from review_aggregator.review_aggregator import RagDescription
+from review_aggregator.property_review_aggregator import PropertyRagAggregator
 
 if __name__ == "__main__":
     with open("config.json", "r") as f:
@@ -26,7 +26,7 @@ if __name__ == "__main__":
         )
 
     if aggregate_reviews:
-        rag_description = RagDescription(
+        rag_description = PropertyRagAggregator(
             num_listings=number_of_listings_to_process,
             review_threshold=review_threshold,
             zipcode=zipcode,
