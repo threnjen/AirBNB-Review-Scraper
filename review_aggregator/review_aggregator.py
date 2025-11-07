@@ -73,10 +73,13 @@ class RagDescription(BaseModel):
         # print(f"The overall mean rating is {overall_mean}")
         return overall_mean
 
-    def load_prompt(self):
-        with open("prompt.json", "r") as f:
-            data = json.load(f)
-        return data["prompt"]
+    def load_prompt(self, prompt):
+        try:
+            with open(prompt, "r") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Prompt file {prompt} not found.")
+        return data["gpt4o_mini_generate_prompt_structured"]
 
     def load_zipcode_prompt(self):
         with open("zipcode_prompt.json", "r") as f:
@@ -118,10 +121,10 @@ class RagDescription(BaseModel):
     ):
         reviews = self.clean_single_item_reviews(ratings=ratings)
 
-        weaviate_client.add_reviews_collection_batch(
+        weaviate_client.add_collection_batch(
             collection_name=self.collection_name,
             listing_id=listing_id,
-            reviews=reviews,
+            items=reviews,
         )
 
         summary = weaviate_client.generate_aggregate(
@@ -133,12 +136,12 @@ class RagDescription(BaseModel):
         )
 
         weaviate_client.remove_collection_listings(
-            listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
+            listing_id=listing_id, collection_name=self.collection_name, items=reviews
         )
 
         return summary
 
-    def rag_description_generation_chain(self):
+    def rag_description_generation_chain_reviews(self):
         with open(f"results/reviews_{self.zipcode}.json", "r") as file:
             unprocessed_reviews = json.load(file)
 
@@ -168,7 +171,7 @@ class RagDescription(BaseModel):
             unprocessed_reviews=unprocessed_reviews
         )
 
-        generated_prompt = self.load_prompt()
+        generated_prompt = self.load_prompt(prompt = "zipcode_prompt.json")
 
         weaviate_client = WeaviateClient()
 
@@ -229,6 +232,7 @@ class RagDescription(BaseModel):
                 print(
                     f"No ratings found for listing {listing_id} or number under threshold; skipping."
                 )
+                num_completed_listings += 1
                 continue
 
             updated_prompt = self.prompt_replacement(
@@ -252,3 +256,73 @@ class RagDescription(BaseModel):
                 encoding="utf-8",
             ) as f:
                 f.write(json.dumps(generated_summaries, ensure_ascii=False))
+
+    def rag_description_generation_chain_summaries(self):
+        with open(f"results/generated_summaries_{self.zipcode}.json", "r") as file:
+            unprocessed_summaries = json.load(file)
+
+        generated_prompt = self.load_prompt(prompt = "review_summary_prompt.json")
+
+        weaviate_client = WeaviateClient()
+
+        weaviate_properties = [
+            {
+                "name": "summary_text",
+                "data_type": wvc.config.DataType.TEXT,
+                "vectorize_property_name": False,
+            },
+            {
+                "name": "product_id",
+                "data_type": wvc.config.DataType.TEXT,
+                "skip_vectorization": True,
+                "vectorize_property_name": False,
+            },
+        ]
+        weaviate_client.create_general_collection(
+            collection_name=self.collection_name,
+            incoming_properties=weaviate_properties,
+        )
+
+        # Add each summary into the collection so generate_aggregate can find them.
+        # Use a shared product_id value ("summary_aggregate") so the generate call
+        # can filter by that id and aggregate all summaries together.
+
+        print(f"Unprocessed summaries looks like {unprocessed_summaries} of type {type(unprocessed_summaries)}")
+
+        summary_items = []
+        for listing_id, summary_text in unprocessed_summaries.items():
+            summary_items.append(summary_text)
+
+        if summary_items:
+            weaviate_client.add_collection_batch(
+                listing_id="summary_aggregate",
+                collection_name=self.collection_name,
+                items=summary_items,
+                property_name="summary_text",
+            )
+
+        generated_summary = weaviate_client.generate_aggregate(
+            id="summary_aggregate",
+            collection_name=self.collection_name,
+            generate_prompt=generated_prompt,
+            filter_field="product_id",
+            return_properties=["summary_text"],
+        )
+
+        # optional: remove the inserted summary objects after aggregation
+        weaviate_client.remove_collection_listings(
+            listing_id="summary_aggregate",
+            collection_name=self.collection_name,
+            items=summary_items,
+            property_name="summary_text",
+        )
+
+        aggregated_summary = {}
+        aggregated_summary["aggregated_summary"] = generated_summary
+        
+        with open(
+            f"results/aggregated_summary_{self.zipcode}.json",
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(json.dumps(generated_summary, ensure_ascii=False))

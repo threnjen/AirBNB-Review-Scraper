@@ -96,51 +96,45 @@ class WeaviateClient(BaseModel):
             )
             weaviate_client.close()
 
-    def add_reviews_collection_batch(
+    def add_collection_batch(
         self,
         listing_id: str,
         collection_name: str,
-        reviews: list[str],
+        items: list[str],
+        property_name: str = "review_text",
     ) -> None:
-        print(f"Adding reviews for item {listing_id}")
         weaviate_client = self.connect_weaviate_client()
         collection = weaviate_client.collections.get(collection_name)
 
         with collection.batch.dynamic() as batch:
-            for review in reviews:
-                review_item = {
-                    "review_text": review,
+            for item in items:
+                obj = {
+                    property_name: item,
                     "product_id": listing_id,
                 }
-                uuid = generate_uuid5(review_item)
-
-                result = batch.add_object(properties=review_item, uuid=uuid)
-
+                uuid = generate_uuid5(obj)
+                result = batch.add_object(properties=obj, uuid=uuid)
                 if "error" in result:
                     print(f"Failed to insert {uuid}: {result['error']}")
-                else:
-                    pass
 
-        print(f"Reviews added for item {listing_id}")
         weaviate_client.close()
 
     def remove_collection_listings(
         self,
         listing_id: str,
         collection_name: str,
-        reviews: list[str],
+        items: list[str],
+        property_name: str = "review_text",
     ) -> None:
         weaviate_client = self.connect_weaviate_client()
-
         collection = weaviate_client.collections.get(collection_name)
 
-        for review in reviews:
-            review_item = {
-                "review_text": review,
+        for item in items:
+            obj = {
+                property_name: item,
                 "product_id": listing_id,
             }
-            uuid = generate_uuid5(review_item)
-
+            uuid = generate_uuid5(obj)
             if collection.data.exists(uuid):
                 collection.data.delete_by_id(uuid=uuid)
 
