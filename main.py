@@ -12,6 +12,8 @@ if __name__ == "__main__":
     aggregate_reviews = config.get("agggregate_reviews", False)
     number_of_listings_to_process = config.get("number_of_listings_to_process", 3)
     review_threshold = config.get("review_threshold", 5)
+    aggregate_summaries = config.get("aggregate_summaries", False)
+    number_of_summaries_to_process = config.get("number_of_summaries_to_process", 3)
 
     print(f"Configuration loaded: {config}")
 
@@ -31,9 +33,21 @@ if __name__ == "__main__":
             review_threshold=review_threshold,
             zipcode=zipcode,
         )
-        rag_description.rag_description_generation_chain()
+        rag_description.rag_description_generation_chain_reviews()
         print(
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."
+        )
+
+    if aggregate_summaries:
+        rag_description = RagDescription(
+            num_listings = number_of_summaries_to_process,
+            review_threshold=review_threshold,
+            zipcode=zipcode,
+            collection_name="Summaries",
+        )
+        rag_description.rag_description_generation_chain_summaries()
+        print(
+            f"Aggregating summaries for zipcode {zipcode} in country {iso_code} completed."
         )
 
     # Things to do

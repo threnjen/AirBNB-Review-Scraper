@@ -2,7 +2,9 @@
     "zipcode": "97067",
     "iso_code": "us",
     "scrape_reviews": false,
-    "number_of_listings_to_process": 100000,
+    "number_of_listings_to_process": 5,
     "review_threshold": 3,
-    "agggregate_reviews": true
+    "agggregate_reviews": false,
+    "aggregate_summaries": true,
+    "number_of_summaries_to_process": 5
 }
