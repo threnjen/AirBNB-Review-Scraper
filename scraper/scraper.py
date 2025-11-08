@@ -115,6 +115,7 @@ def retrieve_reviews(zipcode, search_results, num_listings):
             print(
                 f"An error occurred while retrieving reviews for listing ID {id}: {e}"
             )
+            properties_scraped += 1
             continue
 
     print(f"I scraped a total of {total_reviews} reviews across all listings")
@@ -122,7 +123,7 @@ def retrieve_reviews(zipcode, search_results, num_listings):
 
 def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
     search_results = airbnb_searcher(zipcode, iso_code)
-    print(f"Search results data looks like: {search_results[:1]}")
+    # print(f"Search results data looks like: {search_results[:1]}")
     retrieve_reviews(
         zipcode=zipcode, search_results=search_results, num_listings=num_listings
     )
