@@ -4,7 +4,7 @@
     "scrape_reviews": false,
     "number_of_listings_to_process": 5,
     "review_threshold": 3,
-    "agggregate_reviews": false,
+    "aggregate_reviews": false,
     "aggregate_summaries": true,
     "number_of_summaries_to_process": 5
 }
