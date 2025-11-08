@@ -325,4 +325,4 @@ class RagDescription(BaseModel):
             "w",
             encoding="utf-8",
         ) as f:
-            f.write(json.dumps(generated_summary, ensure_ascii=False))
+            f.write(json.dumps(aggregated_summary, ensure_ascii=False))
