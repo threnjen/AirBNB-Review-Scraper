@@ -171,7 +171,7 @@ class RagDescription(BaseModel):
             unprocessed_reviews=unprocessed_reviews
         )
 
-        generated_prompt = self.load_prompt(prompt = "zipcode_prompt.json")
+        generated_prompt = self.load_prompt(prompt="zipcode_prompt.json")
 
         weaviate_client = WeaviateClient()
 
@@ -232,7 +232,7 @@ class RagDescription(BaseModel):
                 print(
                     f"No ratings found for listing {listing_id} or number under threshold; skipping."
                 )
-                num_completed_listings += 1
+                self.num_completed_listings += 1
                 continue
 
             updated_prompt = self.prompt_replacement(
@@ -261,7 +261,7 @@ class RagDescription(BaseModel):
         with open(f"results/generated_summaries_{self.zipcode}.json", "r") as file:
             unprocessed_summaries = json.load(file)
 
-        generated_prompt = self.load_prompt(prompt = "review_summary_prompt.json")
+        generated_prompt = self.load_prompt(prompt="review_summary_prompt.json")
 
         weaviate_client = WeaviateClient()
 
@@ -287,7 +287,9 @@ class RagDescription(BaseModel):
         # Use a shared product_id value ("summary_aggregate") so the generate call
         # can filter by that id and aggregate all summaries together.
 
-        print(f"Unprocessed summaries looks like {unprocessed_summaries} of type {type(unprocessed_summaries)}")
+        print(
+            f"Unprocessed summaries looks like {unprocessed_summaries} of type {type(unprocessed_summaries)}"
+        )
 
         summary_items = []
         for listing_id, summary_text in unprocessed_summaries.items():
@@ -319,7 +321,7 @@ class RagDescription(BaseModel):
 
         aggregated_summary = {}
         aggregated_summary["aggregated_summary"] = generated_summary
-        
+
         with open(
             f"results/aggregated_summary_{self.zipcode}.json",
             "w",
