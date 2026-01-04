@@ -30,7 +30,9 @@ def retrieve_details(search_results, num_listings):
 
             # Save the details data to a JSON file
             with open(
-                f"results/property_details_{room_id}.json", "w", encoding="utf-8"
+                f"property_details_results/property_details_{room_id}.json",
+                "w",
+                encoding="utf-8",
             ) as f:
                 f.write(
                     json.dumps(single_property_details, ensure_ascii=False)
