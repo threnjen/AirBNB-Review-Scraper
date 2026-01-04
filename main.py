@@ -1,5 +1,4 @@
 import json
-import sys
 from scraper.reviews_scraper import airbnb_scraper
 from scraper.details_scraper import airbnb_scraper as details_scraper
 from review_aggregator.property_review_aggregator import PropertyRagAggregator

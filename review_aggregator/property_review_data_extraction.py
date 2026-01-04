@@ -1,15 +1,10 @@
 import json
-from typing import ClassVar, Any
-import pandas as pd
-import os
-import datetime
-import weaviate.classes as wvc
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.weaviate_client import WeaviateClient
 
-from utils.nlp_functions import filter_stopwords
 
 
 class PropertyDataExtraction(BaseModel):

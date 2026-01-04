@@ -25,7 +25,7 @@ class S3FileHandler(FileHandler):
 
     def _check_s3_access(self):
         s3_client = boto3.client("s3", region_name=REGION_NAME)
-        response = s3_client.head_bucket(Bucket=S3_SCRAPER_BUCKET)
+        s3_client.head_bucket(Bucket=S3_SCRAPER_BUCKET)
 
     @property
     def file_missing_exception(self) -> Exception:
@@ -37,7 +37,7 @@ class S3FileHandler(FileHandler):
             return True
         except self.file_missing_exception:
             return False
-        except:
+        except Exception:
             return False
 
     def get_last_modified(self, file_path: str) -> datetime:
@@ -77,7 +77,7 @@ class S3FileHandler(FileHandler):
         return obj["Body"].read().decode("utf-8")
 
     def save_xml(self, file_path: str, data: Any):
-        if type(data) == str:
+        if type(data) is str:
             data = bytes(data, "utf-8")
         self.s3_client.put_object(Bucket=S3_SCRAPER_BUCKET, Key=file_path, Body=data)
 

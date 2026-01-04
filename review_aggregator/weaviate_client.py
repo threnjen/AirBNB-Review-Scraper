@@ -1,7 +1,5 @@
 import os
 
-import pandas as pd
-import json
 import weaviate
 import weaviate.classes as wvc
 from weaviate.classes.config import Configure

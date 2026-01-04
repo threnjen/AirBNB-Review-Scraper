@@ -1,4 +1,3 @@
-import requests
 import pgeocode
 
 postal_code = "97224"
@@ -23,7 +22,7 @@ def locationer(postal_code, iso_code="us"):
 
     lat = query.get("latitude")
     lon = query.get("longitude")
-    city = query.get("place_name")
+    query.get("place_name")
 
     ne_lat, sw_lat = round(lat + 0.14, 7), round(lat - 0.14, 7)
     ne_lon, sw_lon = round(lon + 0.14, 7), round(lon - 0.14, 7)
