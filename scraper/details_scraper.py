@@ -50,7 +50,7 @@ def retrieve_details(search_results, num_listings):
 def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
     if os.path.isfile("custom_listing_ids.json"):
         with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
-            property_ids = json.load(f)
+            property_ids = json.load(f).keys()
         # print(f"Using {len(property_ids)} custom listing IDs from custom_listing_ids.json")
         search_results = []
         for room_id in property_ids:
