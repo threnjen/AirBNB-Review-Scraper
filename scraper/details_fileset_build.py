@@ -9,6 +9,8 @@ class DetailsFilesetBuilder:
     def __init__(self) -> None:
         self.property_details = {}
         self.house_rules = {}
+        self.property_descriptions = {}
+        self.neighborhood_highlights = {}
 
     def get_files_list(self):
         files = os.listdir("results_property_details")
@@ -20,8 +22,6 @@ class DetailsFilesetBuilder:
         return property_details_files
 
     def parse_amenity_flags(self, property_id: str, property_details: dict):
-        amenities_dict = property_details.get("amenities_dift", {})
-
         amenities_matrix = property_details.get("amenities", {})
 
         for amenity_category in amenities_matrix:
@@ -41,9 +41,13 @@ class DetailsFilesetBuilder:
                 rule_icon = rule.get("icon")
                 self.property_details[property_id][rule_icon] = rule_title
 
-    def parse_basic_details(self, property_id: str, property_details: dict):
-        print(property_details.keys())
+        highlights_section = property_details.get("highlights", [])
+        for highlight in highlights_section:
+            highlight_title = highlight.get("title")
+            highlight_icon = highlight.get("icon")
+            self.property_details[property_id][highlight_icon] = highlight_title
 
+    def parse_basic_details(self, property_id: str, property_details: dict):
         room_type = property_details.get("room_type", "N/A")
 
         if not room_type == "Entire home/apt":
@@ -76,14 +80,53 @@ class DetailsFilesetBuilder:
             bathrooms = sub_details[3].split(" baths")[0]
             self.property_details[property_id]["bathrooms"] = bathrooms
 
+        # TO DO location description
         location_description = property_details.get("location_descriptions", "")
-        print(location_description)
+        if len(location_description) > 0:
+            if location_description[0].get("title") == "Neighborhood highlights":
+                neighborhood_highlights = location_description[0].get("content")
+                self.neighborhood_highlights[property_id] = neighborhood_highlights
+
+        description = property_details.get("description", [])
+        self.property_descriptions[property_id] = description
+
+        # host_details = property_details.get("host_details", {})
+        # print(host_details)
 
         return True
+
+    def get_financials(self, property_id: str, property_details: dict):
+        adr = property_details.get("ADR", None)
+        self.property_details[property_id]["ADR"] = adr
+
+        occupancy_rate_based_on_available_days = property_details.get("Occupancy", None)
+        self.property_details[property_id]["Occupancy_Rate_Based_on_Available_Days"] = (
+            occupancy_rate_based_on_available_days
+        )
+
+        days_available = property_details.get("Days_Available", None)
+        self.property_details[property_id]["Days_Available"] = days_available
+
+        availability = (
+            (days_available / 365) * 100 if days_available is not None else None
+        )
+        self.property_details[property_id]["Availability_Rate"] = availability
+
+        pass
 
     def build_fileset(self):
         print("Building details fileset...")
         # Placeholder for actual implementation
+
+        if os.path.isfile("custom_listing_ids.json"):
+            with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
+                properties = json.load(f)
+
+            for property_id, property_details in properties.items():
+                self.property_details[property_id] = {}
+                self.get_financials(
+                    property_id=property_id, property_details=property_details
+                )
 
         property_details_files = self.get_files_list()
         print(f"Found {len(property_details_files)} property details files.")
@@ -94,18 +137,31 @@ class DetailsFilesetBuilder:
             file.close()
             property_id = file_name.split("property_details_")[-1].split(".json")[0]
 
-            self.property_details[property_id] = {}
-
             if not self.parse_basic_details(property_id, property_details):
                 continue
 
             self.parse_amenity_flags(property_id, property_details)
 
-        # amenities_df = pd.DataFrame.from_dict(
-        #     self.property_details, orient="index"
-        # ).fillna(False)
+        amenities_df = pd.DataFrame.from_dict(
+            self.property_details, orient="index"
+        ).fillna(False)
 
-        # amenities_df.to_csv("results_property_details/property_amenities_matrix.csv")
-        # print(
-        #     "Details fileset built and saved to results_property_details/property_amenities_matrix.csv"
-        # )
+        amenities_df.to_csv("results_property_details/property_amenities_matrix.csv")
+        print(
+            "Details fileset built and saved to results_property_details/property_amenities_matrix.csv"
+        )
+
+        with open(
+            "results_property_details/house_rules_details.json", "w"
+        ) as house_rules_file:
+            json.dump(self.house_rules, house_rules_file, indent=4)
+
+        with open(
+            "results_property_details/property_descriptions.json", "w"
+        ) as descriptions_file:
+            json.dump(self.property_descriptions, descriptions_file, indent=4)
+
+        with open(
+            "results_property_details/neighborhood_highlights.json", "w"
+        ) as highlights_file:
+            json.dump(self.neighborhood_highlights, highlights_file, indent=4)
