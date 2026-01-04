@@ -1,7 +1,9 @@
 import json
 import sys
-from scraper.scraper import airbnb_scraper
+from scraper.reviews_scraper import airbnb_scraper
+from scraper.details_scraper import airbnb_scraper as details_scraper
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
+from review_aggregator.review_aggregator import RagDescription
 
 if __name__ == "__main__":
     with open("config.json", "r") as f:
@@ -9,6 +11,7 @@ if __name__ == "__main__":
     zipcode = config.get("zipcode", "00501")
     iso_code = config.get("iso_code", "us")
     scrape_reviews = config.get("scrape_reviews", False)
+    scrape_details = config.get("scrape_details", False)
     aggregate_reviews = config.get("aggregate_reviews", False)
     number_of_listings_to_process = config.get("number_of_listings_to_process", 3)
     review_threshold = config.get("review_threshold", 5)
@@ -27,20 +30,30 @@ if __name__ == "__main__":
             f"Scraping reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
+    if scrape_details:
+        details_scraper(
+            zipcode=zipcode,
+            iso_code=iso_code,
+            num_listings=number_of_listings_to_process,
+        )
+        print(
+            f"Scraping details for zipcode {zipcode} in country {iso_code} completed."
+        )
+
     if aggregate_reviews:
         rag_description = PropertyRagAggregator(
             num_listings=number_of_listings_to_process,
             review_threshold=review_threshold,
             zipcode=zipcode,
         )
-        rag_description.rag_description_generation_chain_reviews()
+        rag_description.rag_description_generation_chain()
         print(
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
     if aggregate_summaries:
         rag_description = RagDescription(
-            num_listings = number_of_summaries_to_process,
+            num_listings=number_of_summaries_to_process,
             review_threshold=review_threshold,
             zipcode=zipcode,
             collection_name="Summaries",
