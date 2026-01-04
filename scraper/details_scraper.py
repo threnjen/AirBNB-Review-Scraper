@@ -6,7 +6,7 @@ import os
 from scraper.airbnb_searcher import airbnb_searcher
 
 
-def retrieve_reviews(search_results, num_listings):
+def retrieve_details(search_results, num_listings):
     property_ids = [listing["room_id"] for listing in search_results]
 
     # print(property_ids)
@@ -19,22 +19,22 @@ def retrieve_reviews(search_results, num_listings):
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for room_id in property_ids[:num_listings]:
         print(
-            f"Retrieving reviews for listing ID {room_id}; property {properties_scraped + 1} of {num_listings}"
+            f"Retrieving details for listing ID {room_id}; property {properties_scraped + 1} of {num_listings}"
         )
 
         try:
-            # Retrieve reviews for the specified listing
+            # Retrieve details for the specified listing
             single_property_details = pyairbnb.get_details(room_id=room_id)
 
             properties_scraped += 1
 
-            # Save the reviews data to a JSON file
+            # Save the details data to a JSON file
             with open(
                 f"results/property_details_{room_id}.json", "w", encoding="utf-8"
             ) as f:
                 f.write(
                     json.dumps(single_property_details, ensure_ascii=False)
-                )  # Extract reviews and save them to a file
+                )  # Extract details and save them to a file
 
             time.sleep(random.uniform(1, 3))
 
@@ -59,4 +59,4 @@ def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
         search_results = airbnb_searcher(zipcode, iso_code)
     # print(f"Search results data looks like: {search_results[:1]}")
     print(len(search_results))
-    retrieve_reviews(search_results=search_results, num_listings=num_listings)
+    retrieve_details(search_results=search_results, num_listings=num_listings)
