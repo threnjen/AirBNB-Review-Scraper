@@ -3,6 +3,7 @@ import time
 import random
 import os
 import pandas as pd
+from math import ceil
 
 
 class DetailsFilesetBuilder:
@@ -13,7 +14,7 @@ class DetailsFilesetBuilder:
         self.neighborhood_highlights = {}
 
     def get_files_list(self):
-        files = os.listdir("results_property_details")
+        files = os.listdir("property_details_results")
         property_details_files = [
             f
             for f in files
@@ -100,19 +101,28 @@ class DetailsFilesetBuilder:
         self.property_details[property_id]["ADR"] = adr
 
         occupancy_rate_based_on_available_days = property_details.get("Occupancy", None)
-        self.property_details[property_id]["Occupancy_Rate_Based_on_Available_Days"] = (
+        self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
             occupancy_rate_based_on_available_days
         )
 
-        days_available = property_details.get("Days_Available", None)
+        days_available = property_details.get("Days_Avail", None)
         self.property_details[property_id]["Days_Available"] = days_available
+
+        occupied_days = (
+            (occupancy_rate_based_on_available_days / 100 * days_available) * 100 / 365
+            if occupancy_rate_based_on_available_days is not None
+            else None
+        )
+        self.property_details[property_id]["Abs_Occ_Rate"] = (
+            ceil(occupied_days) if occupied_days is not None else None
+        )
 
         availability = (
             (days_available / 365) * 100 if days_available is not None else None
         )
-        self.property_details[property_id]["Availability_Rate"] = availability
-
-        pass
+        self.property_details[property_id]["Avail_Rate"] = (
+            round(availability, 2) if availability is not None else None
+        )
 
     def build_fileset(self):
         print("Building details fileset...")
@@ -132,7 +142,7 @@ class DetailsFilesetBuilder:
         print(f"Found {len(property_details_files)} property details files.")
 
         for file_name in property_details_files:
-            file = open(os.path.join("results_property_details", file_name), "r")
+            file = open(os.path.join("property_details_results", file_name), "r")
             property_details = json.load(file)
             file.close()
             property_id = file_name.split("property_details_")[-1].split(".json")[0]
@@ -146,22 +156,22 @@ class DetailsFilesetBuilder:
             self.property_details, orient="index"
         ).fillna(False)
 
-        amenities_df.to_csv("results_property_details/property_amenities_matrix.csv")
+        amenities_df.to_csv("property_details_results/property_amenities_matrix.csv")
         print(
-            "Details fileset built and saved to results_property_details/property_amenities_matrix.csv"
+            "Details fileset built and saved to property_details_results/property_amenities_matrix.csv"
         )
 
         with open(
-            "results_property_details/house_rules_details.json", "w"
+            "property_details_results/house_rules_details.json", "w"
         ) as house_rules_file:
             json.dump(self.house_rules, house_rules_file, indent=4)
 
         with open(
-            "results_property_details/property_descriptions.json", "w"
+            "property_details_results/property_descriptions.json", "w"
         ) as descriptions_file:
             json.dump(self.property_descriptions, descriptions_file, indent=4)
 
         with open(
-            "results_property_details/neighborhood_highlights.json", "w"
+            "property_details_results/neighborhood_highlights.json", "w"
         ) as highlights_file:
             json.dump(self.neighborhood_highlights, highlights_file, indent=4)
