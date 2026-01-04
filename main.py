@@ -4,23 +4,20 @@ from scraper.reviews_scraper import airbnb_scraper
 from scraper.details_scraper import airbnb_scraper as details_scraper
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
 from review_aggregator.review_aggregator import RagDescription
+from scraper.details_fileset_build import DetailsFilesetBuilder
 
 if __name__ == "__main__":
     with open("config.json", "r") as f:
         config = json.load(f)
     zipcode = config.get("zipcode", "00501")
     iso_code = config.get("iso_code", "us")
-    scrape_reviews = config.get("scrape_reviews", False)
-    scrape_details = config.get("scrape_details", False)
-    aggregate_reviews = config.get("aggregate_reviews", False)
     number_of_listings_to_process = config.get("number_of_listings_to_process", 3)
     review_threshold = config.get("review_threshold", 5)
-    aggregate_summaries = config.get("aggregate_summaries", False)
     number_of_summaries_to_process = config.get("number_of_summaries_to_process", 3)
 
     print(f"Configuration loaded: {config}")
 
-    if scrape_reviews:
+    if config.get("scrape_reviews", False):
         airbnb_scraper(
             zipcode=zipcode,
             iso_code=iso_code,
@@ -30,7 +27,7 @@ if __name__ == "__main__":
             f"Scraping reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
-    if scrape_details:
+    if config.get("scrape_details", False):
         details_scraper(
             zipcode=zipcode,
             iso_code=iso_code,
@@ -40,7 +37,12 @@ if __name__ == "__main__":
             f"Scraping details for zipcode {zipcode} in country {iso_code} completed."
         )
 
-    if aggregate_reviews:
+    if config.get("build_details", False):
+        fileset_builder = DetailsFilesetBuilder()
+        fileset_builder.build_fileset()
+        print("Building details fileset completed.")
+
+    if config.get("aggregate_reviews", False):
         rag_description = PropertyRagAggregator(
             num_listings=number_of_listings_to_process,
             review_threshold=review_threshold,
@@ -51,7 +53,7 @@ if __name__ == "__main__":
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
-    if aggregate_summaries:
+    if config.get("aggregate_summaries", False):
         rag_description = RagDescription(
             num_listings=number_of_summaries_to_process,
             review_threshold=review_threshold,

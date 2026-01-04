@@ -6,7 +6,6 @@ import os
 from scraper.airbnb_searcher import airbnb_searcher
 
 
-
 def retrieve_reviews(search_results, num_listings):
     property_ids = [listing["room_id"] for listing in search_results]
 
@@ -20,7 +19,7 @@ def retrieve_reviews(search_results, num_listings):
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for room_id in property_ids[:num_listings]:
         print(
-            f"Retrieving reviews for listing ID {id}; property {properties_scraped + 1} of {num_listings}"
+            f"Retrieving reviews for listing ID {room_id}; property {properties_scraped + 1} of {num_listings}"
         )
 
         try:
@@ -59,5 +58,5 @@ def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
     else:
         search_results = airbnb_searcher(zipcode, iso_code)
     # print(f"Search results data looks like: {search_results[:1]}")
+    print(len(search_results))
     retrieve_reviews(search_results=search_results, num_listings=num_listings)
-
