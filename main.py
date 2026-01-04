@@ -3,7 +3,7 @@ import sys
 from scraper.reviews_scraper import airbnb_scraper
 from scraper.details_scraper import airbnb_scraper as details_scraper
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
-from review_aggregator.review_aggregator import RagDescription
+from review_aggregator.review_aggregator import AreaRagAggregator
 from scraper.details_fileset_build import DetailsFilesetBuilder
 
 if __name__ == "__main__":
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         )
 
     if config.get("aggregate_summaries", False):
-        rag_description = RagDescription(
+        rag_description = AreaRagAggregator(
             num_listings=number_of_summaries_to_process,
             review_threshold=review_threshold,
             zipcode=zipcode,
