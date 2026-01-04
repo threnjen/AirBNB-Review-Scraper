@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 from typing import Union
 
 import awswrangler as wr
@@ -13,7 +12,6 @@ IS_LOCAL = False if os.environ.get("IS_LOCAL", "True").lower() == "false" else T
 S3_SCRAPER_BUCKET = f'{os.environ.get("TF_VAR_S3_SCRAPER_BUCKET")}-{os.environ.get("TF_VAR_RESOURCE_ENV")}'
 WORKING_DIR = f"data/{ENVIRONMENT}"
 
-import re
 
 
 def explode_columnar_df(df: pd.DataFrame):
@@ -98,7 +96,7 @@ def load_file_local_first(path: str = None, file_name: str = ""):
     try:
         # open from local_pile_path
         file = LocalFileHandler().load_file(file_path=load_path)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         file = S3FileHandler().load_file(file_path=load_path)
         if IS_LOCAL:
             LocalFileHandler().save_file(file_path=load_path, data=file)

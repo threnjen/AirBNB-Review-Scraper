@@ -1,7 +1,5 @@
 import json
 import pandas as pd
-import os
-import datetime
 import weaviate.classes as wvc
 
 from pydantic import BaseModel, ConfigDict
