@@ -148,10 +148,10 @@ class PropertyRagAggregator(BaseModel):
         )
         reviews = self.clean_single_item_reviews(ratings=listing_ratings)
 
-        self.weaviate_client.add_reviews_collection_batch(
+        self.weaviate_client.add_collection_batch(
             collection_name=self.collection_name,
             listing_id=listing_id,
-            reviews=reviews,
+            items=reviews,
         )
 
         summary = self.weaviate_client.generate_aggregate(
@@ -163,7 +163,7 @@ class PropertyRagAggregator(BaseModel):
         )
 
         self.weaviate_client.remove_collection_listings(
-            listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
+            listing_id=listing_id, collection_name=self.collection_name, items=reviews
         )
 
         return summary

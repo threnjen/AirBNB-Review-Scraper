@@ -19,7 +19,7 @@ class AreaRagAggregator(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
     num_overall_ids: int = 100
-    collection_name: str = "Reviews"
+    collection_name: str = "Summaries"
     overall_stats: dict = Field(default_factory=dict)
     listing_ids: list = Field(default_factory=list)
     generate_prompt: str = "None"  # consider Optional[str] = None
