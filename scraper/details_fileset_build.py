@@ -14,7 +14,7 @@ class DetailsFilesetBuilder:
         self.neighborhood_highlights = {}
 
     def get_files_list(self):
-        files = os.listdir("property_details_results")
+        files = os.listdir("property_details_scraped")
         property_details_files = [
             f
             for f in files
@@ -100,13 +100,13 @@ class DetailsFilesetBuilder:
         adr = property_details.get("ADR", None)
         self.property_details[property_id]["ADR"] = adr
 
-        occupancy_rate_based_on_available_days = property_details.get("Occupancy", None)
+        occupancy_rate_based_on_available_days = property_details.get("Occupancy", 0)
         self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
             occupancy_rate_based_on_available_days
         )
 
-        days_available = property_details.get("Days_Avail", None)
-        self.property_details[property_id]["Days_Available"] = days_available
+        days_available = property_details.get("Days_Available", 0)
+        self.property_details[property_id]["Days_Avail"] = days_available
 
         occupied_days = (
             (occupancy_rate_based_on_available_days / 100 * days_available) * 100 / 365
@@ -142,7 +142,7 @@ class DetailsFilesetBuilder:
         print(f"Found {len(property_details_files)} property details files.")
 
         for file_name in property_details_files:
-            file = open(os.path.join("property_details_results", file_name), "r")
+            file = open(os.path.join("property_details_scraped", file_name), "r")
             property_details = json.load(file)
             file.close()
             property_id = file_name.split("property_details_")[-1].split(".json")[0]
@@ -155,6 +155,8 @@ class DetailsFilesetBuilder:
         amenities_df = pd.DataFrame.from_dict(
             self.property_details, orient="index"
         ).fillna(False)
+
+        amenities_df.index.name = "property_id"
 
         amenities_df.to_csv("property_details_results/property_amenities_matrix.csv")
         print(
