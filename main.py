@@ -37,7 +37,9 @@ if __name__ == "__main__":
         )
 
     if config.get("build_details", False):
-        fileset_builder = DetailsFilesetBuilder()
+        fileset_builder = DetailsFilesetBuilder(
+            use_categoricals=config.get("dataset_use_categoricals", False)
+        )
         fileset_builder.build_fileset()
         print("Building details fileset completed.")
 
