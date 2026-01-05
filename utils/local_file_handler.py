@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 
 import pandas as pd
 import pytz
@@ -58,7 +58,7 @@ class LocalFileHandler(FileHandler):
 
     def save_xml(self, file_path: str, data: str):
         self.make_directory(Path(file_path).parent)
-        if type(data) == str:
+        if type(data) is str:
             data = bytes(data, "utf-8")
         with open(file_path, "wb") as f:
             f.write(data)

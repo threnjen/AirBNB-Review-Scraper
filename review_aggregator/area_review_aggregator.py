@@ -1,8 +1,5 @@
-import json
-from typing import ClassVar, Any
+from typing import Any
 import pandas as pd
-import os
-import datetime
 import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
 
