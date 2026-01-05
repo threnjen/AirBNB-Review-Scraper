@@ -12,7 +12,7 @@ def evaluate_quality_words_over_thresh(text: str, threshold: int = 5) -> str:
 def filter_stopwords(text: str) -> str:
     stop_words = set(stopwords.words("english"))
     word_tokens = text.split(" ")
-    filtered_sentence = [w for w in word_tokens if not w.lower() in stop_words]
+    filtered_sentence = [w for w in word_tokens if w.lower() not in stop_words]
     return " ".join(filtered_sentence)
 
 

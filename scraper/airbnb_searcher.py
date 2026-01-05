@@ -5,12 +5,12 @@ import random
 import scraper.location_calculator as location_calculator
 
 
-def airbnb_searcher(zipcode, iso_code="us"):
+def airbnb_searcher(zipcode: str, iso_code: str ="us"):
     ne_lat, sw_lat, ne_lon, sw_lon = location_calculator.locationer(
         postal_code=zipcode, iso_code=iso_code
     )
 
-    def boxed_search(ne_lat, sw_lat, ne_lon, sw_lon, dimensions=2):
+    def boxed_search(ne_lat: float, sw_lat: float, ne_lon: float, sw_lon: float, dimensions: int=2) -> list:
         boxes = []
 
         lat_step = (ne_lat - sw_lat) / dimensions
