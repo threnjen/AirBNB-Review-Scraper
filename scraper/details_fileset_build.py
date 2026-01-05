@@ -102,7 +102,7 @@ class DetailsFilesetBuilder:
                 amenity_icon = amenity.get("icon")
 
                 if self.use_categoricals:
-                    self.property_details[property_id][amenity_title] = True
+                    self.property_details[property_id][amenity_icon] = True
                 else:
                     self.property_details[property_id][amenity_icon] = amenity_title
 
@@ -132,6 +132,10 @@ class DetailsFilesetBuilder:
 
             for property_id, occupancy_details in list(properties.items()):
                 self.property_details[property_id] = {}
+
+                self.property_details[property_id]["link"] = (
+                    f"https://www.airbnb.com/rooms/{property_id}"
+                )
                 self.get_financials(
                     property_id=property_id, property_details=occupancy_details
                 )
@@ -155,6 +159,8 @@ class DetailsFilesetBuilder:
         amenities_df = pd.DataFrame.from_dict(
             self.property_details, orient="index"
         ).fillna(False)
+
+        amenities_df = amenities_df.sort_values(by="ADR", ascending=False)
 
         amenities_df.index.name = "property_id"
 
