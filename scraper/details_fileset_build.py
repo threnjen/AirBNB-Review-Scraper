@@ -5,46 +5,40 @@ from math import ceil
 
 
 class DetailsFilesetBuilder:
-    def __init__(self) -> None:
+    def __init__(self, use_categoricals: bool) -> None:
+        self.use_categoricals = use_categoricals
         self.property_details = {}
         self.house_rules = {}
         self.property_descriptions = {}
         self.neighborhood_highlights = {}
 
-    def get_files_list(self):
-        files = os.listdir("property_details_scraped")
-        property_details_files = [
-            f
-            for f in files
-            if f.startswith("property_details_") and f.endswith(".json")
-        ]
-        return property_details_files
+    def get_financials(self, property_id: str, property_details: dict):
+        adr = property_details.get("ADR", None)
+        self.property_details[property_id]["ADR"] = adr
 
-    def parse_amenity_flags(self, property_id: str, property_details: dict):
-        amenities_matrix = property_details.get("amenities", {})
+        occupancy_rate_based_on_available_days = property_details.get("Occupancy", 0)
+        self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
+            occupancy_rate_based_on_available_days
+        )
 
-        for amenity_category in amenities_matrix:
-            category_values = amenity_category.get("values", [])
+        days_available = property_details.get("Days_Available", 0)
+        self.property_details[property_id]["Days_Avail"] = days_available
 
-            for amenity in category_values:
-                amenity_title = amenity.get("title")
-                amenity_icon = amenity.get("icon")
+        occupied_days = (
+            (occupancy_rate_based_on_available_days / 100 * days_available) * 100 / 365
+            if occupancy_rate_based_on_available_days is not None
+            else None
+        )
+        self.property_details[property_id]["Abs_Occ_Rate"] = (
+            ceil(occupied_days) if occupied_days is not None else None
+        )
 
-                self.property_details[property_id][amenity_icon] = amenity_title
-
-        house_rules_section = property_details.get("house_rules", {}).get("general", [])
-        for rule_category in house_rules_section:
-            category_values = rule_category.get("values", [])
-            for rule in category_values:
-                rule_title = rule.get("title")
-                rule_icon = rule.get("icon")
-                self.property_details[property_id][rule_icon] = rule_title
-
-        highlights_section = property_details.get("highlights", [])
-        for highlight in highlights_section:
-            highlight_title = highlight.get("title")
-            highlight_icon = highlight.get("icon")
-            self.property_details[property_id][highlight_icon] = highlight_title
+        availability = (
+            (days_available / 365) * 100 if days_available is not None else None
+        )
+        self.property_details[property_id]["Avail_Rate"] = (
+            round(availability, 2) if availability is not None else None
+        )
 
     def parse_basic_details(self, property_id: str, property_details: dict):
         room_type = property_details.get("room_type", "N/A")
@@ -61,6 +55,9 @@ class DetailsFilesetBuilder:
 
         house_rules = property_details.get("house_rules", {})
         self.house_rules[property_id] = house_rules.get("aditional")
+
+        title = property_details.get("title", {})
+        self.property_details[property_id]["title"] = title
 
         sub_details = property_details.get("sub_description", {}).get("items", [])
 
@@ -94,33 +91,34 @@ class DetailsFilesetBuilder:
 
         return True
 
-    def get_financials(self, property_id: str, property_details: dict):
-        adr = property_details.get("ADR", None)
-        self.property_details[property_id]["ADR"] = adr
+    def parse_amenity_flags(self, property_id: str, property_details: dict):
+        amenities_matrix = property_details.get("amenities", {})
 
-        occupancy_rate_based_on_available_days = property_details.get("Occupancy", 0)
-        self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
-            occupancy_rate_based_on_available_days
-        )
+        for amenity_category in amenities_matrix:
+            category_values = amenity_category.get("values", [])
 
-        days_available = property_details.get("Days_Available", 0)
-        self.property_details[property_id]["Days_Avail"] = days_available
+            for amenity in category_values:
+                amenity_title = amenity.get("title")
+                amenity_icon = amenity.get("icon")
 
-        occupied_days = (
-            (occupancy_rate_based_on_available_days / 100 * days_available) * 100 / 365
-            if occupancy_rate_based_on_available_days is not None
-            else None
-        )
-        self.property_details[property_id]["Abs_Occ_Rate"] = (
-            ceil(occupied_days) if occupied_days is not None else None
-        )
+                if self.use_categoricals:
+                    self.property_details[property_id][amenity_title] = True
+                else:
+                    self.property_details[property_id][amenity_icon] = amenity_title
 
-        availability = (
-            (days_available / 365) * 100 if days_available is not None else None
-        )
-        self.property_details[property_id]["Avail_Rate"] = (
-            round(availability, 2) if availability is not None else None
-        )
+        house_rules_section = property_details.get("house_rules", {}).get("general", [])
+        for rule_category in house_rules_section:
+            category_values = rule_category.get("values", [])
+            for rule in category_values:
+                rule_title = rule.get("title")
+                rule_icon = rule.get("icon")
+                self.property_details[property_id][rule_icon] = rule_title
+
+        highlights_section = property_details.get("highlights", [])
+        for highlight in highlights_section:
+            highlight_title = highlight.get("title")
+            highlight_icon = highlight.get("icon")
+            self.property_details[property_id][highlight_icon] = highlight_title
 
     def build_fileset(self):
         print("Building details fileset...")
@@ -130,25 +128,29 @@ class DetailsFilesetBuilder:
             with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
                 properties = json.load(f)
 
-            for property_id, property_details in properties.items():
+            print(f"Found {len(properties)} property details files.")
+
+            for property_id, occupancy_details in list(properties.items()):
                 self.property_details[property_id] = {}
                 self.get_financials(
-                    property_id=property_id, property_details=property_details
+                    property_id=property_id, property_details=occupancy_details
                 )
 
-        property_details_files = self.get_files_list()
-        print(f"Found {len(property_details_files)} property details files.")
+                file_name = f"property_details_{property_id}.json"
+                file = open(os.path.join("property_details_scraped", file_name), "r")
+                property_details = json.load(file)
+                file.close()
 
-        for file_name in property_details_files:
-            file = open(os.path.join("property_details_scraped", file_name), "r")
-            property_details = json.load(file)
-            file.close()
-            property_id = file_name.split("property_details_")[-1].split(".json")[0]
+                if not self.parse_basic_details(property_id, property_details):
+                    continue
 
-            if not self.parse_basic_details(property_id, property_details):
-                continue
+                self.parse_amenity_flags(property_id, property_details)
 
-            self.parse_amenity_flags(property_id, property_details)
+        else:
+            print(
+                "No custom_listing_ids.json file found. Please build a data fileset first."
+            )
+            return
 
         amenities_df = pd.DataFrame.from_dict(
             self.property_details, orient="index"

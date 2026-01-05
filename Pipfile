@@ -18,6 +18,11 @@ awswrangler = "*"
 pgeocode = "*"
 pyairbnb = "*"
 ruff = "*"
+xgboost = "*"
+scikit-learn = "*"
+statsmodels = "*"
+matplotlib = "*"
+seaborn = "*"
 
 [dev-packages]
 black = "*"
