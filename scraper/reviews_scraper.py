@@ -17,7 +17,6 @@ def retrieve_reviews(zipcode, search_results, num_listings):
     # logger.info(property_ids)
     logger.info(f"There are {len(property_ids)} listings in the area")
 
-    review_results = {}
     total_reviews = 0
     properties_scraped = 0
 
@@ -44,7 +43,7 @@ def retrieve_reviews(zipcode, search_results, num_listings):
                     }
                 )
 
-            review_results[id] = single_property_formatted_reviews
+            review_results = {id: single_property_formatted_reviews}
 
             logger.info(
                 f"I scraped {len(single_property_formatted_reviews)} reviews for this listing"
@@ -53,7 +52,11 @@ def retrieve_reviews(zipcode, search_results, num_listings):
             properties_scraped += 1
 
             # Save the reviews data to a JSON file
-            with open(f"results/reviews_{zipcode}.json", "w", encoding="utf-8") as f:
+            with open(
+                f"property_reviews_scraped/reviews_{zipcode}_{id}.json",
+                "w",
+                encoding="utf-8",
+            ) as f:
                 f.write(
                     json.dumps(review_results, ensure_ascii=False)
                 )  # Extract reviews and save them to a file
@@ -70,14 +73,32 @@ def retrieve_reviews(zipcode, search_results, num_listings):
     logger.info(f"I scraped a total of {total_reviews} reviews across all listings")
 
 
-def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
-    if os.path.isfile("custom_listing_ids.json"):
-        with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
+def airbnb_scraper(
+    zipcode="97067",
+    iso_code="us",
+    num_listings=3,
+    use_custom_listings_file=False,
+    custom_filepath="custom_listings.json",
+):
+    """Main function to scrape Airbnb reviews based on zipcode and number of listings."""
+
+    if use_custom_listings_file and os.path.isfile(custom_filepath):
+        with open(custom_filepath, "r", encoding="utf-8") as f:
             property_ids = json.load(f).keys()
         # logger.info(f"Using {len(property_ids)} custom listing IDs from custom_listing_ids.json")
         search_results = []
         for room_id in property_ids:
             search_results.append({"room_id": room_id})
+    elif os.path.isfile(f"property_search_results/search_results_{zipcode}.json"):
+        with open(
+            f"property_search_results/search_results_{zipcode}.json",
+            "r",
+            encoding="utf-8",
+        ) as f:
+            search_results = json.load(f)
+        logger.info(
+            f"Loaded {len(search_results)} listings from existing search results file."
+        )
     else:
         search_results = airbnb_searcher(zipcode, iso_code)
     # logger.info(f"Search results data looks like: {search_results[:1]}")

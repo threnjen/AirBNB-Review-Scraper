@@ -217,20 +217,22 @@ class PropertyRagAggregator(BaseModel):
             del generated_summaries[empty_id]
 
         save_json_file(
-            filename=f"results/generated_summaries_{self.zipcode}.json",
+            filename=f"property_details_results/generated_summaries_{self.zipcode}.json",
             data=generated_summaries,
         )
         return generated_summaries
 
     def rag_description_generation_chain(self):
         # Load reviews along with any existing aggregated summaries to determine what still needs processing
-        reviews = load_json_file(filename=f"results/reviews_{self.zipcode}.json")
+        reviews = load_json_file(
+            filename=f"property_details_scraped/reviews_{self.zipcode}.json"
+        )
         logger.info(f"Total reviews loaded: {len(reviews)}")
 
         self.overall_mean = self.get_overall_mean_rating(reviews=reviews)
 
         generated_summaries = load_json_file(
-            filename=f"results/generated_summaries_{self.zipcode}.json"
+            filename=f"property_details_results/generated_summaries_{self.zipcode}.json"
         )
         logger.info(f"Already processed reviews loaded: {len(generated_summaries)}")
 
@@ -261,7 +263,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"results/generated_summaries_{self.zipcode}.json",
+                filename=f"property_details_results/generated_summaries_{self.zipcode}.json",
                 data=generated_summaries,
             )
 
@@ -283,7 +285,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"results/generated_summaries_{self.zipcode}.json",
+                filename=f"property_details_results/generated_summaries_{self.zipcode}.json",
                 data=generated_summaries,
             )
         logger.info("RAG description generation chain completed.")
