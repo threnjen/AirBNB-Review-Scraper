@@ -2,6 +2,11 @@ import json
 import os
 import pandas as pd
 from math import ceil
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
 
 
 class DetailsFilesetBuilder:
@@ -44,7 +49,9 @@ class DetailsFilesetBuilder:
         room_type = property_details.get("room_type", "N/A")
 
         if not room_type == "Entire home/apt":
-            print(f"Skipping property {property_id} as it is not an entire home/apt")
+            logger.info(
+                f"Skipping property {property_id} as it is not an entire home/apt"
+            )
             return False
 
         person_capacity = property_details.get("person_capacity", 0)
@@ -87,7 +94,7 @@ class DetailsFilesetBuilder:
         self.property_descriptions[property_id] = description
 
         # host_details = property_details.get("host_details", {})
-        # print(host_details)
+        # logger.info(host_details)
 
         return True
 
@@ -121,14 +128,14 @@ class DetailsFilesetBuilder:
             self.property_details[property_id][highlight_icon] = highlight_title
 
     def build_fileset(self):
-        print("Building details fileset...")
+        logger.info("Building details fileset...")
         # Placeholder for actual implementation
 
         if os.path.isfile("custom_listing_ids.json"):
             with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
                 properties = json.load(f)
 
-            print(f"Found {len(properties)} property details files.")
+            logger.info(f"Found {len(properties)} property details files.")
 
             for property_id, occupancy_details in list(properties.items()):
                 self.property_details[property_id] = {}
@@ -151,7 +158,7 @@ class DetailsFilesetBuilder:
                 self.parse_amenity_flags(property_id, property_details)
 
         else:
-            print(
+            logger.info(
                 "No custom_listing_ids.json file found. Please build a data fileset first."
             )
             return
@@ -165,7 +172,7 @@ class DetailsFilesetBuilder:
         amenities_df.index.name = "property_id"
 
         amenities_df.to_csv("property_details_results/property_amenities_matrix.csv")
-        print(
+        logger.info(
             "Details fileset built and saved to property_details_results/property_amenities_matrix.csv"
         )
 

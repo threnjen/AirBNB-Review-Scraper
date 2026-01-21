@@ -6,6 +6,11 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from utils.tiny_file_handler import load_json_file, save_json_file
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
 
 
 class CacheManager(BaseModel):
@@ -90,11 +95,11 @@ class CacheManager(BaseModel):
                 os.remove(cache_file)
                 return None
 
-            print(f"Cache hit for listing {listing_id}")
+            logger.info(f"Cache hit for listing {listing_id}")
             return cache_data.get("summary")
 
         except Exception as e:
-            print(f"Error reading cache for listing {listing_id}: {str(e)}")
+            logger.info(f"Error reading cache for listing {listing_id}: {str(e)}")
             return None
 
     def cache_summary(
@@ -122,11 +127,11 @@ class CacheManager(BaseModel):
             }
 
             save_json_file(cache_file, cache_data)
-            print(f"Cached summary for listing {listing_id}")
+            logger.info(f"Cached summary for listing {listing_id}")
             return True
 
         except Exception as e:
-            print(f"Error caching summary for listing {listing_id}: {str(e)}")
+            logger.info(f"Error caching summary for listing {listing_id}: {str(e)}")
             return False
 
     def get_cache_stats(self) -> Dict[str, Any]:
@@ -190,11 +195,11 @@ class CacheManager(BaseModel):
                     except Exception:
                         pass
 
-            print(f"Removed {removed_count} expired cache files")
+            logger.info(f"Removed {removed_count} expired cache files")
             return removed_count
 
         except Exception as e:
-            print(f"Error clearing expired cache: {str(e)}")
+            logger.info(f"Error clearing expired cache: {str(e)}")
             return 0
 
     def clear_all_cache(self) -> int:
@@ -213,9 +218,9 @@ class CacheManager(BaseModel):
                 except Exception:
                     pass
 
-            print(f"Removed {removed_count} cache files")
+            logger.info(f"Removed {removed_count} cache files")
             return removed_count
 
         except Exception as e:
-            print(f"Error clearing all cache: {str(e)}")
+            logger.info(f"Error clearing all cache: {str(e)}")
             return 0

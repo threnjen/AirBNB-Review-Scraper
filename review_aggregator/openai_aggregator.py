@@ -8,6 +8,12 @@ from utils.tiny_file_handler import load_json_file
 from utils.cache_manager import CacheManager
 from utils.cost_tracker import CostTracker
 
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
+
 
 class OpenAIAggregator(BaseModel):
     """
@@ -125,14 +131,14 @@ class OpenAIAggregator(BaseModel):
                 return response.choices[0].message.content.strip()
 
             except Exception as e:
-                print(
+                logger.info(
                     f"OpenAI API error for listing {listing_id} (attempt {attempt + 1}): {str(e)}"
                 )
 
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (2**attempt))  # Exponential backoff
                 else:
-                    print(
+                    logger.info(
                         f"Failed to process listing {listing_id} after {self.max_retries} attempts"
                     )
                     return None
@@ -175,10 +181,10 @@ Unified Analysis:"""
         Handles chunking for large review sets, caching, and cost tracking.
         """
         if not reviews:
-            print(f"No reviews provided for listing {listing_id}")
+            logger.info(f"No reviews provided for listing {listing_id}")
             return None
 
-        print(f"Processing {len(reviews)} reviews for listing {listing_id}")
+        logger.info(f"Processing {len(reviews)} reviews for listing {listing_id}")
 
         # Check cache first
         cached_summary = self.cache_manager.get_cached_summary(
@@ -219,7 +225,7 @@ Unified Analysis:"""
             )
         else:
             # Need to chunk reviews
-            print(
+            logger.info(
                 f"Large review set detected ({total_tokens} tokens), chunking into smaller pieces"
             )
             chunks = self.chunk_reviews(reviews, prompt)
@@ -247,15 +253,17 @@ Unified Analysis:"""
                 if chunk_summary:
                     chunk_summaries.append(chunk_summary)
                 else:
-                    print(f"Failed to process chunk {i + 1} for listing {listing_id}")
+                    logger.info(
+                        f"Failed to process chunk {i + 1} for listing {listing_id}"
+                    )
 
             if not chunk_summaries:
-                print(f"No successful chunk processing for listing {listing_id}")
+                logger.info(f"No successful chunk processing for listing {listing_id}")
                 return None
 
             # Merge chunk summaries if we have multiple
             if len(chunk_summaries) > 1:
-                print(
+                logger.info(
                     f"Merging {len(chunk_summaries)} chunk summaries for listing {listing_id}"
                 )
                 summary = self.merge_chunk_summaries(

@@ -36,10 +36,10 @@ class WeaviateClient(BaseModel):
                     1200,
                 ),
             )
-            # print("Connected to Weaviate instance on Fargate ECS")
+            # logger.info("Connected to Weaviate instance on Fargate ECS")
             return client
 
-        # print("Connected to Weaviate instance on local machine")
+        # logger.info("Connected to Weaviate instance on local machine")
         return weaviate.connect_to_local(
             port=8080,
             grpc_port=50051,
@@ -54,10 +54,10 @@ class WeaviateClient(BaseModel):
     def check_collection_exists(self, collection_name: str, reset: bool = True) -> bool:
         weaviate_client = self.connect_weaviate_client()
         if weaviate_client.collections.exists(collection_name):
-            print(f"Collection {collection_name} already exists for this block")
+            logger.info(f"Collection {collection_name} already exists for this block")
             if reset:
                 weaviate_client.collections.delete(collection_name)
-                print(f"Deleted and recreating collection {collection_name}")
+                logger.info(f"Deleted and recreating collection {collection_name}")
                 weaviate_client.close()
                 return False
             weaviate_client.close()
@@ -113,7 +113,7 @@ class WeaviateClient(BaseModel):
                 uuid = generate_uuid5(obj)
                 result = batch.add_object(properties=obj, uuid=uuid)
                 if "error" in result:
-                    print(f"Failed to insert {uuid}: {result['error']}")
+                    logger.info(f"Failed to insert {uuid}: {result['error']}")
 
         weaviate_client.close()
 
@@ -146,7 +146,7 @@ class WeaviateClient(BaseModel):
         filter_field: str,
         return_properties: list[str] = [],
     ) -> str:
-        print(f"Generating aggregate for item {id}")
+        logger.info(f"Generating aggregate for item {id}")
 
         weaviate_client = self.connect_weaviate_client()
 
@@ -158,7 +158,7 @@ class WeaviateClient(BaseModel):
                 )
             )
         except Exception as e:
-            print(f"Failed to get collection '{collection_name}': {e}")
+            logger.info(f"Failed to get collection '{collection_name}': {e}")
             weaviate_client.close()
             return ""
 
@@ -169,24 +169,24 @@ class WeaviateClient(BaseModel):
                 grouped_task=generate_prompt,
                 limit=1000,
             )
-            print(f"Aggregate is {aggregate} of type {type(aggregate)}")
+            logger.info(f"Aggregate is {aggregate} of type {type(aggregate)}")
 
             if not aggregate.objects:
-                print("No objects found for this id.")
+                logger.info("No objects found for this id.")
                 weaviate_client.close()
                 return ""
 
             if not getattr(aggregate, "generated", None):
-                print("No aggregate was generated.")
+                logger.info("No aggregate was generated.")
                 weaviate_client.close()
                 return ""
 
-            print(f"Generated aggregate for item {id}: {aggregate.generated}")
+            logger.info(f"Generated aggregate for item {id}: {aggregate.generated}")
 
             weaviate_client.close()
 
             return aggregate.generated
         except Exception as e:
-            print(f"Error during generate.fetch_objects(): {e}")
+            logger.info(f"Error during generate.fetch_objects(): {e}")
             weaviate_client.close()
             return ""

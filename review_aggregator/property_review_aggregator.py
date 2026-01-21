@@ -1,12 +1,20 @@
 from typing import Any
 import pandas as pd
-import weaviate.classes as wvc
+
+# import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from review_aggregator.weaviate_client import WeaviateClientfrom review_aggregator.openai_aggregator import OpenAIAggregator
+# from review_aggregator.weaviate_client import WeaviateClient
+from review_aggregator.openai_aggregator import OpenAIAggregator
 # from utils.nlp_functions import filter_stopwords
+
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
 
 
 class PropertyRagAggregator(BaseModel):
@@ -84,7 +92,7 @@ class PropertyRagAggregator(BaseModel):
             )
         overall_mean /= len(reviews)
         overall_mean = round(overall_mean, 4)
-        # print(f"The overall mean rating is {overall_mean}")
+        # logger.info(f"The overall mean rating is {overall_mean}")
         return overall_mean
 
     def prompt_replacement(
@@ -114,7 +122,7 @@ class PropertyRagAggregator(BaseModel):
         return df["combined_review"].to_list()
 
     def process_single_listing(self, reviews, listing_id):
-        print(
+        logger.info(
             f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.number_of_listings_to_process}"
         )
 
@@ -131,7 +139,7 @@ class PropertyRagAggregator(BaseModel):
             or len(listing_ratings) == 0
             or len(listing_ratings) < self.review_threshold
         ):
-            print(
+            logger.info(
                 f"No ratings found for listing {listing_id} or number under threshold; skipping."
             )
             return
@@ -165,9 +173,7 @@ class PropertyRagAggregator(BaseModel):
 
         # Generate summary using OpenAI aggregator
         summary = self.openai_aggregator.generate_summary(
-            reviews=reviews,
-            prompt=updated_prompt,
-            listing_id=listing_id
+            reviews=reviews, prompt=updated_prompt, listing_id=listing_id
         )
 
         return summary
@@ -177,13 +183,13 @@ class PropertyRagAggregator(BaseModel):
     ) -> dict:
         already_processed_reviews_ids = list(already_processed_reviews.keys())
 
-        print(f"Already aggregated ids: {len(already_processed_reviews_ids)}")
+        logger.info(f"Already aggregated ids: {len(already_processed_reviews_ids)}")
 
         unprocessed_reviews = {
             x: y for x, y in reviews.items() if x not in already_processed_reviews_ids
         }
 
-        print(f"Reviews to process after filtering: {len(unprocessed_reviews)}")
+        logger.info(f"Reviews to process after filtering: {len(unprocessed_reviews)}")
 
         return unprocessed_reviews
 
@@ -193,7 +199,7 @@ class PropertyRagAggregator(BaseModel):
             if "?" in value:
                 incomplete_keys.append(key)
 
-        print(f"Listings needing more processing: {len(incomplete_keys)}")
+        logger.info(f"Listings needing more processing: {len(incomplete_keys)}")
         return incomplete_keys
 
     def get_empty_aggregated_reviews(self, generated_summaries) -> list[str]:
@@ -219,25 +225,25 @@ class PropertyRagAggregator(BaseModel):
     def rag_description_generation_chain(self):
         # Load reviews along with any existing aggregated summaries to determine what still needs processing
         reviews = load_json_file(filename=f"results/reviews_{self.zipcode}.json")
-        print(f"Total reviews loaded: {len(reviews)}")
+        logger.info(f"Total reviews loaded: {len(reviews)}")
 
         self.overall_mean = self.get_overall_mean_rating(reviews=reviews)
 
         generated_summaries = load_json_file(
             filename=f"results/generated_summaries_{self.zipcode}.json"
         )
-        print(f"Already processed reviews loaded: {len(generated_summaries)}")
+        logger.info(f"Already processed reviews loaded: {len(generated_summaries)}")
 
         unprocessed_reviews = self.filter_out_processed_reviews(
             reviews=reviews, already_processed_reviews=generated_summaries
         )
 
         if not unprocessed_reviews:
-            print("No unprocessed reviews found; exiting.")
+            logger.info("No unprocessed reviews found; exiting.")
             return
 
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
-        print(f"Number of reviews to aggregate: {len(unprocessed_reviews_ids)}")
+        logger.info(f"Number of reviews to aggregate: {len(unprocessed_reviews_ids)}")
 
         self.number_of_listings_to_process = (
             self.adjust_list_length_upper_bound_for_config(
@@ -268,7 +274,7 @@ class PropertyRagAggregator(BaseModel):
         )
 
         for listing_id in self.review_ids_need_more_processing:
-            print(listing_id)
+            logger.info(listing_id)
             generated_summaries[listing_id] = self.process_single_listing(
                 reviews=reviews,
                 listing_id=listing_id,
@@ -280,17 +286,19 @@ class PropertyRagAggregator(BaseModel):
                 filename=f"results/generated_summaries_{self.zipcode}.json",
                 data=generated_summaries,
             )
-        print("RAG description generation chain completed.")
-        
-        # Print cost summary and log session
-        self.openai_aggregator.cost_tracker.print_session_summary()
+        logger.info("RAG description generation chain completed.")
+
+        # logger.info cost summary and log session
+        self.openai_aggregator.cost_tracker.logger.info_session_summary()
         self.openai_aggregator.cost_tracker.log_session()
-        
-        # Print cache statistics
+
+        # logger.info cache statistics
         cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
         if cache_stats.get("enabled"):
-            print(f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired")
-            
+            logger.info(
+                f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
+            )
+
         # Clean up expired cache
         if cache_stats.get("expired_cache", 0) > 0:
             self.openai_aggregator.cache_manager.clear_expired_cache()
