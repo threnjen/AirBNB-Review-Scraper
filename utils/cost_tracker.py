@@ -241,7 +241,6 @@ class CostTracker(BaseModel):
         logger.info("=" * 50)
         logger.info(f"Session Duration: {summary['session_duration_minutes']} minutes")
         logger.info(f"Model: {self.model}")
-        logger.info()
 
         logger.info("API USAGE:")
         logger.info(f"  Total Requests: {summary['total_requests']}")
@@ -250,7 +249,6 @@ class CostTracker(BaseModel):
         logger.info(
             f"  Cache Hits: {summary['cache_hits']} ({summary['cache_hit_rate']}%)"
         )
-        logger.info()
 
         logger.info("PROCESSING:")
         logger.info(f"  Unique Listings: {summary['unique_listings']}")
@@ -258,13 +256,11 @@ class CostTracker(BaseModel):
         logger.info(
             f"  Est. Cost per 100 Listings: ${summary['estimated_cost_per_100_listings']}"
         )
-        logger.info()
 
         logger.info("TOKEN USAGE:")
         logger.info(f"  Input Tokens: {summary['total_input_tokens']:,}")
         logger.info(f"  Output Tokens: {summary['total_output_tokens']:,}")
         logger.info(f"  Total Tokens: {summary['total_tokens']:,}")
-        logger.info()
 
         logger.info("COSTS:")
         logger.info(f"  Total Session Cost: ${summary['total_cost']}")
