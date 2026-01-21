@@ -290,29 +290,29 @@ class PropertyRagAggregator(BaseModel):
         # Second pass: Remove any listings that resulted in empty summaries
         generated_summaries = self.remove_empty_reviews(generated_summaries)
 
-        return
         # Third pass: Re-process any listings that resulted in incomplete summaries where the model indicated uncertainty
         self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
             generated_summaries
         )
+        print(self.review_ids_need_more_processing)
 
         for listing_id in self.review_ids_need_more_processing:
             logger.info(listing_id)
             generated_summaries[listing_id] = self.process_single_listing(
-                reviews=reviews,
+                one_property_reviews=reviews[listing_id],
                 listing_id=listing_id,
             )
 
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"property_generated_summaries/generated_summaries_{self.zipcode}.json",
-                data=generated_summaries,
+                filename=f"property_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
+                data={listing_id: generated_summaries[listing_id]},
             )
         logger.info("RAG description generation chain completed.")
 
         # logger.info cost summary and log session
-        self.openai_aggregator.cost_tracker.logger.info_session_summary()
+        self.openai_aggregator.cost_tracker.print_session_summary()
         self.openai_aggregator.cost_tracker.log_session()
 
         # logger.info cache statistics
