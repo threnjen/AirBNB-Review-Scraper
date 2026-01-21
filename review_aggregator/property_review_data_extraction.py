@@ -6,9 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from review_aggregator.weaviate_client import WeaviateClient
 
 
-
 class PropertyDataExtraction(BaseModel):
-    review_threshold: int = 5
+    review_thresh_to_include_prop: int = 5
     num_listings: int = 3
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
@@ -19,7 +18,7 @@ class PropertyDataExtraction(BaseModel):
     generate_prompt: str = "None"  # consider Optional[str] = None
     zipcode: str = "00501"
     overall_mean: float = 0.0
-    number_of_listings_to_process: int = 0
+    num_listings_to_process: int = 0
     empty_aggregated_reviews: list = Field(default_factory=list)
     review_ids_need_more_processing: list = Field(default_factory=list)
     weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
