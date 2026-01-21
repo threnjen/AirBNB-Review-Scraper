@@ -1,5 +1,6 @@
 from typing import Any
 import pandas as pd
+import os
 
 # import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
@@ -19,17 +20,16 @@ logger = logging.getLogger(__name__)
 
 class PropertyRagAggregator(BaseModel):
     review_thresh_to_include_prop: int = 5
-    num_listings: int = 3
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
     num_overall_ids: int = 100
-    collection_name: str = "Reviews"
+    # collection_name: str = "Reviews"
     overall_stats: dict = Field(default_factory=dict)
     listing_ids: list = Field(default_factory=list)
     generate_prompt: str = "None"  # consider Optional[str] = None
     zipcode: str = "00501"
     overall_mean: float = 0.0
-    num_listings_to_process: int = 0
+    num_listings_to_summarize: int = 0
     empty_aggregated_reviews: list = Field(default_factory=list)
     review_ids_need_more_processing: list = Field(default_factory=list)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
@@ -58,41 +58,39 @@ class PropertyRagAggregator(BaseModel):
     ) -> int:
         # placeholder function to count the number of listing ids.
         total_listings = len(unprocessed_reviews)
-        if self.num_listings < total_listings:
-            num_listings_to_process = self.num_listings
+        if self.num_listings_to_summarize < total_listings:
+            num_listings_to_summarize = self.num_listings_to_summarize
         else:
-            num_listings_to_process = total_listings
+            num_listings_to_summarize = total_listings
 
-        return num_listings_to_process
+        return num_listings_to_summarize
 
-    def get_listing_ratings_and_reviews(self, reviews: dict, listing_id: str) -> list:
-        listing_ratings_and_reviews = reviews.get(listing_id)
-        return listing_ratings_and_reviews
-
-    def get_listing_id_mean_rating(self, reviews, listing_id) -> float:
+    def get_listing_id_mean_rating(self, one_property_reviews) -> float:
         mean_rating = 0
-        listing_data = self.get_listing_ratings_and_reviews(reviews, listing_id)
-        for review in listing_data:
+        for review in one_property_reviews:
             if review.get("rating") is None:
                 pass
             else:
                 mean_rating += review.get("rating")
-        if len(listing_data) > 0:
-            mean_rating /= len(listing_data)
+        if len(one_property_reviews) > 0:
+            mean_rating /= len(one_property_reviews)
             mean_rating = round(mean_rating, 4)
         else:
             mean_rating = 0
+        # logger.info(f"Calculated mean for listing {listing_id}: {mean_rating}")
         return mean_rating
 
     def get_overall_mean_rating(self, reviews: dict) -> float:
         overall_mean = 0
         for listing_id in reviews:
             overall_mean += self.get_listing_id_mean_rating(
-                reviews=reviews, listing_id=listing_id
+                one_property_reviews=reviews[listing_id]
             )
+
         overall_mean /= len(reviews)
         overall_mean = round(overall_mean, 4)
         # logger.info(f"The overall mean rating is {overall_mean}")
+        logger.info(f"Calculated overall mean: {overall_mean}")
         return overall_mean
 
     def prompt_replacement(
@@ -121,37 +119,34 @@ class PropertyRagAggregator(BaseModel):
 
         return df["combined_review"].to_list()
 
-    def process_single_listing(self, reviews, listing_id):
+    def process_single_listing(self, one_property_reviews, listing_id):
         logger.info(
-            f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.num_listings_to_process}"
+            f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.num_listings_to_summarize}"
         )
 
         listing_mean_rating = self.get_listing_id_mean_rating(
-            listing_id=listing_id, reviews=reviews
+            one_property_reviews=one_property_reviews
         )
-
-        listing_ratings = self.get_listing_ratings_and_reviews(
-            listing_id=listing_id, reviews=reviews
-        )
+        logger.info(f"Listing {listing_id} mean rating: {listing_mean_rating}")
 
         if (
-            listing_ratings is None
-            or len(listing_ratings) == 0
-            or len(listing_ratings) < self.review_thresh_to_include_prop
+            one_property_reviews is None
+            or len(one_property_reviews) == 0
+            or len(one_property_reviews) < self.review_thresh_to_include_prop
         ):
             logger.info(
-                f"No ratings found for listing {listing_id} or number under threshold; skipping."
+                f"No reviews found for listing {listing_id} or number under threshold; skipping."
             )
             return
 
-        generated_prompt = load_json_file("prompt.json")["prompt"]
+        generated_prompt = load_json_file("prompts/prompt.json")["prompt"]
 
         updated_prompt = self.prompt_replacement(
             current_prompt=generated_prompt,
             listing_mean=str(listing_mean_rating),
             overall_mean=str(self.overall_mean),
         )
-        reviews = self.clean_single_item_reviews(ratings=listing_ratings)
+        reviews = self.clean_single_item_reviews(ratings=one_property_reviews)
 
         # self.weaviate_client.add_collection_batch(
         #     collection_name=self.collection_name,
@@ -215,26 +210,46 @@ class PropertyRagAggregator(BaseModel):
         )
         for empty_id in empty_aggregated_reviews:
             del generated_summaries[empty_id]
+            os.remove(
+                f"property_generated_summaries/generated_summaries_{self.zipcode}_{empty_id}.json"
+            )
 
-        save_json_file(
-            filename=f"property_details_results/generated_summaries_{self.zipcode}.json",
-            data=generated_summaries,
-        )
         return generated_summaries
 
     def rag_description_generation_chain(self):
         # Load reviews along with any existing aggregated summaries to determine what still needs processing
-        reviews = load_json_file(
-            filename=f"property_details_scraped/reviews_{self.zipcode}.json"
-        )
-        logger.info(f"Total reviews loaded: {len(reviews)}")
+
+        reviews = {}
+        generated_summaries = {}
+
+        review_files = [
+            x
+            for x in os.listdir("property_reviews_scraped/")
+            if x.startswith("reviews_")
+        ]
+
+        for file in review_files:
+            one_property = load_json_file(filename=f"property_reviews_scraped/{file}")
+            reviews.update(one_property)
+        logger.info(f"Total property loaded: {len(reviews)}")
+
+        generated_summaries_files = [
+            x
+            for x in os.listdir("property_generated_summaries/")
+            if x.startswith("generated_summaries_")
+        ]
+        logger.info(f"Generated summaries files found: {generated_summaries_files}")
+
+        for file in generated_summaries_files:
+            logger.info(f"Using generated summaries file: {file}")
+            one_property = load_json_file(
+                filename=f"property_generated_summaries/{file}"
+            )
+            generated_summaries.update(one_property)
+
+        logger.info(f"Already processed reviews loaded: {len(generated_summaries)}")
 
         self.overall_mean = self.get_overall_mean_rating(reviews=reviews)
-
-        generated_summaries = load_json_file(
-            filename=f"property_details_results/generated_summaries_{self.zipcode}.json"
-        )
-        logger.info(f"Already processed reviews loaded: {len(generated_summaries)}")
 
         unprocessed_reviews = self.filter_out_processed_reviews(
             reviews=reviews, already_processed_reviews=generated_summaries
@@ -247,27 +262,35 @@ class PropertyRagAggregator(BaseModel):
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
         logger.info(f"Number of reviews to aggregate: {len(unprocessed_reviews_ids)}")
 
-        self.num_listings_to_process = self.adjust_list_length_upper_bound_for_config(
-            unprocessed_reviews=unprocessed_reviews
+        self.num_listings_to_summarize = self.adjust_list_length_upper_bound_for_config(
+            unprocessed_reviews=unprocessed_reviews,
+        )
+        logger.info(
+            f"Number of listings to summarize in this run: {self.num_listings_to_summarize}"
         )
 
+        start_index = len(generated_summaries)
+        end_index = start_index + self.num_listings_to_summarize
+
         # First pass: process each unprocessed listing up to the configured limit
-        for listing_id in unprocessed_reviews_ids[: self.num_listings_to_process]:
+        for listing_id in unprocessed_reviews_ids[start_index:end_index]:
             generated_summaries[listing_id] = self.process_single_listing(
-                reviews=unprocessed_reviews,
+                one_property_reviews=unprocessed_reviews[listing_id],
                 listing_id=listing_id,
             )
 
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"property_details_results/generated_summaries_{self.zipcode}.json",
-                data=generated_summaries,
+                filename=f"property_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
+                data={listing_id: generated_summaries[listing_id]},
             )
+        logger.info("First pass of RAG description generation chain completed.")
 
         # Second pass: Remove any listings that resulted in empty summaries
         generated_summaries = self.remove_empty_reviews(generated_summaries)
 
+        return
         # Third pass: Re-process any listings that resulted in incomplete summaries where the model indicated uncertainty
         self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
             generated_summaries
@@ -283,7 +306,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"property_details_results/generated_summaries_{self.zipcode}.json",
+                filename=f"property_generated_summaries/generated_summaries_{self.zipcode}.json",
                 data=generated_summaries,
             )
         logger.info("RAG description generation chain completed.")
