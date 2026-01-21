@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class PropertyRagAggregator(BaseModel):
-    review_threshold: int = 5
+    review_thresh_to_include_prop: int = 5
     num_listings: int = 3
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
@@ -29,7 +29,7 @@ class PropertyRagAggregator(BaseModel):
     generate_prompt: str = "None"  # consider Optional[str] = None
     zipcode: str = "00501"
     overall_mean: float = 0.0
-    number_of_listings_to_process: int = 0
+    num_listings_to_process: int = 0
     empty_aggregated_reviews: list = Field(default_factory=list)
     review_ids_need_more_processing: list = Field(default_factory=list)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
@@ -59,11 +59,11 @@ class PropertyRagAggregator(BaseModel):
         # placeholder function to count the number of listing ids.
         total_listings = len(unprocessed_reviews)
         if self.num_listings < total_listings:
-            number_of_listings_to_process = self.num_listings
+            num_listings_to_process = self.num_listings
         else:
-            number_of_listings_to_process = total_listings
+            num_listings_to_process = total_listings
 
-        return number_of_listings_to_process
+        return num_listings_to_process
 
     def get_listing_ratings_and_reviews(self, reviews: dict, listing_id: str) -> list:
         listing_ratings_and_reviews = reviews.get(listing_id)
@@ -123,7 +123,7 @@ class PropertyRagAggregator(BaseModel):
 
     def process_single_listing(self, reviews, listing_id):
         logger.info(
-            f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.number_of_listings_to_process}"
+            f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.num_listings_to_process}"
         )
 
         listing_mean_rating = self.get_listing_id_mean_rating(
@@ -137,7 +137,7 @@ class PropertyRagAggregator(BaseModel):
         if (
             listing_ratings is None
             or len(listing_ratings) == 0
-            or len(listing_ratings) < self.review_threshold
+            or len(listing_ratings) < self.review_thresh_to_include_prop
         ):
             logger.info(
                 f"No ratings found for listing {listing_id} or number under threshold; skipping."
@@ -247,14 +247,12 @@ class PropertyRagAggregator(BaseModel):
         unprocessed_reviews_ids = list(unprocessed_reviews.keys())
         logger.info(f"Number of reviews to aggregate: {len(unprocessed_reviews_ids)}")
 
-        self.number_of_listings_to_process = (
-            self.adjust_list_length_upper_bound_for_config(
-                unprocessed_reviews=unprocessed_reviews
-            )
+        self.num_listings_to_process = self.adjust_list_length_upper_bound_for_config(
+            unprocessed_reviews=unprocessed_reviews
         )
 
         # First pass: process each unprocessed listing up to the configured limit
-        for listing_id in unprocessed_reviews_ids[: self.number_of_listings_to_process]:
+        for listing_id in unprocessed_reviews_ids[: self.num_listings_to_process]:
             generated_summaries[listing_id] = self.process_single_listing(
                 reviews=unprocessed_reviews,
                 listing_id=listing_id,

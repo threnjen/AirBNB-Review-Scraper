@@ -2,8 +2,6 @@ import pyairbnb
 import json
 import time
 import random
-import os
-from scraper.airbnb_searcher import airbnb_searcher
 import logging
 import sys
 
@@ -11,7 +9,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-def retrieve_details(search_results, num_listings):
+def scrape_details(search_results, num_listings):
     property_ids = [listing["room_id"] for listing in search_results]
 
     # logger.info(property_ids)
@@ -35,7 +33,7 @@ def retrieve_details(search_results, num_listings):
 
             # Save the details data to a JSON file
             with open(
-                f"property_details_results/property_details_{room_id}.json",
+                f"property_details_scraped/property_details_{room_id}.json",
                 "w",
                 encoding="utf-8",
             ) as f:
@@ -54,18 +52,3 @@ def retrieve_details(search_results, num_listings):
     logger.info(
         f"I scraped a total of {properties_scraped} properties across all listings"
     )
-
-
-def airbnb_scraper(zipcode="97067", iso_code="us", num_listings=3):
-    if os.path.isfile("custom_listing_ids.json"):
-        with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
-            property_ids = json.load(f).keys()
-        # logger.info(f"Using {len(property_ids)} custom listing IDs from custom_listing_ids.json")
-        search_results = []
-        for room_id in property_ids:
-            search_results.append({"room_id": room_id})
-    else:
-        search_results = airbnb_searcher(zipcode, iso_code)
-    # logger.info(f"Search results data looks like: {search_results[:1]}")
-    logger.info(len(search_results))
-    retrieve_details(search_results=search_results, num_listings=num_listings)

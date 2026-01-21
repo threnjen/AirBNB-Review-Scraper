@@ -2,8 +2,6 @@ import pyairbnb
 import json
 import time
 import random
-import os
-from scraper.airbnb_searcher import airbnb_searcher
 import logging
 import sys
 
@@ -11,7 +9,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-def retrieve_reviews(zipcode, search_results, num_listings):
+def scrape_reviews(zipcode, search_results, num_listings):
     property_ids = [listing["room_id"] for listing in search_results]
 
     # logger.info(property_ids)
@@ -71,37 +69,3 @@ def retrieve_reviews(zipcode, search_results, num_listings):
             continue
 
     logger.info(f"I scraped a total of {total_reviews} reviews across all listings")
-
-
-def airbnb_scraper(
-    zipcode="97067",
-    iso_code="us",
-    num_listings=3,
-    use_custom_listings_file=False,
-    custom_filepath="custom_listings.json",
-):
-    """Main function to scrape Airbnb reviews based on zipcode and number of listings."""
-
-    if use_custom_listings_file and os.path.isfile(custom_filepath):
-        with open(custom_filepath, "r", encoding="utf-8") as f:
-            property_ids = json.load(f).keys()
-        # logger.info(f"Using {len(property_ids)} custom listing IDs from custom_listing_ids.json")
-        search_results = []
-        for room_id in property_ids:
-            search_results.append({"room_id": room_id})
-    elif os.path.isfile(f"property_search_results/search_results_{zipcode}.json"):
-        with open(
-            f"property_search_results/search_results_{zipcode}.json",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            search_results = json.load(f)
-        logger.info(
-            f"Loaded {len(search_results)} listings from existing search results file."
-        )
-    else:
-        search_results = airbnb_searcher(zipcode, iso_code)
-    # logger.info(f"Search results data looks like: {search_results[:1]}")
-    retrieve_reviews(
-        zipcode=zipcode, search_results=search_results, num_listings=num_listings
-    )
