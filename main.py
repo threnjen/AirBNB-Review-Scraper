@@ -1,9 +1,17 @@
 import json
+import sys
+
 from scraper.reviews_scraper import airbnb_scraper
 from scraper.details_scraper import airbnb_scraper as details_scraper
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
-from review_aggregator.area_review_aggregator import AreaRagAggregator
+
+# from review_aggregator.area_review_aggregator import AreaRagAggregator
 from scraper.details_fileset_build import DetailsFilesetBuilder
+
+import logging
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     with open("config.json", "r") as f:
@@ -14,7 +22,7 @@ if __name__ == "__main__":
     review_threshold = config.get("review_threshold", 5)
     number_of_summaries_to_process = config.get("number_of_summaries_to_process", 3)
 
-    print(f"Configuration loaded: {config}")
+    logger.info(f"Configuration loaded: {config}")
 
     if config.get("scrape_reviews", False):
         airbnb_scraper(
@@ -22,7 +30,7 @@ if __name__ == "__main__":
             iso_code=iso_code,
             num_listings=number_of_listings_to_process,
         )
-        print(
+        logger.info(
             f"Scraping reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
@@ -32,7 +40,7 @@ if __name__ == "__main__":
             iso_code=iso_code,
             num_listings=number_of_listings_to_process,
         )
-        print(
+        logger.info(
             f"Scraping details for zipcode {zipcode} in country {iso_code} completed."
         )
 
@@ -41,7 +49,7 @@ if __name__ == "__main__":
             use_categoricals=config.get("dataset_use_categoricals", False)
         )
         fileset_builder.build_fileset()
-        print("Building details fileset completed.")
+        logger.info("Building details fileset completed.")
 
     if config.get("aggregate_reviews", False):
         rag_property = PropertyRagAggregator(
@@ -50,7 +58,7 @@ if __name__ == "__main__":
             zipcode=zipcode,
         )
         rag_property.rag_description_generation_chain()
-        print(
+        logger.info(
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
@@ -62,7 +70,7 @@ if __name__ == "__main__":
     #         collection_name="Summaries",
     #     )
     #     rag_area.rag_description_generation_chain_summaries()
-    #     print(
+    #     logger.info(
     #         f"Aggregating summaries for zipcode {zipcode} in country {iso_code} completed."
     #     )
 

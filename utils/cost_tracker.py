@@ -7,6 +7,12 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from utils.tiny_file_handler import load_json_file, save_json_file
 
+import logging
+import sys
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
+
 
 class CostTracker(BaseModel):
     """
@@ -215,52 +221,54 @@ class CostTracker(BaseModel):
                 logs = logs[-100:]
 
             save_json_file(self.log_file, logs)
-            print(f"Session costs logged to {self.log_file}")
+            logger.info(f"Session costs logged to {self.log_file}")
             return True
 
         except Exception as e:
-            print(f"Error logging session: {str(e)}")
+            logger.info(f"Error logging session: {str(e)}")
             return False
 
     def print_session_summary(self):
-        """Print a formatted summary of the current session."""
+        """logger.info a formatted summary of the current session."""
         summary = self.get_session_summary()
 
         if not summary.get("tracking_enabled"):
-            print("Cost tracking is disabled")
+            logger.info("Cost tracking is disabled")
             return
 
-        print("\n" + "=" * 50)
-        print("        OpenAI COST TRACKING SUMMARY")
-        print("=" * 50)
-        print(f"Session Duration: {summary['session_duration_minutes']} minutes")
-        print(f"Model: {self.model}")
-        print()
+        logger.info("\n" + "=" * 50)
+        logger.info("        OpenAI COST TRACKING SUMMARY")
+        logger.info("=" * 50)
+        logger.info(f"Session Duration: {summary['session_duration_minutes']} minutes")
+        logger.info(f"Model: {self.model}")
+        logger.info()
 
-        print("API USAGE:")
-        print(f"  Total Requests: {summary['total_requests']}")
-        print(f"  Successful: {summary['successful_requests']}")
-        print(f"  Failed: {summary['failed_requests']}")
-        print(f"  Cache Hits: {summary['cache_hits']} ({summary['cache_hit_rate']}%)")
-        print()
+        logger.info("API USAGE:")
+        logger.info(f"  Total Requests: {summary['total_requests']}")
+        logger.info(f"  Successful: {summary['successful_requests']}")
+        logger.info(f"  Failed: {summary['failed_requests']}")
+        logger.info(
+            f"  Cache Hits: {summary['cache_hits']} ({summary['cache_hit_rate']}%)"
+        )
+        logger.info()
 
-        print("PROCESSING:")
-        print(f"  Unique Listings: {summary['unique_listings']}")
-        print(f"  Avg Cost per Listing: ${summary['average_cost_per_listing']}")
-        print(
+        logger.info("PROCESSING:")
+        logger.info(f"  Unique Listings: {summary['unique_listings']}")
+        logger.info(f"  Avg Cost per Listing: ${summary['average_cost_per_listing']}")
+        logger.info(
             f"  Est. Cost per 100 Listings: ${summary['estimated_cost_per_100_listings']}"
         )
-        print()
+        logger.info()
 
-        print("TOKEN USAGE:")
-        print(f"  Input Tokens: {summary['total_input_tokens']:,}")
-        print(f"  Output Tokens: {summary['total_output_tokens']:,}")
-        print(f"  Total Tokens: {summary['total_tokens']:,}")
-        print()
+        logger.info("TOKEN USAGE:")
+        logger.info(f"  Input Tokens: {summary['total_input_tokens']:,}")
+        logger.info(f"  Output Tokens: {summary['total_output_tokens']:,}")
+        logger.info(f"  Total Tokens: {summary['total_tokens']:,}")
+        logger.info()
 
-        print("COSTS:")
-        print(f"  Total Session Cost: ${summary['total_cost']}")
-        print("=" * 50)
+        logger.info("COSTS:")
+        logger.info(f"  Total Session Cost: ${summary['total_cost']}")
+        logger.info("=" * 50)
 
     def get_historical_stats(self, days: int = 30) -> Dict:
         """Get historical cost statistics from log file."""
