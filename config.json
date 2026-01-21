@@ -9,5 +9,15 @@
     "number_of_summaries_to_process": 10000,
     "scrape_details": false,
     "build_details": true,
-    "dataset_use_categoricals": false
+    "dataset_use_categoricals": false,
+    "openai": {
+        "model": "gpt-4o-mini",
+        "temperature": 0.3,
+        "max_tokens": 4000,
+        "chunk_size": 20,
+        "max_retries": 3,
+        "retry_delay": 1.0,
+        "enable_caching": true,
+        "enable_cost_tracking": true
+    }
 }

@@ -44,27 +44,27 @@ if __name__ == "__main__":
         print("Building details fileset completed.")
 
     if config.get("aggregate_reviews", False):
-        rag_description = PropertyRagAggregator(
+        rag_property = PropertyRagAggregator(
             num_listings=number_of_listings_to_process,
             review_threshold=review_threshold,
             zipcode=zipcode,
         )
-        rag_description.rag_description_generation_chain()
+        rag_property.rag_description_generation_chain()
         print(
             f"Aggregating reviews for zipcode {zipcode} in country {iso_code} completed."
         )
 
-    if config.get("aggregate_summaries", False):
-        rag_description = AreaRagAggregator(
-            num_listings=number_of_summaries_to_process,
-            review_threshold=review_threshold,
-            zipcode=zipcode,
-            collection_name="Summaries",
-        )
-        rag_description.rag_description_generation_chain_summaries()
-        print(
-            f"Aggregating summaries for zipcode {zipcode} in country {iso_code} completed."
-        )
+    # if config.get("aggregate_summaries", False):
+    #     rag_area = AreaRagAggregator(
+    #         num_listings=number_of_summaries_to_process,
+    #         review_threshold=review_threshold,
+    #         zipcode=zipcode,
+    #         collection_name="Summaries",
+    #     )
+    #     rag_area.rag_description_generation_chain_summaries()
+    #     print(
+    #         f"Aggregating summaries for zipcode {zipcode} in country {iso_code} completed."
+    #     )
 
     # Things to do
     # Aggregrate the aggreated reviews into a single review per zip code
