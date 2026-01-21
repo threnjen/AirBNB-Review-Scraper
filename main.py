@@ -29,6 +29,8 @@ if __name__ == "__main__":
             zipcode=zipcode,
             iso_code=iso_code,
             num_listings=number_of_listings_to_process,
+            use_custom_listings_file=config.get("use_custom_listings_file", False),
+            custom_filepath=config.get("custom_listings_file", "custom_listings.json"),
         )
         logger.info(
             f"Scraping reviews for zipcode {zipcode} in country {iso_code} completed."

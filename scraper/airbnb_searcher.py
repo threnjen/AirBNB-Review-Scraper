@@ -34,8 +34,8 @@ def airbnb_searcher(zipcode: str, iso_code: str = "us"):
 
         return boxes
 
-    # logger.info(f"All of our boxes are {boxed_search(ne_lat, sw_lat, ne_lon, sw_lon)}")
-    # logger.info(f"The first box is {boxed_search(ne_lat, sw_lat, ne_lon, sw_lon)[0]}")
+    logger.info(f"All of our boxes are {boxed_search(ne_lat, sw_lat, ne_lon, sw_lon)}")
+    logger.info(f"The first box is {boxed_search(ne_lat, sw_lat, ne_lon, sw_lon)[0]}")
 
     search_results = []
 
@@ -59,11 +59,11 @@ def airbnb_searcher(zipcode: str, iso_code: str = "us"):
         time.sleep(random.uniform(1, 5))
 
     # Save the search results as a JSON file
-    with open(f"results/search_results_{zipcode}.json", "w", encoding="utf-8") as f:
+    with open(
+        f"property_search_results/search_results_{zipcode}.json", "w", encoding="utf-8"
+    ) as f:
         f.write(
             json.dumps(search_results, ensure_ascii=False)
         )  # Convert results to JSON and write to file
-
-    # logger.info(f"The search results json is logger.infoed as {type(search_results)}")
 
     return search_results
