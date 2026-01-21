@@ -21,7 +21,8 @@ class AirBnbReviewAggregator:
         self.config = {}
         self.zipcode = "00000"
         self.iso_code = "us"
-        self.num_listings_to_process = 3
+        self.num_listings_to_summarize = 3
+        self.num_listings_to_search = 3
         self.review_thresh_to_include_prop = 5
         self.num_summary_to_process = 3
         self.use_custom_listings_file = False
@@ -40,11 +41,12 @@ class AirBnbReviewAggregator:
             self.config = json.load(f)
         self.zipcode = self.config.get("zipcode", "97067")
         self.iso_code = self.config.get("iso_code", "us")
-        self.num_listings_to_process = self.config.get("num_listings_to_process", 3)
+        self.num_listings_to_search = self.config.get("num_listings_to_search", 3)
+        self.num_listings_to_summarize = self.config.get("num_listings_to_summarize", 3)
         self.review_thresh_to_include_prop = self.config.get(
             "review_thresh_to_include_prop", 5
         )
-        self.num_summary_to_process = self.config.get("num_summary_to_process", 3)
+
         self.use_custom_listings_file = self.config.get(
             "use_custom_listings_file", False
         )
@@ -91,7 +93,7 @@ class AirBnbReviewAggregator:
             scrape_reviews(
                 zipcode=self.zipcode,
                 search_results=search_results,
-                num_listings=self.num_listings_to_process,
+                num_listings=self.num_listings_to_search,
             )
             logger.info(
                 f"Scraping reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
@@ -101,7 +103,7 @@ class AirBnbReviewAggregator:
             search_results = self.get_area_search_results()
             scrape_details(
                 search_results=search_results,
-                num_listings=self.num_listings_to_process,
+                num_listings=self.num_listings_to_search,
             )
             logger.info(
                 f"Scraping details for zipcode {self.zipcode} in country {self.iso_code} completed."
@@ -116,7 +118,7 @@ class AirBnbReviewAggregator:
 
         if self.aggregate_reviews:
             rag_property = PropertyRagAggregator(
-                num_listings=self.num_listings_to_process,
+                num_listings_to_summarize=self.num_listings_to_summarize,
                 review_thresh_to_include_prop=self.review_thresh_to_include_prop,
                 zipcode=self.zipcode,
             )
