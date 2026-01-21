@@ -5,9 +5,8 @@ from utils.tiny_file_handler import load_json_file, save_json_file
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from review_aggregator.weaviate_client import WeaviateClient
-
-from utils.nlp_functions import filter_stopwords
+from review_aggregator.weaviate_client import WeaviateClientfrom review_aggregator.openai_aggregator import OpenAIAggregator
+# from utils.nlp_functions import filter_stopwords
 
 
 class PropertyRagAggregator(BaseModel):
@@ -25,25 +24,26 @@ class PropertyRagAggregator(BaseModel):
     number_of_listings_to_process: int = 0
     empty_aggregated_reviews: list = Field(default_factory=list)
     review_ids_need_more_processing: list = Field(default_factory=list)
-    weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
+    # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
+    openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
 
-    def model_post_init(self, __context: Any) -> None:
-        self.weaviate_client.create_general_collection(
-            collection_name=self.collection_name,
-            incoming_properties=[
-                {
-                    "name": "review_text",
-                    "data_type": wvc.config.DataType.TEXT,
-                    "vectorize_property_name": False,
-                },
-                {
-                    "name": "product_id",
-                    "data_type": wvc.config.DataType.TEXT,
-                    "skip_vectorization": True,
-                    "vectorize_property_name": False,
-                },
-            ],
-        )
+    # def model_post_init(self, __context: Any) -> None:
+    #     self.weaviate_client.create_general_collection(
+    #         collection_name=self.collection_name,
+    #         incoming_properties=[
+    #             {
+    #                 "name": "review_text",
+    #                 "data_type": wvc.config.DataType.TEXT,
+    #                 "vectorize_property_name": False,
+    #             },
+    #             {
+    #                 "name": "product_id",
+    #                 "data_type": wvc.config.DataType.TEXT,
+    #                 "skip_vectorization": True,
+    #                 "vectorize_property_name": False,
+    #             },
+    #         ],
+    #     )
 
     def adjust_list_length_upper_bound_for_config(
         self, unprocessed_reviews: dict
@@ -105,8 +105,8 @@ class PropertyRagAggregator(BaseModel):
     def clean_single_item_reviews(self, ratings: dict) -> list:
         df = pd.DataFrame(ratings)[["rating", "review"]]
 
-        df["review"] = df["review"].replace(r"[^A-Za-z0-9 ]+", "", regex=True)
-        df["review"] = df["review"].str.lower().apply(lambda x: filter_stopwords(x))
+        # df["review"] = df["review"].replace(r"[^A-Za-z0-9 ]+", "", regex=True)
+        # df["review"] = df["review"].str.lower().apply(lambda x: filter_stopwords(x))
 
         # remove all special characters from combined_review
         df["combined_review"] = df["rating"].astype("string") + " " + df["review"]
@@ -145,22 +145,29 @@ class PropertyRagAggregator(BaseModel):
         )
         reviews = self.clean_single_item_reviews(ratings=listing_ratings)
 
-        self.weaviate_client.add_collection_batch(
-            collection_name=self.collection_name,
-            listing_id=listing_id,
-            items=reviews,
-        )
+        # self.weaviate_client.add_collection_batch(
+        #     collection_name=self.collection_name,
+        #     listing_id=listing_id,
+        #     items=reviews,
+        # )
 
-        summary = self.weaviate_client.generate_aggregate(
-            id=listing_id,
-            collection_name=self.collection_name,
-            generate_prompt=updated_prompt,
-            filter_field="product_id",
-            return_properties=["review_text"],
-        )
+        # summary = self.weaviate_client.generate_aggregate(
+        #     id=listing_id,
+        #     collection_name=self.collection_name,
+        #     generate_prompt=updated_prompt,
+        #     filter_field="product_id",
+        #     return_properties=["review_text"],
+        # )
 
-        self.weaviate_client.remove_collection_listings(
-            listing_id=listing_id, collection_name=self.collection_name, items=reviews
+        # self.weaviate_client.remove_collection_listings(
+        #     listing_id=listing_id, collection_name=self.collection_name, items=reviews
+        # )
+
+        # Generate summary using OpenAI aggregator
+        summary = self.openai_aggregator.generate_summary(
+            reviews=reviews,
+            prompt=updated_prompt,
+            listing_id=listing_id
         )
 
         return summary
@@ -274,3 +281,16 @@ class PropertyRagAggregator(BaseModel):
                 data=generated_summaries,
             )
         print("RAG description generation chain completed.")
+        
+        # Print cost summary and log session
+        self.openai_aggregator.cost_tracker.print_session_summary()
+        self.openai_aggregator.cost_tracker.log_session()
+        
+        # Print cache statistics
+        cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
+        if cache_stats.get("enabled"):
+            print(f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired")
+            
+        # Clean up expired cache
+        if cache_stats.get("expired_cache", 0) > 0:
+            self.openai_aggregator.cache_manager.clear_expired_cache()
