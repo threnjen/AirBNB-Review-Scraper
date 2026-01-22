@@ -24,7 +24,7 @@ docker container ls
 
 Test open api is working: docker exec -it weaviate sh -c "wget -qO- --header='Authorization: Bearer $OPENAI_API_KEY' https://api.openai.com/v1/models"
 
-docker exec -it weaviate printenv | grep OPENAI
+docker exec -it weaviate logger.infoenv | grep OPENAI
 
 docker logs -f weaviate
 

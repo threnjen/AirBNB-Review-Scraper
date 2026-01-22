@@ -11,22 +11,22 @@ pandas = "*"
 requests = "*"
 regex = "*"
 boto3 = "*"
-weaviate-client = "*"
 openai = "*"
-nltk = "*"
 awswrangler = "*"
 pgeocode = "*"
 pyairbnb = "*"
 ruff = "*"
-xgboost = "*"
+tiktoken = "*"
+black = "*"
+ipykernel = "*"
+
+[dev-packages]
 scikit-learn = "*"
 statsmodels = "*"
 matplotlib = "*"
 seaborn = "*"
-
-[dev-packages]
-black = "*"
-ipykernel = "*"
+xgboost = "*"
+weaviate-client = "*"
 
 [requires]
 python_version = "3.13"
