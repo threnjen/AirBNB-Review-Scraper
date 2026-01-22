@@ -7,11 +7,16 @@ import pandas as pd
 from utils.local_file_handler import LocalFileHandler
 from utils.s3_file_handler import S3FileHandler
 
-ENVIRONMENT = os.environ.get("TF_VAR_RESOURCE_ENV" "dev")
-IS_LOCAL = False if os.environ.get("IS_LOCAL", "True").lower() == "false" else True
-S3_SCRAPER_BUCKET = f'{os.environ.get("TF_VAR_S3_SCRAPER_BUCKET")}-{os.environ.get("TF_VAR_RESOURCE_ENV")}'
-WORKING_DIR = f"data/{ENVIRONMENT}"
+import logging
+import sys
 
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+logger = logging.getLogger(__name__)
+
+ENVIRONMENT = os.environ.get("TF_VAR_RESOURCE_ENVdev")
+IS_LOCAL = False if os.environ.get("IS_LOCAL", "True").lower() == "false" else True
+S3_SCRAPER_BUCKET = f"{os.environ.get('TF_VAR_S3_SCRAPER_BUCKET')}-{os.environ.get('TF_VAR_RESOURCE_ENV')}"
+WORKING_DIR = f"data/{ENVIRONMENT}"
 
 
 def explode_columnar_df(df: pd.DataFrame):
@@ -78,17 +83,16 @@ def save_file_local_first(path: str, file_name: str, data: Union[pd.DataFrame, d
     file_path = f"{path}/{file_name}"
 
     save_path = f"{WORKING_DIR}{file_path}"
-    print(f"\n{save_path}")
+    logger.info(f"\n{save_path}")
 
     if IS_LOCAL:
-        print(f"Saving {file_name} to local")
+        logger.info(f"Saving {file_name} to local")
         LocalFileHandler().save_file(file_path=save_path, data=data)
-    print(f"Saving {file_name} to S3")
+    logger.info(f"Saving {file_name} to S3")
     S3FileHandler().save_file(file_path=save_path, data=data)
 
 
 def load_file_local_first(path: str = None, file_name: str = ""):
-
     file_path = f"{path}/{file_name}" if path else file_name
 
     load_path = f"{WORKING_DIR}{file_path}"
@@ -112,7 +116,6 @@ def delete_file_local_first(path: str = None, file_name: str = ""):
 
 
 def save_to_aws_glue(data: pd.DataFrame, table: str, database: str = "boardgamegeek"):
-
     if ENVIRONMENT == "prod":
         data = wr.catalog.sanitize_dataframe_columns_names(data)
 
@@ -216,7 +219,7 @@ def integer_reduce(data: pd.DataFrame, columns: list[str], fill_value: int = 0):
 #     Cleaned user ratings file
 #     """
 
-#     print("\nCleaning Frame #" + str(id_num))
+#     logger.info("\nCleaning Frame #" + str(id_num))
 
 #     # load in raw users file according to id_num inputted
 #     path = "userid/user_ratings" + str(id_num) + ".pkl"
@@ -244,8 +247,8 @@ def integer_reduce(data: pd.DataFrame, columns: list[str], fill_value: int = 0):
 #     # drop the users with fewer than 5 ratings
 #     cleaned.drop(drop_these, axis=0, inplace=True)
 
-#     # print memory usage
-#     print(cleaned.info())
+#     # logger.info memory usage
+#     logger.info(cleaned.info())
 
 #     # return cleaned file
 #     return cleaned
@@ -272,7 +275,7 @@ def integer_reduce(data: pd.DataFrame, columns: list[str], fill_value: int = 0):
 
 #     # for each number in the range from start to end:
 #     for id_num in np.arange(start_file, end_file + 1, 1):
-#         print(id_num)
+#         logger.info(id_num)
 #         # clean the file calling clean_ratings
 #         cleaned_item = clean_ratings(id_num, game_ids)
 #         # append the file to the dataframe
