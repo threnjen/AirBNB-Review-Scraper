@@ -238,10 +238,10 @@ class PropertyRagAggregator(BaseModel):
             for x in os.listdir("property_generated_summaries/")
             if x.startswith("generated_summaries_")
         ]
-        logger.info(f"Generated summaries files found: {generated_summaries_files}")
+        # logger.info(f"Generated summaries files found: {generated_summaries_files}")
 
         for file in generated_summaries_files:
-            logger.info(f"Using generated summaries file: {file}")
+            # logger.info(f"Using generated summaries file: {file}")
             one_property = load_json_file(
                 filename=f"property_generated_summaries/{file}"
             )
@@ -269,7 +269,7 @@ class PropertyRagAggregator(BaseModel):
             f"Number of listings to summarize in this run: {self.num_listings_to_summarize}"
         )
 
-        start_index = len(generated_summaries)
+        start_index = 0
         end_index = start_index + self.num_listings_to_summarize
 
         # First pass: process each unprocessed listing up to the configured limit
