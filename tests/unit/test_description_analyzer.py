@@ -447,6 +447,7 @@ class TestSaveResults(TestDescriptionAnalyzer):
     def test_creates_output_files(self, analyzer, tmp_path):
         """Should create JSON stats and Markdown files."""
         analyzer.output_dir = str(tmp_path)
+        analyzer.reports_dir = str(tmp_path)
         residuals = pd.Series([10, -10], index=["p1", "p2"])
         scores_df = pd.DataFrame({"evocativeness": [8, 3]}, index=["p1", "p2"])
 

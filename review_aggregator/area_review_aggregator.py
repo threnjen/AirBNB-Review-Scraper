@@ -2,6 +2,7 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,9 +23,40 @@ class AreaRagAggregator(BaseModel):
     review_thresh_to_include_prop: int = 5
     zipcode: str = "00501"
     overall_mean: float = 0.0
+    output_dir: str = "reports"
     model_config = ConfigDict(arbitrary_types_allowed=True)
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
+
+    def save_results(
+        self,
+        num_properties: int,
+        iso_code: str,
+        area_summary: str,
+    ):
+        """Save JSON stats and Markdown report for the area summary."""
+        Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+
+        # Save JSON
+        output_data = {
+            "zipcode": self.zipcode,
+            "num_properties_analyzed": num_properties,
+            "area_summary": area_summary,
+        }
+        json_path = f"{self.output_dir}/area_summary_{self.zipcode}.json"
+        save_json_file(filename=json_path, data=output_data)
+        logger.info(f"Saved area summary JSON to {json_path}")
+
+        # Save Markdown report
+        md_path = f"{self.output_dir}/area_summary_{self.zipcode}.md"
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(f"# Area Summary: {self.zipcode}\n\n")
+            f.write(f"**ISO Code:** {iso_code}\n\n")
+            f.write(f"**Properties Analyzed:** {num_properties}\n\n")
+            f.write("---\n\n")
+            f.write(area_summary)
+
+        logger.info(f"Saved area summary report to {md_path}")
 
     def rag_description_generation_chain(self):
         """Generate area-level summary from existing property summaries."""
@@ -70,9 +102,8 @@ class AreaRagAggregator(BaseModel):
 
         # Replace placeholders in prompt
         updated_prompt = prompt_template.replace("{ZIP_CODE_HERE}", self.zipcode)
-        updated_prompt = updated_prompt.replace(
-            "{ISO_CODE_HERE}", load_json_file("config.json").get("iso_code", "us")
-        )
+        iso_code = load_json_file("config.json").get("iso_code", "us")
+        updated_prompt = updated_prompt.replace("{ISO_CODE_HERE}", iso_code)
         updated_prompt = updated_prompt.replace(
             "{OVERALL_MEAN}", str(self.overall_mean)
         )
@@ -84,18 +115,12 @@ class AreaRagAggregator(BaseModel):
             listing_id=f"area_{self.zipcode}",
         )
 
-        # Save area-level summary
-        output_data = {
-            "zipcode": self.zipcode,
-            "num_properties_analyzed": len(all_summaries),
-            "area_summary": area_summary,
-        }
-
-        save_json_file(
-            filename=f"generated_summaries_{self.zipcode}.json", data=output_data
+        # Save area-level summary (JSON + Markdown report)
+        self.save_results(
+            num_properties=len(all_summaries),
+            iso_code=iso_code,
+            area_summary=area_summary,
         )
-
-        logger.info(f"Area summary saved to generated_summaries_{self.zipcode}.json")
 
         # Log cost and cache statistics
         self.openai_aggregator.cost_tracker.print_session_summary()

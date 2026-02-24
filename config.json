@@ -3,8 +3,8 @@
     "scrape_details": false,
     "build_details": false,
     "aggregate_reviews": false,
-    "aggregate_summaries": false,
-    "extract_data": false,
+    "aggregate_summaries": true,
+    "extract_data": true,
     "analyze_correlations": true,
     "analyze_descriptions": true,
     "correlation_metrics": [
