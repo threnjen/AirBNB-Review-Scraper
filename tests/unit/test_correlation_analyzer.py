@@ -86,6 +86,6 @@ class TestCorrelationAnalyzer:
 
         # At least one amenity should NOT be 100% in high tier
         high_pcts = [v["high_tier_pct"] for v in result.values()]
-        assert not all(
-            pct == 100.0 for pct in high_pcts
-        ), "All amenities at 100% suggests string 'False' vs bool False bug"
+        assert not all(pct == 100.0 for pct in high_pcts), (
+            "All amenities at 100% suggests string 'False' vs bool False bug"
+        )

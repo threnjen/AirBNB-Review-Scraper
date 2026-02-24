@@ -177,7 +177,9 @@ class AirBnbReviewAggregator:
         if self.analyze_descriptions:
             desc_analyzer = DescriptionAnalyzer(zipcode=self.zipcode)
             desc_analyzer.run_analysis()
-            logger.info(f"Description quality analysis for zipcode {self.zipcode} completed.")
+            logger.info(
+                f"Description quality analysis for zipcode {self.zipcode} completed."
+            )
 
         # Things to do
         # Aggregrate the aggreated reviews into a single review per zip code

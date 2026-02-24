@@ -96,7 +96,10 @@ class DescriptionAnalyzer(BaseModel):
         # Build design matrix with intercept column
         X = np.column_stack(
             [np.ones(len(valid))]
-            + [pd.to_numeric(valid[col], errors="coerce").fillna(0).values for col in SIZE_FEATURES]
+            + [
+                pd.to_numeric(valid[col], errors="coerce").fillna(0).values
+                for col in SIZE_FEATURES
+            ]
         )
 
         # OLS via numpy least squares
@@ -116,8 +119,7 @@ class DescriptionAnalyzer(BaseModel):
             f"OLS R² = {r_squared:.3f} | "
             f"Coefficients: intercept={coeffs[0]:.1f}, "
             + ", ".join(
-                f"{feat}={coeffs[i + 1]:.1f}"
-                for i, feat in enumerate(SIZE_FEATURES)
+                f"{feat}={coeffs[i + 1]:.1f}" for i, feat in enumerate(SIZE_FEATURES)
             )
         )
 
@@ -205,9 +207,7 @@ class DescriptionAnalyzer(BaseModel):
             logger.warning(f"Only {len(common_idx)} matched properties, need >= 3")
             return {}
 
-        aligned_residuals = residuals.loc[
-            residuals.index.astype(str).isin(common_idx)
-        ]
+        aligned_residuals = residuals.loc[residuals.index.astype(str).isin(common_idx)]
         aligned_scores = scores_df.loc[common_idx]
 
         for col in aligned_scores.columns:
@@ -236,7 +236,9 @@ class DescriptionAnalyzer(BaseModel):
 
         # Sort by absolute correlation descending
         results = dict(
-            sorted(results.items(), key=lambda x: abs(x[1]["correlation"]), reverse=True)
+            sorted(
+                results.items(), key=lambda x: abs(x[1]["correlation"]), reverse=True
+            )
         )
 
         return results
@@ -288,7 +290,10 @@ class DescriptionAnalyzer(BaseModel):
         low_premium_text = format_descriptions(bottom_ids)
 
         # Format correlation table
-        corr_lines = ["| Dimension | Correlation | n |", "|-----------|-------------|---|"]
+        corr_lines = [
+            "| Dimension | Correlation | n |",
+            "|-----------|-------------|---|",
+        ]
         for dim, stats in correlation_results.items():
             corr_lines.append(
                 f"| {dim.replace('_', ' ').title()} | {stats['correlation']:+.3f} | {stats['n']} |"
@@ -340,16 +345,12 @@ class DescriptionAnalyzer(BaseModel):
             },
         }
 
-        json_path = (
-            f"{self.output_dir}/description_quality_stats_{self.zipcode}.json"
-        )
+        json_path = f"{self.output_dir}/description_quality_stats_{self.zipcode}.json"
         save_json_file(json_path, stats)
         logger.info(f"Saved description quality stats to {json_path}")
 
         # Save Markdown insights
-        md_path = (
-            f"{self.output_dir}/description_quality_{self.zipcode}.md"
-        )
+        md_path = f"{self.output_dir}/description_quality_{self.zipcode}.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("# Listing Description Quality Analysis\n\n")
             f.write(f"**Zipcode:** {self.zipcode}\n\n")
@@ -402,9 +403,7 @@ class DescriptionAnalyzer(BaseModel):
             logger.error("No scoring prompt template found")
             return
 
-        scores_df = self.score_all_descriptions(
-            residuals, descriptions, scoring_prompt
-        )
+        scores_df = self.score_all_descriptions(residuals, descriptions, scoring_prompt)
 
         if scores_df.empty:
             logger.error("No descriptions could be scored. Exiting.")
@@ -418,9 +417,7 @@ class DescriptionAnalyzer(BaseModel):
         correlation_results = self.correlate_scores_with_premium(scores_df, residuals)
 
         for dim, stats in correlation_results.items():
-            logger.info(
-                f"  {dim}: r={stats['correlation']:+.3f} (n={stats['n']})"
-            )
+            logger.info(f"  {dim}: r={stats['correlation']:+.3f} (n={stats['n']})")
 
         # Step 4: Generate synthesis
         logger.info("\n" + "=" * 50)
