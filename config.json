@@ -5,6 +5,13 @@
     "aggregate_reviews": true,
     "aggregate_summaries": false,
     "extract_data": false,
+    "analyze_correlations": false,
+    "correlation_metrics": [
+        "adr",
+        "occupancy"
+    ],
+    "correlation_top_percentile": 25,
+    "correlation_bottom_percentile": 25,
     "zipcode": "97067",
     "iso_code": "us",
     "use_custom_listings_file": false,
