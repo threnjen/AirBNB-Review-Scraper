@@ -7,6 +7,7 @@ from scraper.details_scraper import scrape_details
 from scraper.airbnb_searcher import airbnb_searcher
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
 from review_aggregator.area_review_aggregator import AreaRagAggregator
+from review_aggregator.data_extractor import DataExtractor
 from scraper.details_fileset_build import DetailsFilesetBuilder
 
 import logging
@@ -31,6 +32,7 @@ class AirBnbReviewAggregator:
         self.build_details = False
         self.aggregate_reviews = False
         self.aggregate_summaries = False
+        self.extract_data = False
         self.use_categoricals = False
         self.load_configs()
         logger.info(f"Configuration loaded: {self.config}")
@@ -58,6 +60,7 @@ class AirBnbReviewAggregator:
         self.build_details = self.config.get("build_details", False)
         self.aggregate_reviews = self.config.get("aggregate_reviews", False)
         self.aggregate_summaries = self.config.get("aggregate_summaries", False)
+        self.extract_data = self.config.get("extract_data", False)
         self.use_categoricals = self.config.get("dataset_use_categoricals", False)
 
     def get_area_search_results(self):
@@ -137,6 +140,11 @@ class AirBnbReviewAggregator:
             logger.info(
                 f"Aggregating area summary for zipcode {self.zipcode} completed."
             )
+
+        if self.extract_data:
+            extractor = DataExtractor(zipcode=self.zipcode)
+            extractor.run_extraction()
+            logger.info(f"Data extraction for zipcode {self.zipcode} completed.")
 
         # Things to do
         # Aggregrate the aggreated reviews into a single review per zip code

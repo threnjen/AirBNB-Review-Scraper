@@ -4,6 +4,7 @@
     "build_details": false,
     "aggregate_reviews": true,
     "aggregate_summaries": false,
+    "extract_data": false,
     "zipcode": "97067",
     "iso_code": "us",
     "use_custom_listings_file": false,
