@@ -11,7 +11,6 @@ from utils.file_handler import FileHandler
 
 
 class LocalFileHandler(FileHandler):
-
     @property
     def file_missing_exception(self) -> Exception:
         return FileNotFoundError
@@ -38,7 +37,7 @@ class LocalFileHandler(FileHandler):
             return json.load(f)
 
     def save_json(self, file_path: str, data: str):
-        self.make_directory
+        self.make_directory(Path(file_path).parent)
         with open(file_path, "w") as f:
             json.dump(data, f)
 

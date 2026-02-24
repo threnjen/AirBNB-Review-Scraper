@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # from review_aggregator.weaviate_client import WeaviateClient
 from review_aggregator.openai_aggregator import OpenAIAggregator
+
 # from utils.nlp_functions import filter_stopwords
 
 import logging
@@ -294,7 +295,6 @@ class PropertyRagAggregator(BaseModel):
         self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
             generated_summaries
         )
-        print(self.review_ids_need_more_processing)
 
         for listing_id in self.review_ids_need_more_processing:
             logger.info(listing_id)
@@ -317,7 +317,7 @@ class PropertyRagAggregator(BaseModel):
 
         # logger.info cache statistics
         cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
-        if cache_stats.get("enabled"):
+        if cache_stats.get("enabled") and "valid_cache" in cache_stats:
             logger.info(
                 f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
             )

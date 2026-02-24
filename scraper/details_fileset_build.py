@@ -22,9 +22,9 @@ class DetailsFilesetBuilder:
         self.property_details[property_id]["ADR"] = adr
 
         occupancy_rate_based_on_available_days = property_details.get("Occupancy", 0)
-        self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
-            occupancy_rate_based_on_available_days
-        )
+        self.property_details[property_id][
+            "Occ_Rate_Based_on_Avail"
+        ] = occupancy_rate_based_on_available_days
 
         days_available = property_details.get("Days_Available", 0)
         self.property_details[property_id]["Days_Avail"] = days_available
@@ -140,9 +140,9 @@ class DetailsFilesetBuilder:
             for property_id, occupancy_details in list(properties.items()):
                 self.property_details[property_id] = {}
 
-                self.property_details[property_id]["link"] = (
-                    f"https://www.airbnb.com/rooms/{property_id}"
-                )
+                self.property_details[property_id][
+                    "link"
+                ] = f"https://www.airbnb.com/rooms/{property_id}"
                 self.get_financials(
                     property_id=property_id, property_details=occupancy_details
                 )
