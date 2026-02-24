@@ -46,6 +46,7 @@ class DescriptionAnalyzer(BaseModel):
 
     zipcode: str = "00000"
     output_dir: str = "property_correlation_results"
+    reports_dir: str = "reports"
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
 
     def load_property_data(self) -> pd.DataFrame:
@@ -390,7 +391,8 @@ class DescriptionAnalyzer(BaseModel):
         logger.info(f"Saved description quality stats to {json_path}")
 
         # Save Markdown insights
-        md_path = f"{self.output_dir}/description_quality_{self.zipcode}.md"
+        Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
+        md_path = f"{self.reports_dir}/description_quality_{self.zipcode}.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("# Listing Description Quality Analysis\n\n")
             f.write(f"**Zipcode:** {self.zipcode}\n\n")
