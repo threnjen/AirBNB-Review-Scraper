@@ -16,7 +16,7 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.openai_aggregator import OpenAIAggregator
 from utils.tiny_file_handler import load_json_file, save_json_file

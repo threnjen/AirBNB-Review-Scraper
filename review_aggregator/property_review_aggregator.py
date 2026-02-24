@@ -1,19 +1,18 @@
-from typing import Any
-import pandas as pd
+import logging
 import os
+import sys
+from typing import Any
 
-# import weaviate.classes as wvc
-from utils.tiny_file_handler import load_json_file, save_json_file
-
+import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 # from review_aggregator.weaviate_client import WeaviateClient
 from review_aggregator.openai_aggregator import OpenAIAggregator
+# import weaviate.classes as wvc
+from utils.tiny_file_handler import load_json_file, save_json_file
 
 # from utils.nlp_functions import filter_stopwords
 
-import logging
-import sys
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)

@@ -1,18 +1,17 @@
 import json
-import sys
-import os
-
-from scraper.reviews_scraper import scrape_reviews
-from scraper.details_scraper import scrape_details
-from scraper.airbnb_searcher import airbnb_searcher
-from review_aggregator.property_review_aggregator import PropertyRagAggregator
-from review_aggregator.area_review_aggregator import AreaRagAggregator
-from review_aggregator.data_extractor import DataExtractor
-from review_aggregator.correlation_analyzer import CorrelationAnalyzer
-from review_aggregator.description_analyzer import DescriptionAnalyzer
-from scraper.details_fileset_build import DetailsFilesetBuilder
-
 import logging
+import os
+import sys
+
+from review_aggregator.area_review_aggregator import AreaRagAggregator
+from review_aggregator.correlation_analyzer import CorrelationAnalyzer
+from review_aggregator.data_extractor import DataExtractor
+from review_aggregator.description_analyzer import DescriptionAnalyzer
+from review_aggregator.property_review_aggregator import PropertyRagAggregator
+from scraper.airbnb_searcher import airbnb_searcher
+from scraper.details_fileset_build import DetailsFilesetBuilder
+from scraper.details_scraper import scrape_details
+from scraper.reviews_scraper import scrape_reviews
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)

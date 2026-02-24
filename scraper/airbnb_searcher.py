@@ -1,11 +1,12 @@
-import pyairbnb
 import json
-import time
-import random
-import scraper.location_calculator as location_calculator
-
 import logging
+import random
 import sys
+import time
+
+import pyairbnb
+
+import scraper.location_calculator as location_calculator
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)

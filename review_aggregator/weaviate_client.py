@@ -2,8 +2,8 @@ import os
 
 import weaviate
 import weaviate.classes as wvc
-from weaviate.classes.config import Configure
 from pydantic import BaseModel, ConfigDict, SkipValidation
+from weaviate.classes.config import Configure
 from weaviate.classes.init import AdditionalConfig, Timeout
 
 # from weaviate.classes.config import Configure

@@ -3,13 +3,14 @@ DataExtractor: Extracts and aggregates numeric review data from property summari
 Uses LLM to parse semi-structured text and cluster topics into categories.
 """
 
-import os
-import logging
-import sys
 import json
+import logging
+import os
+import sys
 from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
 from review_aggregator.openai_aggregator import OpenAIAggregator
 from utils.tiny_file_handler import load_json_file, save_json_file
 

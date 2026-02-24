@@ -2,8 +2,9 @@
 Unit tests for utils/cost_tracker.py
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 class TestCostTracker:

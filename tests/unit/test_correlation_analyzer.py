@@ -2,9 +2,10 @@
 Unit tests for review_aggregator/correlation_analyzer.py
 """
 
-import pytest
-import pandas as pd
 from unittest.mock import patch
+
+import pandas as pd
+import pytest
 
 
 class TestCorrelationAnalyzer:
@@ -86,6 +87,6 @@ class TestCorrelationAnalyzer:
 
         # At least one amenity should NOT be 100% in high tier
         high_pcts = [v["high_tier_pct"] for v in result.values()]
-        assert not all(pct == 100.0 for pct in high_pcts), (
-            "All amenities at 100% suggests string 'False' vs bool False bug"
-        )
+        assert not all(
+            pct == 100.0 for pct in high_pcts
+        ), "All amenities at 100% suggests string 'False' vs bool False bug"

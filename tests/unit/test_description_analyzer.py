@@ -6,10 +6,11 @@ They should fail (red) until description_analyzer.py is created.
 """
 
 import json
-import pytest
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import patch, MagicMock
+import pytest
 
 
 class TestDescriptionAnalyzer:
