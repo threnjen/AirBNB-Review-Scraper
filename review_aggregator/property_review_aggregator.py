@@ -294,7 +294,6 @@ class PropertyRagAggregator(BaseModel):
         self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
             generated_summaries
         )
-        print(self.review_ids_need_more_processing)
 
         for listing_id in self.review_ids_need_more_processing:
             logger.info(listing_id)
