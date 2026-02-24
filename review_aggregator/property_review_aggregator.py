@@ -317,7 +317,7 @@ class PropertyRagAggregator(BaseModel):
 
         # logger.info cache statistics
         cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
-        if cache_stats.get("enabled"):
+        if cache_stats.get("enabled") and "valid_cache" in cache_stats:
             logger.info(
                 f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
             )
