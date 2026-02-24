@@ -75,6 +75,7 @@ class CorrelationAnalyzer(BaseModel):
     top_percentile: int = 25
     bottom_percentile: int = 25
     output_dir: str = "property_correlation_results"
+    reports_dir: str = "reports"
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
 
     def load_property_data(self) -> pd.DataFrame:
@@ -354,7 +355,8 @@ class CorrelationAnalyzer(BaseModel):
         logger.info(f"Saved stats to {json_path}")
 
         # Save Markdown insights
-        md_path = f"{self.output_dir}/correlation_insights_{metric}_{self.zipcode}.md"
+        Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
+        md_path = f"{self.reports_dir}/correlation_insights_{metric}_{self.zipcode}.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(f"# {config.get('display_name', metric)} Correlation Analysis\n\n")
             f.write(f"**Zipcode:** {self.zipcode}\n\n")

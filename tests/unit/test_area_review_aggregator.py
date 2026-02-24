@@ -2,6 +2,7 @@
 Unit tests for review_aggregator/area_review_aggregator.py
 """
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -100,8 +101,8 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.save_json_file"
-                ) as mock_save:
+                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                ) as mock_save_results:
                     with patch.object(
                         aggregator.openai_aggregator.client.chat.completions,
                         "create",
@@ -109,12 +110,11 @@ class TestAreaRagAggregator:
                     ):
                         aggregator.rag_description_generation_chain()
 
-                        mock_save.assert_called_once()
-                        call_args = mock_save.call_args
-                        filename = call_args.kwargs.get("filename", "")
-                        if not filename and call_args[0]:
-                            filename = call_args[0][0]
-                        assert "generated_summaries_97067.json" in filename
+                        mock_save_results.assert_called_once()
+                        call_kwargs = mock_save_results.call_args.kwargs
+                        assert call_kwargs["num_properties"] == 1
+                        assert call_kwargs["iso_code"] == "us"
+                        assert call_kwargs["area_summary"] == "Area summary text"
 
     def test_rag_chain_limits_to_num_listings(self):
         """Test that only num_listings files are processed."""
@@ -153,7 +153,9 @@ class TestAreaRagAggregator:
                     {"gpt4o_mini_generate_prompt_structured": "Prompt"},
                     {"iso_code": "us"},
                 ]
-                with patch("review_aggregator.area_review_aggregator.save_json_file"):
+                with patch(
+                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                ):
                     with patch.object(
                         limited_aggregator.openai_aggregator.client.chat.completions,
                         "create",
@@ -187,8 +189,8 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.save_json_file"
-                ) as mock_save:
+                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                ) as mock_save_results:
                     with patch.object(
                         aggregator.openai_aggregator.client.chat.completions,
                         "create",
@@ -196,14 +198,11 @@ class TestAreaRagAggregator:
                     ):
                         aggregator.rag_description_generation_chain()
 
-                        # Verify that save was called (meaning processing completed)
-                        assert mock_save.called
+                        # Verify that save_results was called
+                        assert mock_save_results.called
                         # Verify output shows 1 property analyzed (the non-empty one)
-                        call_args = mock_save.call_args
-                        saved_data = call_args.kwargs.get("data")
-                        if saved_data is None and len(call_args[0]) > 1:
-                            saved_data = call_args[0][1]
-                        assert saved_data["num_properties_analyzed"] == 1
+                        call_kwargs = mock_save_results.call_args.kwargs
+                        assert call_kwargs["num_properties"] == 1
 
     def test_rag_chain_all_empty_summaries_returns_early(self, aggregator):
         """Test that if all summaries are empty, the method returns early."""
@@ -235,8 +234,8 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.save_json_file"
-                ) as mock_save:
+                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                ) as mock_save_results:
                     with patch.object(
                         aggregator.openai_aggregator.client.chat.completions,
                         "create",
@@ -244,11 +243,84 @@ class TestAreaRagAggregator:
                     ):
                         aggregator.rag_description_generation_chain()
 
-                        call_args = mock_save.call_args
-                        saved_data = call_args.kwargs.get("data")
-                        if saved_data is None and len(call_args[0]) > 1:
-                            saved_data = call_args[0][1]
-                        assert "zipcode" in saved_data
-                        assert saved_data["zipcode"] == "97067"
-                        assert "num_properties_analyzed" in saved_data
-                        assert "area_summary" in saved_data
+                        call_kwargs = mock_save_results.call_args.kwargs
+                        assert call_kwargs["num_properties"] == 1
+                        assert call_kwargs["iso_code"] == "us"
+                        assert call_kwargs["area_summary"] == "Generated area summary"
+
+
+class TestSaveResults:
+    """Tests for AreaRagAggregator.save_results."""
+
+    @pytest.fixture
+    def aggregator(self):
+        """Create an AreaRagAggregator with mocked dependencies."""
+        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "openai": {"enable_caching": False, "enable_cost_tracking": False}
+            }
+            with patch("utils.cache_manager.load_json_file", return_value={}):
+                with patch("utils.cost_tracker.load_json_file", return_value={}):
+                    from review_aggregator.area_review_aggregator import (
+                        AreaRagAggregator,
+                    )
+
+                    return AreaRagAggregator(
+                        zipcode="97067",
+                        num_listings=5,
+                        review_thresh_to_include_prop=5,
+                    )
+
+    def test_creates_output_files(self, aggregator, tmp_path):
+        """Should create JSON stats and Markdown report files."""
+        aggregator.output_dir = str(tmp_path)
+
+        aggregator.save_results(
+            num_properties=42,
+            iso_code="us",
+            area_summary="## Area Description\nCozy cabins near Mt Hood.",
+        )
+
+        json_path = tmp_path / "area_summary_97067.json"
+        md_path = tmp_path / "area_summary_97067.md"
+
+        assert json_path.exists()
+        assert md_path.exists()
+
+        stats = json.loads(json_path.read_text())
+        assert stats["zipcode"] == "97067"
+        assert stats["num_properties_analyzed"] == 42
+        assert "Cozy cabins" in stats["area_summary"]
+
+    def test_markdown_contains_header_and_body(self, aggregator, tmp_path):
+        """Markdown report should have a structured header and LLM body."""
+        aggregator.output_dir = str(tmp_path)
+
+        aggregator.save_results(
+            num_properties=10,
+            iso_code="us",
+            area_summary="## Positives\n- **Cleanliness**: spotless",
+        )
+
+        md_content = (tmp_path / "area_summary_97067.md").read_text()
+
+        assert "# Area Summary: 97067" in md_content
+        assert "**ISO Code:** us" in md_content
+        assert "**Properties Analyzed:** 10" in md_content
+        assert "---" in md_content
+        assert "## Positives" in md_content
+        assert "**Cleanliness**" in md_content
+
+    def test_creates_output_dir_if_missing(self, aggregator, tmp_path):
+        """Should create the output directory if it does not exist."""
+        nested_dir = tmp_path / "nested" / "reports"
+        aggregator.output_dir = str(nested_dir)
+
+        aggregator.save_results(
+            num_properties=1,
+            iso_code="gb",
+            area_summary="Summary text",
+        )
+
+        assert (nested_dir / "area_summary_97067.md").exists()
+        assert (nested_dir / "area_summary_97067.json").exists()
