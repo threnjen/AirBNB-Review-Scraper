@@ -6,9 +6,8 @@ They should fail (red) until description_analyzer.py is created.
 """
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -222,3 +221,335 @@ class TestCorrelateScoresWithPremium(TestDescriptionAnalyzer):
         assert "dim_a" in result
         assert "dim_b" in result
         assert "correlation" in result["dim_a"]
+
+
+class TestLoadDescriptions(TestDescriptionAnalyzer):
+    """Tests for load_descriptions with hardened error handling."""
+
+    def test_returns_empty_dict_when_file_missing(self, analyzer):
+        """Should return empty dict when descriptions file doesn't exist."""
+        with patch("os.path.exists", return_value=False):
+            result = analyzer.load_descriptions()
+
+        assert result == {}
+
+    def test_returns_empty_dict_on_non_dict_json(self, analyzer):
+        """Should return empty dict when JSON is not an object (e.g. list)."""
+        with patch("os.path.exists", return_value=True):
+            with patch(
+                "review_aggregator.description_analyzer.load_json_file",
+                return_value=["not", "a", "dict"],
+            ):
+                result = analyzer.load_descriptions()
+
+        assert result == {}
+
+    def test_returns_empty_dict_on_load_failure(self, analyzer):
+        """Should return empty dict when file loading raises an exception."""
+        with patch("os.path.exists", return_value=True):
+            with patch(
+                "review_aggregator.description_analyzer.load_json_file",
+                side_effect=Exception("corrupt file"),
+            ):
+                result = analyzer.load_descriptions()
+
+        assert result == {}
+
+    def test_valid_descriptions_returned(self, analyzer):
+        """Should return string descriptions, joining lists."""
+        raw = {
+            "prop_1": "A nice cabin",
+            "prop_2": ["Part one.", "Part two."],
+            "prop_3": 12345,
+        }
+        with patch("os.path.exists", return_value=True):
+            with patch(
+                "review_aggregator.description_analyzer.load_json_file",
+                return_value=raw,
+            ):
+                result = analyzer.load_descriptions()
+
+        assert result["prop_1"] == "A nice cabin"
+        assert result["prop_2"] == "Part one. Part two."
+        assert "prop_3" not in result
+
+
+class TestScoreSingleDescription(TestDescriptionAnalyzer):
+    """Tests for score_single_description."""
+
+    def test_prompt_template_replacement(self, analyzer):
+        """Prompt template placeholders should be filled correctly."""
+        template = "Score property {PROPERTY_ID}: {DESCRIPTION}"
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary"
+        ) as mock_gen:
+            mock_gen.return_value = '{"evocativeness": 5}'
+            result = analyzer.score_single_description(
+                "prop_1", "A cozy cabin", template
+            )
+
+            call_args = mock_gen.call_args
+            sent_reviews = call_args.kwargs.get(
+                "reviews", call_args.args[1] if len(call_args.args) > 1 else None
+            )
+            assert "prop_1" in sent_reviews[0]
+            assert "A cozy cabin" in sent_reviews[0]
+            assert result["evocativeness"] == 5
+
+    def test_returns_empty_on_llm_failure(self, analyzer):
+        """Should return empty dict when LLM returns None."""
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary",
+            return_value=None,
+        ):
+            result = analyzer.score_single_description("prop_1", "desc", "template")
+
+        assert result == {}
+
+
+class TestScoreAllDescriptions(TestDescriptionAnalyzer):
+    """Tests for score_all_descriptions."""
+
+    def test_scores_matching_properties(self, analyzer, sample_descriptions):
+        """Should score descriptions that match residual indices."""
+        residuals = pd.Series(
+            [10, 20, 30], index=["prop_1", "prop_2", "prop_3"], name="adr_residual"
+        )
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary",
+            return_value='{"evocativeness": 7, "specificity": 5}',
+        ):
+            result = analyzer.score_all_descriptions(
+                residuals, sample_descriptions, "Score: {DESCRIPTION}"
+            )
+
+        assert len(result) == 3
+        assert "evocativeness" in result.columns
+
+    def test_skips_missing_descriptions(self, analyzer):
+        """Should skip properties without descriptions."""
+        residuals = pd.Series([10, 20], index=["prop_1", "prop_99"])
+        descriptions = {"prop_1": "A cabin"}
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary",
+            return_value='{"evocativeness": 5}',
+        ):
+            result = analyzer.score_all_descriptions(
+                residuals, descriptions, "Score: {DESCRIPTION}"
+            )
+
+        assert len(result) == 1
+        assert "prop_1" in result.index
+
+    def test_handles_list_descriptions(self, analyzer):
+        """Should join list-type descriptions into a single string."""
+        residuals = pd.Series([10], index=["prop_1"])
+        descriptions = {"prop_1": ["Part one.", "Part two."]}
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary",
+            return_value='{"evocativeness": 6}',
+        ):
+            result = analyzer.score_all_descriptions(
+                residuals, descriptions, "{DESCRIPTION}"
+            )
+
+        assert len(result) == 1
+
+    def test_returns_empty_df_when_all_scoring_fails(self, analyzer):
+        """Should return empty DataFrame when LLM fails for all properties."""
+        residuals = pd.Series([10], index=["prop_1"])
+        descriptions = {"prop_1": "desc"}
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary",
+            return_value=None,
+        ):
+            result = analyzer.score_all_descriptions(
+                residuals, descriptions, "template"
+            )
+
+        assert result.empty
+
+
+class TestGenerateSynthesis(TestDescriptionAnalyzer):
+    """Tests for generate_synthesis."""
+
+    def test_synthesis_prompt_substitution(self, analyzer, sample_descriptions):
+        """Should fill all template placeholders in the synthesis prompt."""
+        residuals = pd.Series(
+            [100, 50, -50, -100],
+            index=["prop_1", "prop_2", "prop_3", "prop_4"],
+        )
+        scores_df = pd.DataFrame(
+            {"evocativeness": [8, 7, 3, 2]},
+            index=["prop_1", "prop_2", "prop_3", "prop_4"],
+        )
+        correlation_results = {"evocativeness": {"correlation": 0.85, "n": 4}}
+        template = (
+            "Zipcode: {ZIPCODE}, R²: {R_SQUARED}, N: {NUM_PROPERTIES}\n"
+            "{CORRELATION_TABLE}\n{HIGH_PREMIUM_DESCRIPTIONS}\n"
+            "{LOW_PREMIUM_DESCRIPTIONS}"
+        )
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary"
+        ) as mock_gen:
+            mock_gen.return_value = "Synthesis report"
+            result = analyzer.generate_synthesis(
+                r_squared=0.75,
+                correlation_results=correlation_results,
+                residuals=residuals,
+                descriptions=sample_descriptions,
+                scores_df=scores_df,
+                synthesis_prompt_template=template,
+            )
+
+            assert result == "Synthesis report"
+            call_args = mock_gen.call_args
+            sent_reviews = call_args.kwargs.get(
+                "reviews", call_args.args[1] if len(call_args.args) > 1 else None
+            )
+            sent_prompt = sent_reviews[0]
+            assert "97067" in sent_prompt
+            assert "0.750" in sent_prompt
+            assert "4" in sent_prompt
+
+    def test_handles_missing_residual_for_property(self, analyzer):
+        """Should skip properties whose IDs don't match any residual index."""
+        residuals = pd.Series([100], index=["prop_1"])
+        descriptions = {"prop_1": "Good cabin", "prop_999": "Ghost property"}
+        scores_df = pd.DataFrame({"evocativeness": [8]}, index=["prop_1"])
+
+        with patch(
+            "review_aggregator.description_analyzer.OpenAIAggregator.generate_summary",
+            return_value="Report",
+        ):
+            # Should not raise IndexError
+            result = analyzer.generate_synthesis(
+                r_squared=0.5,
+                correlation_results={},
+                residuals=residuals,
+                descriptions=descriptions,
+                scores_df=scores_df,
+                synthesis_prompt_template="{ZIPCODE}{R_SQUARED}{CORRELATION_TABLE}{HIGH_PREMIUM_DESCRIPTIONS}{LOW_PREMIUM_DESCRIPTIONS}{NUM_PROPERTIES}",
+            )
+
+        assert result == "Report"
+
+
+class TestSaveResults(TestDescriptionAnalyzer):
+    """Tests for save_results."""
+
+    def test_creates_output_files(self, analyzer, tmp_path):
+        """Should create JSON stats and Markdown files."""
+        analyzer.output_dir = str(tmp_path)
+        residuals = pd.Series([10, -10], index=["p1", "p2"])
+        scores_df = pd.DataFrame({"evocativeness": [8, 3]}, index=["p1", "p2"])
+
+        analyzer.save_results(
+            r_squared=0.75,
+            correlation_results={"evocativeness": {"correlation": 0.8, "n": 2}},
+            residuals=residuals,
+            scores_df=scores_df,
+            synthesis="Test synthesis content",
+        )
+
+        json_path = tmp_path / "description_quality_stats_97067.json"
+        md_path = tmp_path / "description_quality_97067.md"
+
+        assert json_path.exists()
+        assert md_path.exists()
+
+        import json
+
+        stats = json.loads(json_path.read_text())
+        assert stats["zipcode"] == "97067"
+        assert stats["regression_r_squared"] == 0.75
+        assert stats["num_properties_analyzed"] == 2
+
+        md_content = md_path.read_text()
+        assert "Test synthesis content" in md_content
+        assert "97067" in md_content
+
+
+class TestRunAnalysis(TestDescriptionAnalyzer):
+    """Tests for run_analysis orchestrator."""
+
+    def test_exits_early_on_empty_property_data(self, analyzer):
+        """Should exit without error when property data is empty."""
+        with patch(
+            "review_aggregator.description_analyzer.DescriptionAnalyzer.load_property_data",
+            return_value=pd.DataFrame(),
+        ):
+            # Should not raise
+            analyzer.run_analysis()
+
+    def test_exits_early_on_empty_descriptions(self, analyzer, sample_property_df):
+        """Should exit without error when descriptions are empty."""
+        with patch(
+            "review_aggregator.description_analyzer.DescriptionAnalyzer.load_property_data",
+            return_value=sample_property_df,
+        ):
+            with patch(
+                "review_aggregator.description_analyzer.DescriptionAnalyzer.load_descriptions",
+                return_value={},
+            ):
+                analyzer.run_analysis()
+
+    def test_exits_early_on_failed_residuals(self, analyzer, sample_property_df):
+        """Should exit when regression fails (not enough data)."""
+        tiny_df = sample_property_df.head(2)
+        with patch(
+            "review_aggregator.description_analyzer.DescriptionAnalyzer.load_property_data",
+            return_value=tiny_df,
+        ):
+            with patch(
+                "review_aggregator.description_analyzer.DescriptionAnalyzer.load_descriptions",
+                return_value={"p1": "desc"},
+            ):
+                # 2 properties < 5 needed for regression
+                analyzer.run_analysis()
+
+
+class TestComputeResidualsWithBadFeatures(TestDescriptionAnalyzer):
+    """Tests for filtering NaN/zero size features in regression."""
+
+    def test_excludes_zero_bedrooms(self, analyzer):
+        """Properties with 0 bedrooms should be excluded from regression."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 400, 500, 200, 350, 450],
+                "capacity": [4, 6, 8, 3, 5, 7],
+                "bedrooms": [2, 0, 3, 1, 2, 3],
+                "beds": [3, 5, 6, 2, 4, 5],
+                "bathrooms": [1, 2, 2, 1, 1, 2],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared = analyzer.compute_size_adjusted_residuals(df)
+
+        assert "b" not in residuals.index
+        assert len(residuals) == 5
+
+    def test_excludes_nan_features(self, analyzer):
+        """Properties with NaN size features should be excluded."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 400, 500, 200, 350, 450],
+                "capacity": [4, 6, 8, 3, 5, 7],
+                "bedrooms": [2, 3, float("nan"), 1, 2, 3],
+                "beds": [3, 5, 6, 2, 4, 5],
+                "bathrooms": [1, 2, 2, 1, 1, 2],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared = analyzer.compute_size_adjusted_residuals(df)
+
+        assert "c" not in residuals.index
+        assert len(residuals) == 5

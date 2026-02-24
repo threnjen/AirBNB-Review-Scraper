@@ -12,7 +12,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -68,7 +68,36 @@ class DescriptionAnalyzer(BaseModel):
             logger.warning(f"Property descriptions not found at {desc_path}")
             return {}
 
-        descriptions = load_json_file(desc_path)
+        try:
+            descriptions_raw = load_json_file(desc_path)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Failed to load property descriptions from %s: %s", desc_path, exc
+            )
+            return {}
+
+        if not isinstance(descriptions_raw, dict):
+            logger.warning(
+                "Property descriptions at %s is not a JSON object (got %s). Ignoring.",
+                desc_path,
+                type(descriptions_raw).__name__,
+            )
+            return {}
+
+        # Ensure values are strings; lists are joined, non-string values dropped
+        descriptions: dict[str, str] = {}
+        for key, value in descriptions_raw.items():
+            if isinstance(value, list):
+                descriptions[str(key)] = " ".join(str(v) for v in value)
+            elif isinstance(value, str):
+                descriptions[str(key)] = value
+            else:
+                logger.debug(
+                    "Skipping description entry %s with value type %s",
+                    key,
+                    type(value).__name__,
+                )
+
         logger.info(f"Loaded {len(descriptions)} property descriptions")
         return descriptions
 
@@ -85,6 +114,12 @@ class DescriptionAnalyzer(BaseModel):
         # Filter to valid ADR rows
         valid = df[df["ADR"].notna() & (df["ADR"] > 0)].copy()
 
+        # Also exclude rows with missing or zero size features
+        for col in SIZE_FEATURES:
+            if col in valid.columns:
+                numeric_col = pd.to_numeric(valid[col], errors="coerce")
+                valid = valid[numeric_col.notna() & (numeric_col > 0)]
+
         if len(valid) < len(SIZE_FEATURES) + 1:
             logger.warning(
                 f"Not enough properties ({len(valid)}) for regression. "
@@ -97,7 +132,7 @@ class DescriptionAnalyzer(BaseModel):
         X = np.column_stack(
             [np.ones(len(valid))]
             + [
-                pd.to_numeric(valid[col], errors="coerce").fillna(0).values
+                pd.to_numeric(valid[col], errors="coerce").values
                 for col in SIZE_FEATURES
             ]
         )
@@ -263,9 +298,13 @@ class DescriptionAnalyzer(BaseModel):
             lines = []
             for pid in prop_ids:
                 if pid in descriptions:
-                    residual_val = float(
-                        residuals.loc[residuals.index.astype(str) == pid].iloc[0]
-                    )
+                    mask = residuals.index.astype(str) == pid
+                    if not mask.any():
+                        logger.debug(
+                            "No residual found for property %s; skipping.", pid
+                        )
+                        continue
+                    residual_val = float(residuals.loc[mask].iloc[0])
                     desc = descriptions[pid]
                     if isinstance(desc, list):
                         desc = " ".join(str(d) for d in desc)
