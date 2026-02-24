@@ -6,8 +6,7 @@ from scraper.reviews_scraper import scrape_reviews
 from scraper.details_scraper import scrape_details
 from scraper.airbnb_searcher import airbnb_searcher
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
-
-# from review_aggregator.area_review_aggregator import AreaRagAggregator
+from review_aggregator.area_review_aggregator import AreaRagAggregator
 from scraper.details_fileset_build import DetailsFilesetBuilder
 
 import logging
@@ -46,6 +45,7 @@ class AirBnbReviewAggregator:
         self.review_thresh_to_include_prop = self.config.get(
             "review_thresh_to_include_prop", 5
         )
+        self.num_summary_to_process = self.config.get("num_summary_to_process", 3)
 
         self.use_custom_listings_file = self.config.get(
             "use_custom_listings_file", False
@@ -127,17 +127,16 @@ class AirBnbReviewAggregator:
                 f"Aggregating reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
             )
 
-        # if self.aggregate_summaries:
-        #     rag_area = AreaRagAggregator(
-        #         num_listings=self.num_summary_to_process,
-        #         review_thresh_to_include_prop=self.review_thresh_to_include_prop,
-        #         zipcode=self.zipcode,
-        #         collection_name="Summaries",
-        #     )
-        #     rag_area.rag_description_generation_chain_summaries()
-        #     logger.info(
-        #         f"Aggregating summaries for zipcode {self.zipcode} in country {self.iso_code} completed."
-        #     )
+        if self.aggregate_summaries:
+            rag_area = AreaRagAggregator(
+                num_listings=self.num_summary_to_process,
+                review_thresh_to_include_prop=self.review_thresh_to_include_prop,
+                zipcode=self.zipcode,
+            )
+            rag_area.rag_description_generation_chain()
+            logger.info(
+                f"Aggregating area summary for zipcode {self.zipcode} completed."
+            )
 
         # Things to do
         # Aggregrate the aggreated reviews into a single review per zip code
