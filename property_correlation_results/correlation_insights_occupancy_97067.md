@@ -10,52 +10,45 @@
 
 # Insights on AirBNB Property Data for Zipcode '97067'
 
-## Key Differentiators
-The following features distinguish high-occupancy properties from low-occupancy ones:
+## 1. Key Differentiators
+The following features significantly distinguish high-occupancy properties from low-occupancy ones:
 
-1. **Capacity**: 
-   - **Difference**: -1.18 (High Tier Avg: 9.17, Low Tier Avg: 10.35)
-   
-2. **Bedrooms**: 
-   - **Difference**: -0.61 (High Tier Avg: 3.39, Low Tier Avg: 4.0)
+| Amenity          | High Tier (%) | Low Tier (%) | Difference (%) |
+|------------------|---------------|--------------|----------------|
+| Pets             | 72.2%         | 45.0%        | +27.2%         |
+| Fireplace        | 88.9%         | 70.0%        | +18.9%         |
+| Ev Charger       | 27.8%         | 15.0%        | +12.8%         |
+| View Mountain    | 22.2%         | 10.0%        | +12.2%         |
+| Hammock          | 22.2%         | 10.0%        | +12.2%         |
+| Firepit          | 72.2%         | 70.0%        | +2.2%          |
+| Dryer            | 100.0%        | 95.0%        | +5.0%          |
 
-3. **Beds**: 
-   - **Difference**: -0.31 (High Tier Avg: 5.89, Low Tier Avg: 6.2)
+These amenities suggest that high-occupancy properties often prioritize features that enhance comfort and outdoor experiences.
 
-4. **Bathrooms**: 
-   - **Difference**: -0.23 (High Tier Avg: 2.25, Low Tier Avg: 2.48)
+## 2. Accessibility & Convenience Features
+The following amenities contribute to making properties more bookable:
 
-The data suggests that high-occupancy properties tend to be slightly smaller in terms of capacity, bedrooms, beds, and bathrooms compared to low-occupancy properties.
+- **Washer/Dryer**: 100% in high tier vs. 95% in low tier (+5.0%)
+- **Workspace**: 61.1% in high tier vs. 65.0% in low tier (-3.9%)
 
-## Accessibility & Convenience Features
-The following amenities are crucial for making properties more bookable:
+While the presence of a washer/dryer is more common in high-occupancy properties, the workspace feature is slightly less prevalent, indicating that it may not be a primary driver for bookings in this market.
 
-- **WiFi**: 100% prevalence in both tiers, indicating it is a standard expectation.
-- **Workspace**: 100% prevalence in both tiers, suggesting that remote work capabilities are essential.
-- **Washer/Dryer**: 100% prevalence in both tiers, highlighting the importance of laundry facilities for longer stays.
+## 3. Pet-Friendliness Impact
+Allowing pets appears to correlate positively with higher occupancy rates. High-occupancy properties allow pets in 72.2% of cases compared to only 45.0% in low-occupancy properties, resulting in a **+27.2%** difference. This suggests that pet-friendly listings are more appealing to potential guests.
 
-These amenities are critical for attracting guests who prioritize convenience and comfort during their stay.
+## 4. Capacity Sweet Spot
+The average capacity of high-occupancy properties is **9.17 guests**, while low-occupancy properties average **10.35 guests**. The difference of **-1.18 guests** indicates that smaller properties may be booked more frequently, as they cater to smaller groups seeking a more intimate experience.
 
-## Pet-Friendliness Impact
-Both high-occupancy and low-occupancy properties allow pets at a rate of 100%. This indicates that pet-friendliness is not a differentiating factor in this market, as all properties cater to pet owners equally.
+## 5. Availability Patterns
+While the data does not explicitly provide availability patterns, it can be inferred that properties with fewer days blocked off for personal use may have higher occupancy rates. Hosts should consider maintaining flexible availability to attract more bookings.
 
-## Capacity Sweet Spot
-The average capacity for high-occupancy properties is 9.17, while for low-occupancy properties it is 10.35. This suggests that properties that accommodate around 9-10 guests may be optimal for maximizing bookings. However, the slightly lower capacity in high-occupancy properties indicates that smaller groups may be more frequently booked.
-
-## Availability Patterns
-The analysis does not provide explicit data on the number of days available for booking. However, it can be inferred that properties with higher availability may correlate with higher occupancy rates, as guests often prefer options that can accommodate their travel dates.
-
-## Recommendations for Hosts
+## 6. Recommendations for Hosts
 To increase booking frequency, hosts should consider the following actionable recommendations:
 
-1. **Optimize Property Size**: Aim for properties that accommodate around 9-10 guests, as this range appears to attract more bookings.
-   
-2. **Highlight Convenience Amenities**: Ensure that essential amenities like WiFi, workspace, and laundry facilities are prominently featured in listings to appeal to modern travelers.
+1. **Emphasize Pet-Friendliness**: Highlight pet-friendly features in listings to attract a broader audience.
+2. **Enhance Comfort Features**: Invest in amenities like fireplaces and outdoor spaces (e.g., fire pits, hammocks) that enhance guest experience.
+3. **Optimize Capacity**: Consider targeting smaller groups by offering properties that accommodate fewer guests, as they may be booked more frequently.
+4. **Maintain Availability**: Ensure that properties have flexible booking options to maximize occupancy potential.
+5. **Promote Unique Views**: If applicable, market properties with mountain or ocean views, as these features can significantly enhance attractiveness.
 
-3. **Market Unique Features**: Emphasize unique selling points such as proximity to outdoor activities, cozy settings, or special amenities (e.g., hot tubs, fire pits) in property descriptions.
-
-4. **Engage with Guests**: Encourage positive reviews and repeat bookings by providing excellent customer service and personalized experiences.
-
-5. **Adjust Pricing Strategically**: Consider competitive pricing strategies during peak seasons or local events to attract more guests.
-
-By implementing these strategies, hosts can enhance their property's appeal and potentially increase their occupancy rates in the competitive AirBNB market of zipcode '97067'.
+These insights are tailored to the specific market of zipcode '97067' and can help hosts optimize their listings for better performance.

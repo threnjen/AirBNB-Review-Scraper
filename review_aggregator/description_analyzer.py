@@ -208,6 +208,7 @@ class DescriptionAnalyzer(BaseModel):
             return {}
 
         aligned_residuals = residuals.loc[residuals.index.astype(str).isin(common_idx)]
+        aligned_residuals.index = aligned_residuals.index.astype(str)
         aligned_scores = scores_df.loc[common_idx]
 
         for col in aligned_scores.columns:
