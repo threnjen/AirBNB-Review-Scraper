@@ -2,6 +2,7 @@ import os
 import time
 from typing import List, Optional
 import tiktoken
+import pandas as pd
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from utils.tiny_file_handler import load_json_file
@@ -55,12 +56,30 @@ class OpenAIAggregator(BaseModel):
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text using tiktoken."""
+
+        # Check for NA/None/empty values
+        # Check pd.isna() FIRST before string conversions to catch pandas NA types
+        try:
+            if pd.isna(text):
+                return 0
+        except (TypeError, ValueError):
+            pass
+
+        # Check for None and empty strings
+        if text is None or text == "":
+            return 0
+
+        # Check for string representations of NA values (including pandas <NA>)
+        text_str_lower = str(text).lower()
+        if text_str_lower in ["nan", "na", "none", "<na>"]:
+            return 0
+
         try:
             encoding = tiktoken.encoding_for_model(self.model)
-            return len(encoding.encode(text))
+            return len(encoding.encode(str(text)))
         except Exception:
             # Fallback estimation: roughly 4 characters per token
-            return len(text) // 4
+            return len(str(text)) // 4
 
     def chunk_reviews(self, reviews: List[str], prompt: str) -> List[List[str]]:
         """

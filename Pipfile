@@ -27,6 +27,11 @@ matplotlib = "*"
 seaborn = "*"
 xgboost = "*"
 weaviate-client = "*"
+pytest = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+responses = "*"
+freezegun = "*"
 
 [requires]
 python_version = "3.13"

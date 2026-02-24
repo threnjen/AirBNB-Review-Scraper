@@ -1,5 +1,4 @@
-from typing import Any
-import pandas as pd
+import os
 
 # import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
@@ -18,270 +17,93 @@ logger = logging.getLogger(__name__)
 
 
 class AreaRagAggregator(BaseModel):
-    review_thresh_to_include_prop: int = 5
+    """Aggregates property summaries into area-level insights."""
+
     num_listings: int = 3
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    num_completed_listings: int = 0
-    num_overall_ids: int = 100
-    collection_name: str = "Summaries"
-    overall_stats: dict = Field(default_factory=dict)
-    listing_ids: list = Field(default_factory=list)
-    generate_prompt: str = "None"  # consider Optional[str] = None
+    review_thresh_to_include_prop: int = 5
     zipcode: str = "00501"
     overall_mean: float = 0.0
-    num_listings_to_process: int = 0
-    empty_aggregated_reviews: list = Field(default_factory=list)
-    review_ids_need_more_processing: list = Field(default_factory=list)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
 
-    # def model_post_init(self, __context: Any) -> None:
-    #     self.weaviate_client.create_general_collection(
-    #         collection_name=self.collection_name,
-    #         incoming_properties=[
-    #             {
-    #                 "name": "review_text",
-    #                 "data_type": wvc.config.DataType.TEXT,
-    #                 "vectorize_property_name": False,
-    #             },
-    #             {
-    #                 "name": "product_id",
-    #                 "data_type": wvc.config.DataType.TEXT,
-    #                 "skip_vectorization": True,
-    #                 "vectorize_property_name": False,
-    #             },
-    #         ],
-    #     )
+    def rag_description_generation_chain(self):
+        """Generate area-level summary from existing property summaries."""
 
-    def adjust_list_length_upper_bound_for_config(
-        self, unprocessed_reviews: dict
-    ) -> int:
-        # placeholder function to count the number of listing ids.
-        total_listings = len(unprocessed_reviews)
-        if self.num_listings < total_listings:
-            num_listings_to_process = self.num_listings
-        else:
-            num_listings_to_process = total_listings
+        # Load all property summaries from the output directory
+        summary_files = [
+            x
+            for x in os.listdir("property_generated_summaries/")
+            if x.startswith(f"generated_summaries_{self.zipcode}_")
+        ]
 
-        return num_listings_to_process
-
-    def get_listing_ratings_and_reviews(self, reviews: dict, listing_id: str) -> list:
-        listing_ratings_and_reviews = reviews.get(listing_id)
-        return listing_ratings_and_reviews
-
-    def get_listing_id_mean_rating(self, reviews, listing_id) -> float:
-        mean_rating = 0
-        listing_data = self.get_listing_ratings_and_reviews(reviews, listing_id)
-        for review in listing_data:
-            if review.get("rating") is None:
-                pass
-            else:
-                mean_rating += review.get("rating")
-        if len(listing_data) > 0:
-            mean_rating /= len(listing_data)
-            mean_rating = round(mean_rating, 4)
-        else:
-            mean_rating = 0
-        return mean_rating
-
-    def get_overall_mean_rating(self, reviews: dict) -> float:
-        overall_mean = 0
-        for listing_id in reviews:
-            overall_mean += self.get_listing_id_mean_rating(
-                reviews=reviews, listing_id=listing_id
+        if not summary_files:
+            logger.info(
+                f"No property summaries found for zipcode {self.zipcode}; exiting."
             )
-        overall_mean /= len(reviews)
-        overall_mean = round(overall_mean, 4)
-        # logger.info(f"The overall mean rating is {overall_mean}")
-        return overall_mean
+            return
 
-    def prompt_replacement(
-        self,
-        current_prompt: str,
-        listing_mean: str,
-        overall_mean: str,
-    ) -> str:
-        # Add more replacements to fill out the entire prompt
-        current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.zipcode)
-        current_prompt = current_prompt.replace(
+        logger.info(
+            f"Found {len(summary_files)} property summaries for zipcode {self.zipcode}"
+        )
+
+        # Collect all summaries
+        all_summaries = []
+        for file in summary_files[: self.num_listings]:
+            file_path = f"property_generated_summaries/{file}"
+            summary_data = load_json_file(filename=file_path)
+            # Each file is {listing_id: summary_text}
+            for listing_id, summary_text in summary_data.items():
+                if summary_text:
+                    all_summaries.append(f"Listing {listing_id}:\n{summary_text}")
+
+        if not all_summaries:
+            logger.info("No valid summaries to aggregate; exiting.")
+            return
+
+        logger.info(
+            f"Aggregating {len(all_summaries)} property summaries into area summary"
+        )
+
+        # Load area-level prompt template
+        prompt_data = load_json_file("prompts/zipcode_prompt.json")
+        prompt_template = prompt_data.get("gpt4o_mini_generate_prompt_structured", "")
+
+        # Replace placeholders in prompt
+        updated_prompt = prompt_template.replace("{ZIP_CODE_HERE}", self.zipcode)
+        updated_prompt = updated_prompt.replace(
             "{ISO_CODE_HERE}", load_json_file("config.json").get("iso_code", "us")
         )
-        current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
-        current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
-        return current_prompt
-
-    def clean_single_item_reviews(self, ratings: dict) -> list:
-        df = pd.DataFrame(ratings)[["rating", "review"]]
-
-        df["review"] = df["review"].replace(r"[^A-Za-z0-9 ]+", "", regex=True)
-        df["review"] = df["review"].str.lower().apply(lambda x: filter_stopwords(x))
-
-        # remove all special characters from combined_review
-        df["combined_review"] = df["rating"].astype("string") + " " + df["review"]
-
-        return df["combined_review"].to_list()
-
-    def process_single_listing(self, reviews, listing_id):
-        logger.info(
-            f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.num_listings_to_process}"
+        updated_prompt = updated_prompt.replace(
+            "{OVERALL_MEAN}", str(self.overall_mean)
         )
 
-        listing_mean_rating = self.get_listing_id_mean_rating(
-            listing_id=listing_id, reviews=reviews
+        # Generate area summary using OpenAI
+        area_summary = self.openai_aggregator.generate_summary(
+            reviews=all_summaries,  # Pass summaries as "reviews" input
+            prompt=updated_prompt,
+            listing_id=f"area_{self.zipcode}",
         )
 
-        listing_ratings = self.get_listing_ratings_and_reviews(
-            listing_id=listing_id, reviews=reviews
-        )
-
-        if (
-            listing_ratings is None
-            or len(listing_ratings) == 0
-            or len(listing_ratings) < self.review_thresh_to_include_prop
-        ):
-            logger.info(
-                f"No ratings found for listing {listing_id} or number under threshold; skipping."
-            )
-            return
-
-        generated_prompt = load_json_file("prompt.json")["prompt"]
-
-        updated_prompt = self.prompt_replacement(
-            current_prompt=generated_prompt,
-            listing_mean=str(listing_mean_rating),
-            overall_mean=str(self.overall_mean),
-        )
-        reviews = self.clean_single_item_reviews(ratings=listing_ratings)
-
-        # self.weaviate_client.add_reviews_collection_batch(
-        #     collection_name=self.collection_name,
-        #     listing_id=listing_id,
-        #     reviews=reviews,
-        # )
-
-        # summary = self.weaviate_client.generate_aggregate(
-        #     id=listing_id,
-        #     collection_name=self.collection_name,
-        #     generate_prompt=updated_prompt,
-        #     filter_field="product_id",
-        #     return_properties=["review_text"],
-        # )
-
-        # self.weaviate_client.remove_collection_listings(
-        #     listing_id=listing_id, collection_name=self.collection_name, reviews=reviews
-        # )
-
-        # Generate summary using OpenAI aggregator
-        summary = self.openai_aggregator.generate_summary(
-            reviews=reviews, prompt=updated_prompt, listing_id=listing_id
-        )
-
-        return summary
-
-    def filter_out_processed_reviews(
-        self, reviews: dict, already_processed_reviews: dict
-    ) -> dict:
-        already_processed_reviews_ids = list(already_processed_reviews.keys())
-
-        logger.info(f"Already aggregated ids: {len(already_processed_reviews_ids)}")
-
-        unprocessed_reviews = {
-            x: y for x, y in reviews.items() if x not in already_processed_reviews_ids
+        # Save area-level summary
+        output_data = {
+            "zipcode": self.zipcode,
+            "num_properties_analyzed": len(all_summaries),
+            "area_summary": area_summary,
         }
 
-        logger.info(f"Reviews to process after filtering: {len(unprocessed_reviews)}")
-
-        return unprocessed_reviews
-
-    def get_unfinished_aggregated_reviews(self, generated_summaries) -> list[str]:
-        incomplete_keys = []
-        for key, value in generated_summaries.items():
-            if "?" in value:
-                incomplete_keys.append(key)
-
-        logger.info(f"Listings needing more processing: {len(incomplete_keys)}")
-        return incomplete_keys
-
-    def get_empty_aggregated_reviews(self, generated_summaries) -> list[str]:
-        incomplete_keys = []
-        for key, value in generated_summaries.items():
-            if value == "" or value is None:
-                incomplete_keys.append(key)
-        return incomplete_keys
-
-    def remove_empty_reviews(self, generated_summaries) -> dict:
-        empty_aggregated_reviews = self.get_empty_aggregated_reviews(
-            generated_summaries
-        )
-        for empty_id in empty_aggregated_reviews:
-            del generated_summaries[empty_id]
-
         save_json_file(
-            filename=f"results/generated_summaries_{self.zipcode}.json",
-            data=generated_summaries,
-        )
-        return generated_summaries
-
-    def rag_description_generation_chain(self):
-        # Load reviews along with any existing aggregated summaries to determine what still needs processing
-        reviews = load_json_file(filename=f"results/reviews_{self.zipcode}.json")
-        logger.info(f"Total reviews loaded: {len(reviews)}")
-
-        self.overall_mean = self.get_overall_mean_rating(reviews=reviews)
-
-        generated_summaries = load_json_file(
-            filename=f"results/generated_summaries_{self.zipcode}.json"
-        )
-        logger.info(f"Already processed reviews loaded: {len(generated_summaries)}")
-
-        unprocessed_reviews = self.filter_out_processed_reviews(
-            reviews=reviews, already_processed_reviews=generated_summaries
+            filename=f"generated_summaries_{self.zipcode}.json", data=output_data
         )
 
-        if not unprocessed_reviews:
-            logger.info("No unprocessed reviews found; exiting.")
-            return
+        logger.info(f"Area summary saved to generated_summaries_{self.zipcode}.json")
 
-        unprocessed_reviews_ids = list(unprocessed_reviews.keys())
-        logger.info(f"Number of reviews to aggregate: {len(unprocessed_reviews_ids)}")
+        # Log cost and cache statistics
+        self.openai_aggregator.cost_tracker.print_session_summary()
+        self.openai_aggregator.cost_tracker.log_session()
 
-        self.num_listings_to_process = self.adjust_list_length_upper_bound_for_config(
-            unprocessed_reviews=unprocessed_reviews
-        )
-
-        # First pass: process each unprocessed listing up to the configured limit
-        for listing_id in unprocessed_reviews_ids[: self.num_listings_to_process]:
-            generated_summaries[listing_id] = self.process_single_listing(
-                reviews=unprocessed_reviews,
-                listing_id=listing_id,
+        cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
+        if cache_stats.get("enabled"):
+            logger.info(
+                f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
             )
-
-            self.num_completed_listings += 1
-
-            save_json_file(
-                filename=f"results/generated_summaries_{self.zipcode}.json",
-                data=generated_summaries,
-            )
-
-        # Second pass: Remove any listings that resulted in empty summaries
-        generated_summaries = self.remove_empty_reviews(generated_summaries)
-
-        # Third pass: Re-process any listings that resulted in incomplete summaries where the model indicated uncertainty
-        self.review_ids_need_more_processing = self.get_unfinished_aggregated_reviews(
-            generated_summaries
-        )
-
-        for listing_id in self.review_ids_need_more_processing:
-            logger.info(listing_id)
-            generated_summaries[listing_id] = self.process_single_listing(
-                reviews=reviews,
-                listing_id=listing_id,
-            )
-
-            self.num_completed_listings += 1
-
-            save_json_file(
-                filename=f"results/generated_summaries_{self.zipcode}.json",
-                data=generated_summaries,
-            )
-        logger.info("RAG description generation chain completed.")
