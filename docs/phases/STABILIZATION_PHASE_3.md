@@ -1,433 +1,420 @@
-# Phase 3: Integration Tests and QA
+# Phase 3: Data Extraction & Aggregation
 
 **Status:** Planned  
 **Dependencies:** Phase 2 (AreaRagAggregator Rewrite)  
-**Deliverables:** Integration test suite, QA validation completed
+**Deliverables:** Structured JSON with area pros/cons weighted by actual review counts
 
 ---
 
 ## Overview
 
-Add integration tests to validate the full pipeline and create QA documentation for manual verification. Focus on integration tests (not unit tests) per project requirements.
+Extract numeric data from property summaries (the "X of Y Reviews" mentions), cluster similar topics into categories using LLM, and aggregate totals across all properties weighted by actual review counts.
 
----
+### Pipeline Position
 
-## Task 1: Create Test Directory Structure
+```
+Property Reviews → PropertyRagAggregator → Property Summaries
+                                              ↓
+                                      DataExtractor (NEW)
+                                              ↓
+                                      Aggregated Area Data (JSON)
+```
 
-### Commands to Run
+### Output Structure
 
-```bash
-mkdir -p tests
-touch tests/__init__.py
+```json
+{
+  "zipcode": "97067",
+  "total_properties_analyzed": 15,
+  "total_reviews_in_area": 450,
+  "positive_categories": {
+    "Location": {
+      "total_mentions": 156,
+      "total_reviews": 200,
+      "percentage": 78.0,
+      "properties": [
+        {"id": "25923", "mentions": 15, "reviews": 20, "description": "Beautiful and secluded environment"},
+        {"id": "45678", "mentions": 40, "reviews": 50, "description": "Great proximity to trails"}
+      ]
+    },
+    "Host Communication": { ... },
+    "Amenities": { ... }
+  },
+  "negative_categories": {
+    "Cleanliness Issues": { ... },
+    "Noise": { ... }
+  }
+}
 ```
 
 ---
 
-## Task 2: Create Integration Test File
+## Seed Categories
+
+### Positive Categories
+
+| Category | Maps From (examples) |
+|----------|---------------------|
+| Location | "Location", "Beautiful Setting", "Proximity to attractions", "Views" |
+| Host Communication | "Host", "Communication", "Check-in", "Responsive" |
+| Cleanliness | "Cleanliness", "Tidy", "Fresh linens", "Clean" |
+| Amenities | "Hot Tub", "Kitchen", "WiFi", "Parking", "Fireplace", "Amenities" |
+| Value | "Value", "Price", "Worth it", "Exceeded expectations" |
+| Comfort | "Comfort", "Bed quality", "Space", "Cozy", "Temperature" |
+| Character/Ambiance | "Character", "Decor", "Uniqueness", "Rustic charm", "Cabin Character" |
+| Accuracy | "Accuracy", "As described", "Matched photos" |
+
+### Negative Categories
+
+| Category | Maps From (examples) |
+|----------|---------------------|
+| Cleanliness Issues | "Cleanliness", "Dust", "Deep clean needed" |
+| Noise | "Noise", "Noisy", "Traffic", "Neighbors" |
+| Privacy Concerns | "Privacy", "Visibility", "Not private" |
+| Accessibility | "Accessibility", "Stairs", "Tight spaces", "Parking difficulty" |
+| Missing Amenities | "WiFi issues", "Missing supplies", "Broken items" |
+| Communication Issues | "Slow response", "Unclear instructions" |
+| Inaccuracy | "Photos didn't match", "Misleading" |
+| Maintenance | "Repairs needed", "Outdated", "Needs work" |
+
+---
+
+## Task 1: Create DataExtractor Class
 
 ### File to Create
 
-`tests/test_pipeline_integration.py`
+`review_aggregator/data_extractor.py`
 
-### File Contents
+### Class Structure
 
 ```python
-#!/usr/bin/env python3
 """
-Integration tests for the AirBNB Review Scraper pipeline.
-Tests the full flow from data loading to summary generation.
+DataExtractor: Extracts and aggregates numeric review data from property summaries.
+Uses LLM to parse semi-structured text and cluster topics into categories.
 """
 
-import json
 import os
-import sys
-import tempfile
-import shutil
-from pathlib import Path
-
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from review_aggregator.property_review_aggregator import PropertyRagAggregator
-from review_aggregator.area_review_aggregator import AreaRagAggregator
-from review_aggregator.openai_aggregator import OpenAIAggregator
-from utils.cache_manager import CacheManager
-from utils.cost_tracker import CostTracker
-from utils.local_file_handler import LocalFileHandler
-
 import logging
+import sys
+from typing import Any
+
+from pydantic import BaseModel, Field, ConfigDict
+from review_aggregator.openai_aggregator import OpenAIAggregator
+from utils.tiny_file_handler import load_json_file, save_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-class TestOpenAIAggregatorIntegration:
-    """Test OpenAI aggregator components work together."""
+# Seed categories for clustering
+POSITIVE_CATEGORIES = [
+    "Location",
+    "Host Communication", 
+    "Cleanliness",
+    "Amenities",
+    "Value",
+    "Comfort",
+    "Character/Ambiance",
+    "Accuracy"
+]
 
-    def test_aggregator_initializes(self):
-        """Test that OpenAIAggregator initializes without errors."""
-        aggregator = OpenAIAggregator()
-        assert aggregator.model is not None
-        assert aggregator.cache_manager is not None
-        assert aggregator.cost_tracker is not None
-        logger.info("✓ OpenAIAggregator initializes correctly")
+NEGATIVE_CATEGORIES = [
+    "Cleanliness Issues",
+    "Noise",
+    "Privacy Concerns",
+    "Accessibility",
+    "Missing Amenities",
+    "Communication Issues",
+    "Inaccuracy",
+    "Maintenance"
+]
 
-    def test_token_estimation(self):
-        """Test token estimation produces reasonable values."""
-        aggregator = OpenAIAggregator()
-        sample_text = "This is a test review for token estimation."
-        tokens = aggregator.estimate_tokens(sample_text)
-        assert tokens > 0
-        assert tokens < 100  # Simple sentence should be under 100 tokens
-        logger.info(f"✓ Token estimation: {tokens} tokens for sample text")
 
-    def test_cache_manager_operations(self):
-        """Test cache manager can store and retrieve values."""
-        cache_manager = CacheManager()
+class DataExtractor(BaseModel):
+    """Extracts and aggregates review data from property summaries."""
+    
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    zipcode: str = "00000"
+    openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
+    
+    def load_property_summaries(self) -> dict[str, str]:
+        """Load all property summaries for this zipcode."""
+        summaries = {}
+        summary_dir = "property_generated_summaries"
         
-        # Skip if caching disabled
-        stats = cache_manager.get_cache_stats()
-        if not stats.get("enabled"):
-            logger.info("⊘ Cache disabled, skipping cache test")
+        if not os.path.exists(summary_dir):
+            logger.warning(f"Summary directory {summary_dir} does not exist")
+            return summaries
+            
+        for filename in os.listdir(summary_dir):
+            if filename.startswith(f"generated_summaries_{self.zipcode}_"):
+                file_path = f"{summary_dir}/{filename}"
+                data = load_json_file(filename=file_path)
+                summaries.update(data)
+                
+        logger.info(f"Loaded {len(summaries)} property summaries for zipcode {self.zipcode}")
+        return summaries
+    
+    def extract_data_from_summary(self, listing_id: str, summary_text: str) -> dict:
+        """Use LLM to extract structured data from a property summary."""
+        
+        extraction_prompt = f"""Extract the numeric review data from this property summary.
+
+For each item mentioned in the Positives and Criticisms sections, extract:
+- topic: The name of the topic (e.g., "Location", "Hot Tub")  
+- sentiment: "positive" or "negative"
+- mentions: The number before "of" (e.g., 15 from "15 of 20 Reviews")
+- total_reviews: The number after "of" (e.g., 20 from "15 of 20 Reviews")
+- description: Brief description from the summary
+
+Categorize each topic into one of these categories:
+
+Positive categories: {POSITIVE_CATEGORIES}
+Negative categories: {NEGATIVE_CATEGORIES}
+
+If a topic doesn't fit existing categories, assign it to the closest match or create a specific new category name.
+
+Return a JSON object with this structure:
+{{
+  "listing_id": "{listing_id}",
+  "total_reviews": <total reviews for this property>,
+  "items": [
+    {{
+      "category": "<category name>",
+      "original_topic": "<topic from summary>",
+      "sentiment": "<positive or negative>",
+      "mentions": <number>,
+      "total_reviews": <number>,
+      "description": "<brief description>"
+    }}
+  ]
+}}
+
+Property Summary:
+{summary_text}
+"""
+        
+        response = self.openai_aggregator.generate_summary(
+            reviews=[extraction_prompt],
+            prompt="Extract the data as requested and return only valid JSON.",
+            listing_id=f"extract_{listing_id}"
+        )
+        
+        # Parse JSON response
+        try:
+            import json
+            # Clean response - remove markdown code blocks if present
+            cleaned = response.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("```")[1]
+                if cleaned.startswith("json"):
+                    cleaned = cleaned[4:]
+            return json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse extraction for {listing_id}: {e}")
+            return {"listing_id": listing_id, "total_reviews": 0, "items": []}
+    
+    def aggregate_extractions(self, extractions: list[dict]) -> dict:
+        """Aggregate extracted data across all properties."""
+        
+        positive_categories = {}
+        negative_categories = {}
+        total_reviews = 0
+        
+        for extraction in extractions:
+            listing_id = extraction.get("listing_id", "unknown")
+            listing_reviews = extraction.get("total_reviews", 0)
+            total_reviews += listing_reviews
+            
+            for item in extraction.get("items", []):
+                category = item.get("category", "Other")
+                sentiment = item.get("sentiment", "positive")
+                mentions = item.get("mentions", 0)
+                item_reviews = item.get("total_reviews", listing_reviews)
+                description = item.get("description", "")
+                original_topic = item.get("original_topic", category)
+                
+                # Choose target dict based on sentiment
+                target = positive_categories if sentiment == "positive" else negative_categories
+                
+                if category not in target:
+                    target[category] = {
+                        "total_mentions": 0,
+                        "total_reviews": 0,
+                        "properties": []
+                    }
+                
+                target[category]["total_mentions"] += mentions
+                target[category]["total_reviews"] += item_reviews
+                target[category]["properties"].append({
+                    "id": listing_id,
+                    "mentions": mentions,
+                    "reviews": item_reviews,
+                    "original_topic": original_topic,
+                    "description": description
+                })
+        
+        # Calculate percentages
+        for category_dict in [positive_categories, negative_categories]:
+            for category, data in category_dict.items():
+                if data["total_reviews"] > 0:
+                    data["percentage"] = round(
+                        (data["total_mentions"] / data["total_reviews"]) * 100, 1
+                    )
+                else:
+                    data["percentage"] = 0.0
+        
+        # Sort by total mentions descending
+        positive_categories = dict(
+            sorted(positive_categories.items(), 
+                   key=lambda x: x[1]["total_mentions"], 
+                   reverse=True)
+        )
+        negative_categories = dict(
+            sorted(negative_categories.items(), 
+                   key=lambda x: x[1]["total_mentions"], 
+                   reverse=True)
+        )
+        
+        return {
+            "zipcode": self.zipcode,
+            "total_properties_analyzed": len(extractions),
+            "total_reviews_in_area": total_reviews,
+            "positive_categories": positive_categories,
+            "negative_categories": negative_categories
+        }
+    
+    def run_extraction(self):
+        """Main entry point: extract, aggregate, and save."""
+        
+        summaries = self.load_property_summaries()
+        
+        if not summaries:
+            logger.info(f"No property summaries found for zipcode {self.zipcode}; exiting.")
             return
         
-        test_key = "test_integration_key"
-        test_value = "test_integration_value"
+        logger.info(f"Extracting data from {len(summaries)} property summaries")
         
-        cache_manager.set(test_key, test_value)
-        retrieved = cache_manager.get(test_key)
+        extractions = []
+        for listing_id, summary_text in summaries.items():
+            if summary_text:
+                extraction = self.extract_data_from_summary(listing_id, summary_text)
+                extractions.append(extraction)
         
-        assert retrieved == test_value
-        logger.info("✓ Cache manager stores and retrieves values")
-
-
-class TestLocalFileHandler:
-    """Test file handler operations."""
-
-    def test_save_json_creates_directory(self):
-        """Test that save_json creates parent directories."""
-        handler = LocalFileHandler()
+        logger.info(f"Extracted data from {len(extractions)} properties")
         
-        with tempfile.TemporaryDirectory() as tmpdir:
-            nested_path = os.path.join(tmpdir, "nested", "dir", "test.json")
-            test_data = {"key": "value"}
-            
-            handler.save_json(nested_path, test_data)
-            
-            assert os.path.exists(nested_path)
-            with open(nested_path, "r") as f:
-                loaded = json.load(f)
-            assert loaded == test_data
-            
-        logger.info("✓ save_json creates nested directories")
-
-    def test_load_json(self):
-        """Test JSON loading."""
-        handler = LocalFileHandler()
+        # Aggregate across all properties
+        aggregated = self.aggregate_extractions(extractions)
         
-        with tempfile.TemporaryDirectory() as tmpdir:
-            test_path = os.path.join(tmpdir, "test.json")
-            test_data = {"reviews": ["good", "bad"]}
-            
-            with open(test_path, "w") as f:
-                json.dump(test_data, f)
-            
-            loaded = handler.load_json(test_path)
-            assert loaded == test_data
-            
-        logger.info("✓ load_json reads files correctly")
-
-
-class TestPropertyRagAggregator:
-    """Test property-level aggregator initialization."""
-
-    def test_aggregator_initializes(self):
-        """Test PropertyRagAggregator initializes with required parameters."""
-        aggregator = PropertyRagAggregator(
-            num_listings_to_summarize=3,
-            review_thresh_to_include_prop=5,
-            zipcode="97067"
-        )
+        # Save output
+        output_path = f"area_data_{self.zipcode}.json"
+        save_json_file(filename=output_path, data=aggregated)
         
-        assert aggregator.zipcode == "97067"
-        assert aggregator.num_listings_to_summarize == 3
-        assert aggregator.openai_aggregator is not None
-        logger.info("✓ PropertyRagAggregator initializes correctly")
-
-    def test_mean_rating_calculation(self):
-        """Test mean rating calculation logic."""
-        aggregator = PropertyRagAggregator(
-            num_listings_to_summarize=3,
-            review_thresh_to_include_prop=5,
-            zipcode="97067"
-        )
+        logger.info(f"Area data saved to {output_path}")
+        logger.info(f"Positive categories: {len(aggregated['positive_categories'])}")
+        logger.info(f"Negative categories: {len(aggregated['negative_categories'])}")
         
-        sample_reviews = [
-            {"rating": 5, "review": "Great!"},
-            {"rating": 4, "review": "Good"},
-            {"rating": 3, "review": "Okay"},
-        ]
+        # Log costs
+        self.openai_aggregator.cost_tracker.print_session_summary()
+        self.openai_aggregator.cost_tracker.log_session()
         
-        mean = aggregator.get_listing_id_mean_rating(sample_reviews)
-        expected = round((5 + 4 + 3) / 3, 4)
-        assert mean == expected
-        logger.info(f"✓ Mean rating calculation: {mean}")
-
-
-class TestAreaRagAggregator:
-    """Test area-level aggregator initialization."""
-
-    def test_aggregator_initializes(self):
-        """Test AreaRagAggregator initializes with required parameters."""
-        aggregator = AreaRagAggregator(
-            num_listings=5,
-            review_thresh_to_include_prop=5,
-            zipcode="97067"
-        )
-        
-        assert aggregator.zipcode == "97067"
-        assert aggregator.num_listings == 5
-        assert aggregator.openai_aggregator is not None
-        logger.info("✓ AreaRagAggregator initializes correctly")
-
-
-def run_all_tests():
-    """Run all integration tests."""
-    logger.info("\n" + "=" * 60)
-    logger.info("INTEGRATION TESTS")
-    logger.info("=" * 60 + "\n")
-    
-    test_classes = [
-        TestOpenAIAggregatorIntegration,
-        TestLocalFileHandler,
-        TestPropertyRagAggregator,
-        TestAreaRagAggregator,
-    ]
-    
-    passed = 0
-    failed = 0
-    
-    for test_class in test_classes:
-        logger.info(f"\n--- {test_class.__name__} ---")
-        instance = test_class()
-        
-        for method_name in dir(instance):
-            if method_name.startswith("test_"):
-                try:
-                    getattr(instance, method_name)()
-                    passed += 1
-                except AssertionError as e:
-                    logger.error(f"✗ {method_name}: {e}")
-                    failed += 1
-                except Exception as e:
-                    logger.error(f"✗ {method_name}: {type(e).__name__}: {e}")
-                    failed += 1
-    
-    logger.info("\n" + "=" * 60)
-    logger.info(f"RESULTS: {passed} passed, {failed} failed")
-    logger.info("=" * 60)
-    
-    return failed == 0
-
-
-if __name__ == "__main__":
-    success = run_all_tests()
-    sys.exit(0 if success else 1)
+        return aggregated
 ```
 
 ---
 
-## Task 3: Add pytest Configuration
-
-### File to Create
-
-`pytest.ini`
-
-### File Contents
-
-```ini
-[pytest]
-testpaths = tests
-python_files = test_*.py
-python_functions = test_*
-python_classes = Test*
-addopts = -v --tb=short
-log_cli = true
-log_cli_level = INFO
-```
-
----
-
-## Task 4: Update Pipfile for pytest
+## Task 2: Add to main.py
 
 ### File to Edit
 
-`Pipfile`
+`main.py`
 
-### Add to [dev-packages] section
+### Change 1: Add Import (after other review_aggregator imports, around line 10)
 
-```toml
-[dev-packages]
-pytest = "*"
+```python
+from review_aggregator.data_extractor import DataExtractor
 ```
 
-### After editing, run
+### Change 2: Add Config Variable (in `__init__`, around line 33)
 
-```bash
-pipenv install --dev
+```python
+self.extract_data = False
+```
+
+### Change 3: Load Config (in `load_configs`, add after `aggregate_summaries`)
+
+```python
+self.extract_data = self.config.get("extract_data", False)
+```
+
+### Change 4: Add Pipeline Step (in `run_tasks_from_config`, after `aggregate_summaries` block)
+
+```python
+if self.extract_data:
+    extractor = DataExtractor(zipcode=self.zipcode)
+    extractor.run_extraction()
+    logger.info(
+        f"Data extraction for zipcode {self.zipcode} completed."
+    )
 ```
 
 ---
 
-## QA Test Plan
+## Task 3: Update config.json
 
-### Pre-Conditions
+### File to Edit
 
-1. Python environment set up with all dependencies
-2. `OPENAI_API_KEY` environment variable set
-3. At least 5 property review files in `property_reviews_scraped/`
-4. Cache directory exists: `cache/summaries/`
+`config.json`
 
-### Test Case 1: Property Summary Generation
+### Add Key
 
-**Objective:** Verify PropertyRagAggregator generates summaries from reviews
-
-**Steps:**
-1. Set `config.json`:
-   ```json
-   {
-     "scrape_reviews": false,
-     "scrape_details": false,
-     "build_details": false,
-     "aggregate_reviews": true,
-     "aggregate_summaries": false,
-     "num_listings_to_summarize": 2,
-     "zipcode": "97067"
-   }
-   ```
-2. Run: `python main.py`
-3. Check logs for "Processing listing" messages
-4. Verify new files created in `property_generated_summaries/`
-
-**Expected Result:**
-- Pipeline completes without errors
-- 2 new summary files created (or uses cached if already exist)
-- Each file contains JSON with `{listing_id: summary_text}` structure
-
-**Pass Criteria:** ☐ Pass ☐ Fail
-
----
-
-### Test Case 2: Area Summary Generation
-
-**Objective:** Verify AreaRagAggregator generates area summary from property summaries
-
-**Pre-Condition:** At least 3 property summaries exist in `property_generated_summaries/`
-
-**Steps:**
-1. Set `config.json`:
-   ```json
-   {
-     "scrape_reviews": false,
-     "scrape_details": false,
-     "build_details": false,
-     "aggregate_reviews": false,
-     "aggregate_summaries": true,
-     "num_summary_to_process": 5,
-     "zipcode": "97067"
-   }
-   ```
-2. Run: `python main.py`
-3. Check logs for "Found X property summaries" message
-4. Verify `generated_summaries_97067.json` created in root directory
-
-**Expected Result:**
-- Pipeline completes without errors
-- Area summary file created with structure:
-  ```json
-  {
-    "zipcode": "97067",
-    "num_properties_analyzed": 5,
-    "area_summary": "..."
-  }
-  ```
-- Summary contains area-level insights about common themes
-
-**Pass Criteria:** ☐ Pass ☐ Fail
-
----
-
-### Test Case 3: Cache Functionality
-
-**Objective:** Verify caching prevents redundant API calls
-
-**Steps:**
-1. Run property aggregation once (Test Case 1)
-2. Note the cost summary logged
-3. Run same aggregation again
-4. Compare cost summary
-
-**Expected Result:**
-- Second run shows cached responses used
-- Cost is lower (or zero) for cached content
-- Log shows "Cache Statistics: X valid"
-
-**Pass Criteria:** ☐ Pass ☐ Fail
-
----
-
-### Test Case 4: Error Handling - Missing Files
-
-**Objective:** Verify graceful handling when no property summaries exist
-
-**Steps:**
-1. Create empty temp directory (or use new zipcode with no data)
-2. Set `config.json` to `aggregate_summaries: true` with unused zipcode
-3. Run: `python main.py`
-
-**Expected Result:**
-- Pipeline logs "No property summaries found for zipcode..."
-- Exits gracefully without crash
-- No empty output file created
-
-**Pass Criteria:** ☐ Pass ☐ Fail
-
----
-
-### Test Case 5: Integration Test Suite
-
-**Objective:** Verify all integration tests pass
-
-**Steps:**
-1. Run: `python tests/test_pipeline_integration.py`
-2. Or with pytest: `pytest tests/ -v`
-
-**Expected Result:**
-- All tests pass
-- Output shows "RESULTS: X passed, 0 failed"
-
-**Pass Criteria:** ☐ Pass ☐ Fail
+```json
+{
+  "extract_data": false
+}
+```
 
 ---
 
 ## Success Criteria
 
-1. [ ] `tests/test_pipeline_integration.py` created with all test classes
-2. [ ] `pytest.ini` configured
-3. [ ] All integration tests pass: `python tests/test_pipeline_integration.py`
-4. [ ] QA Test Cases 1-5 all pass
-5. [ ] No regressions in existing functionality
+1. [ ] `review_aggregator/data_extractor.py` created with full class
+2. [ ] Import added to `main.py`
+3. [ ] Config loading added for `extract_data`
+4. [ ] Pipeline step added in `run_tasks_from_config`
+5. [ ] No syntax errors: `python -m py_compile review_aggregator/data_extractor.py main.py`
+6. [ ] Manual test produces `area_data_{zipcode}.json` with expected structure
+
+---
+
+## Manual Verification Steps
+
+1. Ensure at least 3 property summaries exist in `property_generated_summaries/`
+2. Set `config.json`:
+   ```json
+   {
+     "extract_data": true,
+     "zipcode": "97067"
+   }
+   ```
+3. Run: `python main.py`
+4. Verify `area_data_97067.json` created with structure matching Output Structure above
+5. Check that categories are clustered correctly
+6. Verify per-property breakdown is preserved
 
 ---
 
 ## Commit Message
 
 ```
-test: add integration tests and QA validation
+feat: add DataExtractor for numeric review aggregation
 
-- Create tests/test_pipeline_integration.py with component tests
-- Add pytest.ini configuration
-- Test OpenAI aggregator, cache manager, file handler
-- Test PropertyRagAggregator and AreaRagAggregator initialization
-- Verify Phase 1-2 bug fixes work correctly
+- Create DataExtractor class with LLM-based parsing and clustering
+- Extract "X of Y Reviews" data from property summaries
+- Cluster topics into predefined categories using LLM
+- Aggregate totals weighted by actual review counts
+- Preserve per-property breakdown in output JSON
+- Add extract_data config flag and pipeline step
 ```
+
