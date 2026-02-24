@@ -20,7 +20,6 @@ class CacheManager(BaseModel):
     """
 
     cache_dir: str = "cache/summaries"
-    ttl_hours: int = 24 * 7  # Cache valid for 7 days
     enable_cache: bool = True
 
     def __init__(self, **kwargs):
@@ -31,6 +30,9 @@ class CacheManager(BaseModel):
             config = load_json_file("config.json")
             openai_config = config.get("openai", {})
             self.enable_cache = openai_config.get("enable_caching", self.enable_cache)
+            # Convert days to hours
+            cache_ttl_days = openai_config.get("cache_ttl_days", 7)
+            self.ttl_hours = cache_ttl_days * 24
         except Exception:
             pass
 

@@ -3,9 +3,9 @@
     "scrape_details": false,
     "build_details": false,
     "aggregate_reviews": true,
-    "aggregate_summaries": false,
-    "extract_data": false,
-    "analyze_correlations": false,
+    "aggregate_summaries": true,
+    "extract_data": true,
+    "analyze_correlations": true,
     "correlation_metrics": [
         "adr",
         "occupancy"
@@ -18,7 +18,7 @@
     "custom_filepath": "custom_listings.json",
     "num_listings_to_summarize": 100000,
     "num_listings_to_search": 30000,
-    "num_summary_to_process": 5,
+    "num_summary_to_process": 10000,
     "review_thresh_to_include_prop": 3,
     "dataset_use_categoricals": false,
     "openai": {
@@ -29,6 +29,7 @@
         "max_retries": 3,
         "retry_delay": 1.0,
         "enable_caching": true,
+        "cache_ttl_days": 90,
         "enable_cost_tracking": true
     }
 }
