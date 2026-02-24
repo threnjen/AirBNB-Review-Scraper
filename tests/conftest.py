@@ -139,3 +139,137 @@ def isolate_tests(tmp_path, monkeypatch):
         json.dump(empty_config, f)
 
     # Don't change working directory - just patch file loading where needed
+
+
+# ============================================================================
+# Integration Test Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def sample_property_summary():
+    """Sample property summary text for integration testing."""
+    return """## Property Summary - Listing 12345678
+
+**Overall Rating:** 4.5/5 (based on 25 reviews)
+
+### Positives
+- **Location** (20 of 25 Reviews): Guests consistently praise the central location with easy access to restaurants and shops.
+- **Cleanliness** (18 of 25 Reviews): The property is described as spotless and well-maintained.
+- **Host Communication** (15 of 25 Reviews): The host is responsive and provides helpful local tips.
+
+### Criticisms
+- **Noise** (5 of 25 Reviews): Some guests noted street noise, especially on weekends.
+- **Parking** (3 of 25 Reviews): Limited parking options mentioned by a few guests.
+
+### Notable Features
+- Hot tub on deck
+- Mountain views
+- Pet-friendly
+"""
+
+
+@pytest.fixture
+def sample_extraction_response():
+    """Sample extraction JSON response from OpenAI."""
+    return json.dumps(
+        {
+            "listing_id": "12345678",
+            "total_reviews": 25,
+            "items": [
+                {
+                    "category": "Location",
+                    "original_topic": "Location",
+                    "sentiment": "positive",
+                    "mentions": 20,
+                    "total_reviews": 25,
+                    "description": "Central location with easy access to restaurants and shops",
+                },
+                {
+                    "category": "Cleanliness",
+                    "original_topic": "Cleanliness",
+                    "sentiment": "positive",
+                    "mentions": 18,
+                    "total_reviews": 25,
+                    "description": "Property is spotless and well-maintained",
+                },
+                {
+                    "category": "Noise",
+                    "original_topic": "Noise",
+                    "sentiment": "negative",
+                    "mentions": 5,
+                    "total_reviews": 25,
+                    "description": "Street noise on weekends",
+                },
+            ],
+        }
+    )
+
+
+@pytest.fixture
+def mock_summary_files_dir(tmp_path, sample_property_summary):
+    """Create a temp directory with sample property summary files."""
+    summary_dir = tmp_path / "property_generated_summaries"
+    summary_dir.mkdir()
+
+    # Create sample summary files for zipcode 97067
+    summaries = [
+        (
+            "generated_summaries_97067_12345678.json",
+            {"12345678": sample_property_summary},
+        ),
+        (
+            "generated_summaries_97067_87654321.json",
+            {"87654321": "Another great property with mountain views."},
+        ),
+        (
+            "generated_summaries_97067_11111111.json",
+            {"11111111": "Cozy cabin perfect for families."},
+        ),
+    ]
+
+    for filename, data in summaries:
+        file_path = summary_dir / filename
+        with open(file_path, "w") as f:
+            json.dump(data, f)
+
+    return summary_dir
+
+
+@pytest.fixture
+def mock_review_files_dir(tmp_path, sample_reviews):
+    """Create a temp directory with sample property review files."""
+    review_dir = tmp_path / "property_reviews_scraped"
+    review_dir.mkdir()
+
+    # Create sample review files
+    for i, listing_id in enumerate(["12345678", "87654321", "11111111"]):
+        file_path = review_dir / f"property_reviews_97067_{listing_id}.json"
+        with open(file_path, "w") as f:
+            json.dump(sample_reviews, f)
+
+    return review_dir
+
+
+@pytest.fixture
+def mocked_openai_aggregator(mock_openai_client, tmp_cache_dir, tmp_logs_dir):
+    """Create an OpenAIAggregator with mocked OpenAI client for integration tests."""
+    with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        mock_load.return_value = {
+            "openai": {
+                "model": "gpt-4o-mini",
+                "temperature": 0.3,
+                "max_tokens": 4000,
+                "chunk_size": 20,
+                "enable_caching": True,
+                "enable_cost_tracking": True,
+            }
+        }
+        with patch("utils.cache_manager.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
+
+                agg = OpenAIAggregator(client=mock_openai_client)
+                agg.cache_manager.cache_dir = str(tmp_cache_dir)
+                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+                return agg
