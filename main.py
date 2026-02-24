@@ -9,6 +9,7 @@ from review_aggregator.property_review_aggregator import PropertyRagAggregator
 from review_aggregator.area_review_aggregator import AreaRagAggregator
 from review_aggregator.data_extractor import DataExtractor
 from review_aggregator.correlation_analyzer import CorrelationAnalyzer
+from review_aggregator.description_analyzer import DescriptionAnalyzer
 from scraper.details_fileset_build import DetailsFilesetBuilder
 
 import logging
@@ -35,6 +36,7 @@ class AirBnbReviewAggregator:
         self.aggregate_summaries = False
         self.extract_data = False
         self.analyze_correlations = False
+        self.analyze_descriptions = False
         self.correlation_metrics = ["adr", "occupancy"]
         self.correlation_top_percentile = 25
         self.correlation_bottom_percentile = 25
@@ -67,6 +69,7 @@ class AirBnbReviewAggregator:
         self.aggregate_summaries = self.config.get("aggregate_summaries", False)
         self.extract_data = self.config.get("extract_data", False)
         self.analyze_correlations = self.config.get("analyze_correlations", False)
+        self.analyze_descriptions = self.config.get("analyze_descriptions", False)
         self.correlation_metrics = self.config.get(
             "correlation_metrics", ["adr", "occupancy"]
         )
@@ -170,6 +173,11 @@ class AirBnbReviewAggregator:
             )
             analyzer.run_analysis()
             logger.info(f"Correlation analysis for zipcode {self.zipcode} completed.")
+
+        if self.analyze_descriptions:
+            desc_analyzer = DescriptionAnalyzer(zipcode=self.zipcode)
+            desc_analyzer.run_analysis()
+            logger.info(f"Description quality analysis for zipcode {self.zipcode} completed.")
 
         # Things to do
         # Aggregrate the aggreated reviews into a single review per zip code

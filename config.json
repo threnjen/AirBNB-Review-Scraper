@@ -6,6 +6,7 @@
     "aggregate_summaries": false,
     "extract_data": false,
     "analyze_correlations": true,
+    "analyze_descriptions": false,
     "correlation_metrics": [
         "adr",
         "occupancy"
