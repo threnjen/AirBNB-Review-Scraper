@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # from review_aggregator.weaviate_client import WeaviateClient
 from review_aggregator.openai_aggregator import OpenAIAggregator
+
 # from utils.nlp_functions import filter_stopwords
 
 import logging

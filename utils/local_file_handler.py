@@ -11,7 +11,6 @@ from utils.file_handler import FileHandler
 
 
 class LocalFileHandler(FileHandler):
-
     @property
     def file_missing_exception(self) -> Exception:
         return FileNotFoundError

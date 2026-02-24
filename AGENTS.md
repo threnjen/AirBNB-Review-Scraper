@@ -26,7 +26,7 @@
 2. **Test** — write test first (red)
 3. **Implement** — minimal code to pass (green)
 4. **Refactor** — clean up with tests passing
-5. **Commit** — clear message explaining "why"
+5. **Commit** — pause, present staged files and suggested commit message, wait for user to review and commit
 
 ### When Stuck (Max 3 Attempts)
 1. Document what failed (steps, errors, hypothesis)
@@ -60,7 +60,8 @@
 - [ ] Check plan is up-to-date before commit
 
 ### Always
-- Commit early and often with meaningful messages
+- Pause at commit points — present staged files + suggested commit message, then wait
+- Never run `git commit` or `git push` on behalf of the user
 
 ### Never
 - Use `--no-verify` to bypass hooks
@@ -114,6 +115,13 @@ dev/active/[task-name]/
 - Check `/dev/active/` for existing tasks before starting
 - Read all three files before proceeding with existing task
 - Remove plan file when all stages done
+
+## Environment
+
+This project uses **pipenv**. All Python and pytest commands must be prefixed with `pipenv run`, e.g.:
+- `pipenv run python main.py`
+- `pipenv run pytest`
+- `pipenv run python -m py_compile ...`
 
 ## Extended Guides
 

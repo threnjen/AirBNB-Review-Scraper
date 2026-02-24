@@ -3,6 +3,7 @@
 # Variables
 PIPENV := pipenv
 PYTHON := $(PIPENV) run python
+PYTEST := $(PIPENV) run pytest
 OS := $(shell uname)
 
 # Default target
@@ -12,11 +13,25 @@ default: help
 help:
 	@echo "Available targets:"
 	@echo "  setup          - Set up the environment (Windows/Unix)"
+	@echo "  test           - Run all tests with coverage"
+	@echo "  test-fast      - Run tests without coverage (fail fast)"
+	@echo "  coverage       - Run tests with detailed coverage report"
 
 # Setup target
 setup:
 	@$(PIPENV) install --dev || exit 1
 	pipenv shell
 
+# Test targets
+test:
+	$(PYTEST)
 
-.PHONY: default help setup run clean
+test-fast:
+	$(PYTEST) -x --no-cov
+
+coverage:
+	$(PYTEST) --cov-report=term-missing --cov-report=html:coverage_html
+	@echo "Coverage report generated in coverage_html/"
+
+
+.PHONY: default help setup test test-fast coverage run clean
