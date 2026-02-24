@@ -3,10 +3,10 @@ Shared pytest fixtures for the AirBNB Review Scraper test suite.
 """
 
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 
 # Get the tests directory path
 TESTS_DIR = Path(__file__).parent

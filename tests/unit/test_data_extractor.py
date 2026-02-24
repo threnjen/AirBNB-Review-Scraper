@@ -3,8 +3,9 @@ Unit tests for review_aggregator/data_extractor.py
 """
 
 import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 class TestDataExtractor:
