@@ -2,8 +2,9 @@
 Unit tests for review_aggregator/openai_aggregator.py
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 class TestOpenAIAggregator:

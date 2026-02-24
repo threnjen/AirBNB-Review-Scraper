@@ -4,8 +4,9 @@ Unit tests for utils/local_file_handler.py
 
 import json
 import os
-import pytest
+
 import pandas as pd
+import pytest
 
 from utils.local_file_handler import LocalFileHandler
 

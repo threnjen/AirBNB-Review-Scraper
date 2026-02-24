@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 from typing import Union
 
 import awswrangler as wr
@@ -6,9 +8,6 @@ import pandas as pd
 
 from utils.local_file_handler import LocalFileHandler
 from utils.s3_file_handler import S3FileHandler
-
-import logging
-import sys
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)

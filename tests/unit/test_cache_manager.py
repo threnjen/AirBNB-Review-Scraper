@@ -3,9 +3,10 @@ Unit tests for utils/cache_manager.py
 """
 
 import json
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import patch
+
+import pytest
 
 
 class TestCacheManager:

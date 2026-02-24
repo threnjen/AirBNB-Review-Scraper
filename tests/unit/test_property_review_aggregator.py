@@ -2,8 +2,9 @@
 Unit tests for review_aggregator/property_review_aggregator.py
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 class TestPropertyRagAggregator:

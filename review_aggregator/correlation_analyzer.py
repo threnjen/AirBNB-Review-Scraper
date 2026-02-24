@@ -3,14 +3,14 @@ CorrelationAnalyzer: Analyzes property attributes that correlate with high ADR a
 Segments properties into top/bottom percentiles and identifies differentiating features.
 """
 
-import os
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.openai_aggregator import OpenAIAggregator
 from utils.tiny_file_handler import load_json_file, save_json_file
@@ -153,8 +153,9 @@ class CorrelationAnalyzer(BaseModel):
                 continue
 
             # Count non-False values (amenity present)
-            high_count = (high_tier[col] != False).sum()  # noqa: E712
-            low_count = (low_tier[col] != False).sum()  # noqa: E712
+            # CSV stores the string "False", not Python bool False
+            high_count = (high_tier[col] != "False").sum()
+            low_count = (low_tier[col] != "False").sum()
 
             high_pct = (high_count / len(high_tier) * 100) if len(high_tier) > 0 else 0
             low_pct = (low_count / len(low_tier) * 100) if len(low_tier) > 0 else 0
