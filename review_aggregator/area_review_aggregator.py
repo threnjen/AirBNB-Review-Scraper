@@ -113,8 +113,8 @@ class AreaRagAggregator(BaseModel):
     def clean_single_item_reviews(self, ratings: dict) -> list:
         df = pd.DataFrame(ratings)[["rating", "review"]]
 
-        df["review"] = df["review"].replace(r"[^A-Za-z0-9 ]+", "", regex=True)
-        df["review"] = df["review"].str.lower().apply(lambda x: filter_stopwords(x))
+        # df["review"] = df["review"].replace(r"[^A-Za-z0-9 ]+", "", regex=True)
+        # df["review"] = df["review"].str.lower().apply(lambda x: filter_stopwords(x))
 
         # remove all special characters from combined_review
         df["combined_review"] = df["rating"].astype("string") + " " + df["review"]
