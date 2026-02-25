@@ -1,5 +1,14 @@
 {
-    "scrape_airdna": true,
+    "pipeline_cache_enabled": true,
+    "pipeline_cache_ttl_days": 7,
+    "force_refresh_airdna": false,
+    "force_refresh_search": false,
+    "force_refresh_reviews": false,
+    "force_refresh_details": false,
+    "force_refresh_build_details": false,
+    "force_refresh_aggregate_reviews": false,
+    "force_refresh_aggregate_summaries": false,
+    "scrape_airdna": false,
     "airdna_comp_set_ids": [
         "348454",
         "365541",
@@ -13,8 +22,8 @@
         "365538"
     ],
     "airdna_cdp_url": "http://localhost:9222",
-    "airdna_inspect_mode": true,
-    "scrape_reviews": true,
+    "airdna_inspect_mode": false,
+    "scrape_reviews": false,
     "scrape_details": true,
     "build_details": true,
     "aggregate_reviews": true,

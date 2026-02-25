@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import random
 import sys
 import time
@@ -10,7 +11,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-def scrape_reviews(zipcode, search_results, num_listings):
+def scrape_reviews(zipcode, search_results, num_listings, pipeline_cache=None):
     property_ids = [listing["room_id"] for listing in search_results]
 
     # logger.info(property_ids)
@@ -24,6 +25,13 @@ def scrape_reviews(zipcode, search_results, num_listings):
 
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for id in property_ids[:num_listings]:
+        output_path = f"outputs/03_reviews_scraped/reviews_{zipcode}_{id}.json"
+
+        if pipeline_cache and pipeline_cache.is_file_fresh("reviews", output_path):
+            logger.info(f"Skipping listing {id} — cached reviews are fresh.")
+            properties_scraped += 1
+            continue
+
         room_url = f"https://www.airbnb.com/rooms/{id}"  # Listing URL
         logger.info(
             f"Retrieving reviews for listing ID {id}; property {properties_scraped + 1} of {num_listings}"
@@ -53,7 +61,7 @@ def scrape_reviews(zipcode, search_results, num_listings):
             # Save the reviews data to a JSON file
             os.makedirs("outputs/03_reviews_scraped", exist_ok=True)
             with open(
-                f"outputs/03_reviews_scraped/reviews_{zipcode}_{id}.json",
+                output_path,
                 "w",
                 encoding="utf-8",
             ) as f:
@@ -61,10 +69,13 @@ def scrape_reviews(zipcode, search_results, num_listings):
                     json.dumps(review_results, ensure_ascii=False)
                 )  # Extract reviews and save them to a file
 
+            if pipeline_cache:
+                pipeline_cache.record_output("reviews", output_path)
+
             time.sleep(random.uniform(1, 3))
 
         except Exception as e:
-            logger.info(
+            logger.warning(
                 f"An error occurred while retrieving reviews for listing ID {id}: {e}"
             )
             properties_scraped += 1

@@ -482,3 +482,74 @@ class TestEndToEndPipeline:
                                         saved_data["area_summary"]
                                         == "Complete area summary"
                                     )
+
+
+class TestPipelineCacheIntegration:
+    """Integration tests for PipelineCacheManager with pipeline stages."""
+
+    @pytest.fixture
+    def pipeline_cache(self, tmp_path):
+        """Create a PipelineCacheManager with a temporary metadata path."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            return PipelineCacheManager(metadata_path=metadata_path)
+
+    def test_stage_recorded_then_skipped(self, pipeline_cache, tmp_path):
+        """Test that a completed stage is skipped on second check."""
+        output_file = str(tmp_path / "output.json")
+        with open(output_file, "w") as f:
+            json.dump({"data": "test"}, f)
+
+        pipeline_cache.record_output("build_details", output_file)
+        pipeline_cache.record_stage_complete("build_details")
+
+        assert pipeline_cache.is_stage_fresh("build_details") is True
+
+    def test_force_refresh_causes_rerun(self, tmp_path):
+        """Test that force_refresh flag overrides cached status."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_details": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            cache = PipelineCacheManager(metadata_path=metadata_path)
+
+        output_file = str(tmp_path / "details.json")
+        with open(output_file, "w") as f:
+            json.dump({}, f)
+
+        cache.record_output("details", output_file)
+        cache.record_stage_complete("details")
+
+        assert cache.is_stage_fresh("details") is False
+
+    def test_per_file_skip_in_scraper(self, pipeline_cache, tmp_path):
+        """Test that scrapers skip individual files that are cached."""
+        output_file = str(tmp_path / "reviews_97067_12345.json")
+        with open(output_file, "w") as f:
+            json.dump({"12345": [{"review": "Great", "rating": 5}]}, f)
+
+        pipeline_cache.record_output("reviews", output_file)
+
+        assert pipeline_cache.is_file_fresh("reviews", output_file) is True
+
+    def test_deleted_file_not_cached(self, pipeline_cache, tmp_path):
+        """Test that a deleted file is not considered fresh even with metadata."""
+        output_file = str(tmp_path / "deleted.json")
+        with open(output_file, "w") as f:
+            json.dump({}, f)
+
+        pipeline_cache.record_output("details", output_file)
+        os.remove(output_file)
+
+        assert pipeline_cache.is_file_fresh("details", output_file) is False

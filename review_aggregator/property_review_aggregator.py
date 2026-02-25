@@ -8,8 +8,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # from review_aggregator.weaviate_client import WeaviateClient
 from review_aggregator.openai_aggregator import OpenAIAggregator
+
 # import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
+
+try:
+    from utils.pipeline_cache_manager import PipelineCacheManager
+except ImportError:
+    PipelineCacheManager = None
 
 # from utils.nlp_functions import filter_stopwords
 
@@ -34,6 +40,7 @@ class PropertyRagAggregator(BaseModel):
     review_ids_need_more_processing: list = Field(default_factory=list)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
+    pipeline_cache: Any = Field(default=None)
 
     # def model_post_init(self, __context: Any) -> None:
     #     self.weaviate_client.create_general_collection(
@@ -180,9 +187,20 @@ class PropertyRagAggregator(BaseModel):
 
         logger.info(f"Already aggregated ids: {len(already_processed_reviews_ids)}")
 
-        unprocessed_reviews = {
-            x: y for x, y in reviews.items() if x not in already_processed_reviews_ids
-        }
+        unprocessed_reviews = {}
+        for listing_id, review_data in reviews.items():
+            if listing_id in already_processed_reviews_ids:
+                if self.pipeline_cache:
+                    summary_path = f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json"
+                    if not self.pipeline_cache.is_file_fresh(
+                        "aggregate_reviews", summary_path
+                    ):
+                        logger.info(
+                            f"Stale summary for listing {listing_id} — will regenerate."
+                        )
+                        unprocessed_reviews[listing_id] = review_data
+                continue
+            unprocessed_reviews[listing_id] = review_data
 
         logger.info(f"Reviews to process after filtering: {len(unprocessed_reviews)}")
 
@@ -286,6 +304,11 @@ class PropertyRagAggregator(BaseModel):
                 filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
+
+            if self.pipeline_cache:
+                summary_path = f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json"
+                self.pipeline_cache.record_output("aggregate_reviews", summary_path)
+
         logger.info("First pass of RAG description generation chain completed.")
 
         # Second pass: Remove any listings that resulted in empty summaries
@@ -309,6 +332,11 @@ class PropertyRagAggregator(BaseModel):
                 filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
+
+            if self.pipeline_cache:
+                summary_path = f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json"
+                self.pipeline_cache.record_output("aggregate_reviews", summary_path)
+
         logger.info("RAG description generation chain completed.")
 
         # logger.info cost summary and log session

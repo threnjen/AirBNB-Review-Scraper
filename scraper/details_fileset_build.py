@@ -135,40 +135,61 @@ class DetailsFilesetBuilder:
 
     def build_fileset(self):
         logger.info("Building details fileset...")
-        # Placeholder for actual implementation
 
-        if os.path.isfile(self.comp_set_filepath):
-            with open(self.comp_set_filepath, "r", encoding="utf-8") as f:
-                properties = json.load(f)
-
-            logger.info(f"Found {len(properties)} property details files.")
-
-            for property_id, occupancy_details in list(properties.items()):
-                self.property_details[property_id] = {}
-
-                self.property_details[property_id]["link"] = (
-                    f"https://www.airbnb.com/rooms/{property_id}"
-                )
-                self.get_financials(
-                    property_id=property_id, property_details=occupancy_details
-                )
-
-                file_name = f"property_details_{property_id}.json"
-                file = open(os.path.join(DETAILS_SCRAPED_DIR, file_name), "r")
-                property_details = json.load(file)
-                file.close()
-
-                if not self.parse_basic_details(property_id, property_details):
-                    continue
-
-                self.parse_amenity_flags(property_id, property_details)
-
-        else:
+        # Discover property IDs from files on disk
+        if not os.path.isdir(DETAILS_SCRAPED_DIR):
             logger.info(
-                f"No comp set file found at {self.comp_set_filepath}. "
-                "Please run AirDNA scraping first."
+                f"No details directory found at {DETAILS_SCRAPED_DIR}. "
+                "Please run details scraping first."
             )
             return
+
+        detail_files = [
+            f
+            for f in os.listdir(DETAILS_SCRAPED_DIR)
+            if f.startswith("property_details_") and f.endswith(".json")
+        ]
+
+        if not detail_files:
+            logger.info("No property detail files found in the directory.")
+            return
+
+        logger.info(f"Found {len(detail_files)} property details files on disk.")
+
+        # Load comp set financials if available
+        comp_set_data = {}
+        if os.path.isfile(self.comp_set_filepath):
+            with open(self.comp_set_filepath, "r", encoding="utf-8") as f:
+                comp_set_data = json.load(f)
+            logger.info(
+                f"Loaded financial data for {len(comp_set_data)} properties from comp set."
+            )
+
+        for file_name in detail_files:
+            property_id = file_name.replace("property_details_", "").replace(
+                ".json", ""
+            )
+
+            self.property_details[property_id] = {}
+            self.property_details[property_id]["link"] = (
+                f"https://www.airbnb.com/rooms/{property_id}"
+            )
+
+            # Merge financials if available in comp set
+            if property_id in comp_set_data:
+                self.get_financials(
+                    property_id=property_id,
+                    property_details=comp_set_data[property_id],
+                )
+
+            file_path = os.path.join(DETAILS_SCRAPED_DIR, file_name)
+            with open(file_path, "r") as file:
+                property_details = json.load(file)
+
+            if not self.parse_basic_details(property_id, property_details):
+                continue
+
+            self.parse_amenity_flags(property_id, property_details)
 
         amenities_df = pd.DataFrame.from_dict(
             self.property_details, orient="index"

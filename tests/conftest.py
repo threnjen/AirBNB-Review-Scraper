@@ -133,7 +133,11 @@ def single_review():
 def isolate_tests(tmp_path, monkeypatch):
     """Isolate tests from production config files."""
     # Create empty config.json in tmp_path to prevent loading production config
-    empty_config = {"openai": {"enable_caching": False, "enable_cost_tracking": False}}
+    empty_config = {
+        "openai": {"enable_caching": False, "enable_cost_tracking": False},
+        "pipeline_cache_enabled": False,
+        "pipeline_cache_ttl_days": 7,
+    }
     config_file = tmp_path / "config.json"
     with open(config_file, "w") as f:
         json.dump(empty_config, f)

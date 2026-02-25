@@ -2,7 +2,7 @@
 
 import json
 import os
-from unittest.mock import patch, mock_open
+from unittest.mock import MagicMock, patch, mock_open
 
 import pytest
 
@@ -21,6 +21,10 @@ class TestGetAreaSearchResultsFromCompSet:
             agg.zipcode = "97067"
             agg.iso_code = "us"
             agg.num_listings_to_search = 30000
+            agg.pipeline_cache = MagicMock()
+            agg.pipeline_cache.is_file_fresh.return_value = False
+            agg.pipeline_cache.record_output.return_value = True
+            agg.pipeline_cache.record_stage_complete.return_value = True
         return agg
 
     def test_reads_comp_set_file(self, aggregator):

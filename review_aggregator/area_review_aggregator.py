@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,6 +12,11 @@ from review_aggregator.openai_aggregator import OpenAIAggregator
 
 # import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
+
+try:
+    from utils.pipeline_cache_manager import PipelineCacheManager
+except ImportError:
+    PipelineCacheManager = None
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -26,6 +32,7 @@ class AreaRagAggregator(BaseModel):
     output_dir: str = "reports"
     model_config = ConfigDict(arbitrary_types_allowed=True)
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
+    pipeline_cache: Any = Field(default=None)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
 
     def save_results(
@@ -57,6 +64,10 @@ class AreaRagAggregator(BaseModel):
             f.write(area_summary)
 
         logger.info(f"Saved area summary report to {md_path}")
+
+        if self.pipeline_cache:
+            self.pipeline_cache.record_output("aggregate_summaries", json_path)
+            self.pipeline_cache.record_output("aggregate_summaries", md_path)
 
     def rag_description_generation_chain(self):
         """Generate area-level summary from existing property summaries."""

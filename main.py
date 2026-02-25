@@ -14,6 +14,7 @@ from scraper.airdna_scraper import AirDNAScraper
 from scraper.details_fileset_build import DetailsFilesetBuilder
 from scraper.details_scraper import scrape_details
 from scraper.reviews_scraper import scrape_reviews
+from utils.pipeline_cache_manager import PipelineCacheManager
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -82,6 +83,9 @@ class AirBnbReviewAggregator:
         )
         self.use_categoricals = self.config.get("dataset_use_categoricals", False)
 
+        # Pipeline cache settings
+        self.pipeline_cache = PipelineCacheManager()
+
     def compile_comp_sets(self, output_dir="outputs/01_comp_sets"):
         """Merge all per-comp-set JSON files into a single master file.
 
@@ -112,6 +116,8 @@ class AirBnbReviewAggregator:
 
     def get_area_search_results(self):
         comp_set_path = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+        search_output = f"outputs/02_search_results/search_results_{self.zipcode}.json"
+
         if os.path.isfile(comp_set_path):
             with open(comp_set_path, "r", encoding="utf-8") as f:
                 property_ids = json.load(f).keys()
@@ -119,85 +125,128 @@ class AirBnbReviewAggregator:
             search_results = []
             for room_id in property_ids:
                 search_results.append({"room_id": room_id})
-        elif os.path.isfile(
-            f"outputs/02_search_results/search_results_{self.zipcode}.json"
-        ):
-            with open(
-                f"outputs/02_search_results/search_results_{self.zipcode}.json",
-                "r",
-                encoding="utf-8",
-            ) as f:
+        elif self.pipeline_cache.is_file_fresh("search", search_output):
+            with open(search_output, "r", encoding="utf-8") as f:
+                search_results = json.load(f)
+            logger.info(
+                f"Loaded {len(search_results)} cached search results (still fresh)."
+            )
+        elif os.path.isfile(search_output):
+            with open(search_output, "r", encoding="utf-8") as f:
                 search_results = json.load(f)
             logger.info(
                 f"Loaded {len(search_results)} listings from existing search results file."
             )
         else:
             search_results = airbnb_searcher(self.zipcode, self.iso_code)
+            self.pipeline_cache.record_output("search", search_output)
+            self.pipeline_cache.record_stage_complete("search")
         logger.info(f"Search results data looks like: {search_results[:1]}")
         return search_results
 
     def run_tasks_from_config(self):
         if self.scrape_airdna:
-            airdna_scraper = AirDNAScraper(
-                cdp_url=self.airdna_cdp_url,
-                comp_set_ids=self.airdna_comp_set_ids,
-                inspect_mode=self.airdna_inspect_mode,
-            )
-            airdna_scraper.run()
-            self.compile_comp_sets()
-            logger.info("AirDNA comp set scraping completed.")
+            if self.pipeline_cache.is_stage_fresh("airdna"):
+                logger.info("Skipping AirDNA scraping — cached outputs are fresh.")
+            else:
+                airdna_scraper = AirDNAScraper(
+                    cdp_url=self.airdna_cdp_url,
+                    comp_set_ids=self.airdna_comp_set_ids,
+                    inspect_mode=self.airdna_inspect_mode,
+                )
+                airdna_scraper.run()
+                self.compile_comp_sets()
+                comp_set_path = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+                self.pipeline_cache.record_output("airdna", comp_set_path)
+                self.pipeline_cache.record_stage_complete("airdna")
+                logger.info("AirDNA comp set scraping completed.")
 
         if self.scrape_reviews:
-            search_results = self.get_area_search_results()
-            scrape_reviews(
-                zipcode=self.zipcode,
-                search_results=search_results,
-                num_listings=self.num_listings_to_search,
-            )
-            logger.info(
-                f"Scraping reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
-            )
+            if self.pipeline_cache.is_stage_fresh("reviews"):
+                logger.info("Skipping reviews scraping — cached outputs are fresh.")
+            else:
+                search_results = self.get_area_search_results()
+                scrape_reviews(
+                    zipcode=self.zipcode,
+                    search_results=search_results,
+                    num_listings=self.num_listings_to_search,
+                    pipeline_cache=self.pipeline_cache,
+                )
+                self.pipeline_cache.record_stage_complete("reviews")
+                logger.info(
+                    f"Scraping reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
+                )
 
         if self.scrape_details:
-            search_results = self.get_area_search_results()
-            scrape_details(
-                search_results=search_results,
-                num_listings=self.num_listings_to_search,
-            )
-            logger.info(
-                f"Scraping details for zipcode {self.zipcode} in country {self.iso_code} completed."
-            )
+            if self.pipeline_cache.is_stage_fresh("details"):
+                logger.info("Skipping details scraping — cached outputs are fresh.")
+            else:
+                search_results = self.get_area_search_results()
+                scrape_details(
+                    search_results=search_results,
+                    num_listings=self.num_listings_to_search,
+                    pipeline_cache=self.pipeline_cache,
+                )
+                self.pipeline_cache.record_stage_complete("details")
+                logger.info(
+                    f"Scraping details for zipcode {self.zipcode} in country {self.iso_code} completed."
+                )
 
         if self.build_details:
-            comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
-            fileset_builder = DetailsFilesetBuilder(
-                use_categoricals=self.use_categoricals,
-                comp_set_filepath=comp_set_filepath,
-            )
-            fileset_builder.build_fileset()
-            logger.info("Building details fileset completed.")
+            if self.pipeline_cache.is_stage_fresh("build_details"):
+                logger.info(
+                    "Skipping details fileset build — cached outputs are fresh."
+                )
+            else:
+                comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+                fileset_builder = DetailsFilesetBuilder(
+                    use_categoricals=self.use_categoricals,
+                    comp_set_filepath=comp_set_filepath,
+                )
+                fileset_builder.build_fileset()
+                for output_file in [
+                    "outputs/05_details_results/property_amenities_matrix.csv",
+                    "outputs/05_details_results/house_rules_details.json",
+                    "outputs/05_details_results/property_descriptions.json",
+                    "outputs/05_details_results/neighborhood_highlights.json",
+                ]:
+                    self.pipeline_cache.record_output("build_details", output_file)
+                self.pipeline_cache.record_stage_complete("build_details")
+                logger.info("Building details fileset completed.")
 
         if self.aggregate_reviews:
-            rag_property = PropertyRagAggregator(
-                num_listings_to_summarize=self.num_listings_to_summarize,
-                review_thresh_to_include_prop=self.review_thresh_to_include_prop,
-                zipcode=self.zipcode,
-            )
-            rag_property.rag_description_generation_chain()
-            logger.info(
-                f"Aggregating reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
-            )
+            if self.pipeline_cache.is_stage_fresh("aggregate_reviews"):
+                logger.info("Skipping review aggregation — cached outputs are fresh.")
+            else:
+                rag_property = PropertyRagAggregator(
+                    num_listings_to_summarize=self.num_listings_to_summarize,
+                    review_thresh_to_include_prop=self.review_thresh_to_include_prop,
+                    zipcode=self.zipcode,
+                    pipeline_cache=self.pipeline_cache,
+                )
+                rag_property.rag_description_generation_chain()
+                self.pipeline_cache.record_stage_complete("aggregate_reviews")
+                logger.info(
+                    f"Aggregating reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
+                )
 
         if self.aggregate_summaries:
-            rag_area = AreaRagAggregator(
-                num_listings=self.num_summary_to_process,
-                review_thresh_to_include_prop=self.review_thresh_to_include_prop,
-                zipcode=self.zipcode,
-            )
-            rag_area.rag_description_generation_chain()
-            logger.info(
-                f"Aggregating area summary for zipcode {self.zipcode} completed."
-            )
+            if self.pipeline_cache.is_stage_fresh("aggregate_summaries"):
+                logger.info(
+                    "Skipping area summary aggregation — cached outputs are fresh."
+                )
+            else:
+                rag_area = AreaRagAggregator(
+                    num_listings=self.num_summary_to_process,
+                    review_thresh_to_include_prop=self.review_thresh_to_include_prop,
+                    zipcode=self.zipcode,
+                    pipeline_cache=self.pipeline_cache,
+                )
+                rag_area.rag_description_generation_chain()
+                self.pipeline_cache.record_stage_complete("aggregate_summaries")
+                logger.info(
+                    f"Aggregating area summary for zipcode {self.zipcode} completed."
+                )
 
         if self.extract_data:
             extractor = DataExtractor(zipcode=self.zipcode)

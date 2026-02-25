@@ -86,6 +86,39 @@ Edit `config.json` to configure the pipeline:
 | `openai.enable_caching` | bool | Cache responses to reduce costs |
 | `openai.enable_cost_tracking` | bool | Log API costs |
 
+### Pipeline Caching (TTL)
+
+The pipeline includes a TTL-based cache that prevents redundant scraping and processing. When enabled, each stage's outputs are tracked with timestamps. If all outputs for a stage are still within the TTL window, the stage is skipped entirely on the next run. For per-file stages (reviews, details), individual listings are skipped when their cached files are fresh.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `pipeline_cache_enabled` | bool | `true` | Enable/disable pipeline-level TTL caching |
+| `pipeline_cache_ttl_days` | int | `7` | Number of days before cached outputs expire |
+| `force_refresh_airdna` | bool | `false` | Force re-run AirDNA scraping even if cached |
+| `force_refresh_search` | bool | `false` | Force re-run area search |
+| `force_refresh_reviews` | bool | `false` | Force re-scrape all reviews |
+| `force_refresh_details` | bool | `false` | Force re-scrape all property details |
+| `force_refresh_build_details` | bool | `false` | Force rebuild details fileset |
+| `force_refresh_aggregate_reviews` | bool | `false` | Force regenerate property summaries |
+| `force_refresh_aggregate_summaries` | bool | `false` | Force regenerate area summary |
+
+**How it works:**
+- Metadata is stored in `cache/pipeline_metadata.json`, recording when each output file was produced
+- On each run, the pipeline checks whether outputs exist and are within the TTL before executing a stage
+- The `force_refresh_*` flags let you bypass the cache for specific stages without affecting others
+- This is separate from the OpenAI response cache (`openai.enable_caching`), which caches LLM API call results
+
+**Example:** Run the full pipeline, then re-run immediately — all stages 0–6 will be skipped:
+```bash
+pipenv run python main.py   # First run: executes all enabled stages
+pipenv run python main.py   # Second run: skips cached stages
+```
+
+To force a single stage to re-run:
+```json
+{"force_refresh_reviews": true}
+```
+
 ## Usage
 
 ### AirDNA Comp Set Scraping
