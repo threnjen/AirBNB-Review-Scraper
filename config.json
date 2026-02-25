@@ -1,4 +1,10 @@
 {
+    "scrape_airdna": false,
+    "airdna_comp_set_ids": [
+        "365519"
+    ],
+    "airdna_cdp_url": "http://localhost:9222",
+    "airdna_inspect_mode": false,
     "scrape_reviews": false,
     "scrape_details": false,
     "build_details": false,
