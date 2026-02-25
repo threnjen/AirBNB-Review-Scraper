@@ -339,7 +339,7 @@ class TestPipelineCacheManager:
         assert cache_manager.is_file_fresh("reviews", test_file) is False
 
     def test_force_refresh_search_bypasses_file_freshness(self, tmp_path):
-        """Test that force_refresh_search flag is exposed for callers to check."""
+        """Test that force_refresh flag causes is_file_fresh to return False."""
         metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -357,10 +357,42 @@ class TestPipelineCacheManager:
         manager.record_output("search", test_file)
         manager.record_stage_complete("search")
 
-        # File is fresh per TTL, but force_refresh should override
-        assert manager.is_file_fresh("search", test_file) is True
+        # Both file and stage freshness should be overridden by force_refresh
+        assert manager.is_file_fresh("search", test_file) is False
         assert manager.force_refresh_flags.get("search", False) is True
         assert manager.is_stage_fresh("search") is False
+
+    def test_force_refresh_reviews_bypasses_file_freshness(self, tmp_path):
+        """Test that force_refresh_reviews causes per-file cache to be bypassed."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_reviews": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        test_file = str(tmp_path / "reviews_97067_12345.json")
+        with open(test_file, "w") as f:
+            json.dump({"12345": [{"review": "Great", "rating": 5}]}, f)
+        manager.record_output("reviews", test_file)
+
+        assert manager.is_file_fresh("reviews", test_file) is False
+
+    def test_is_file_fresh_without_force_flag_still_works(
+        self, cache_manager, tmp_path
+    ):
+        """Test that is_file_fresh returns True when force flag is False and file is cached."""
+        test_file = str(tmp_path / "reviews_97067_99999.json")
+        with open(test_file, "w") as f:
+            json.dump({}, f)
+        cache_manager.record_output("reviews", test_file)
+
+        # cache_manager fixture has all force flags False
+        assert cache_manager.is_file_fresh("reviews", test_file) is True
 
     def test_save_metadata_failure_propagates_to_record_output(self, tmp_path):
         """Test that record_output returns False when _save_metadata fails."""

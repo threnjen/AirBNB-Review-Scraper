@@ -51,14 +51,6 @@ def sample_openai_response(sample_data):
 
 
 @pytest.fixture
-def tmp_cache_dir(tmp_path):
-    """Temporary cache directory for testing."""
-    cache_dir = tmp_path / "cache" / "summaries"
-    cache_dir.mkdir(parents=True)
-    return cache_dir
-
-
-@pytest.fixture
 def tmp_logs_dir(tmp_path):
     """Temporary logs directory for testing."""
     logs_dir = tmp_path / "logs"
@@ -256,7 +248,7 @@ def mock_review_files_dir(tmp_path, sample_reviews):
 
 
 @pytest.fixture
-def mocked_openai_aggregator(mock_openai_client, tmp_cache_dir, tmp_logs_dir):
+def mocked_openai_aggregator(mock_openai_client, tmp_logs_dir):
     """Create an OpenAIAggregator with mocked OpenAI client for integration tests."""
     with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
         mock_load.return_value = {
@@ -265,15 +257,12 @@ def mocked_openai_aggregator(mock_openai_client, tmp_cache_dir, tmp_logs_dir):
                 "temperature": 0.3,
                 "max_tokens": 16000,
                 "chunk_size": 20,
-                "enable_caching": True,
                 "enable_cost_tracking": True,
             }
         }
-        with patch("utils.cache_manager.load_json_file", return_value={}):
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
-                from review_aggregator.openai_aggregator import OpenAIAggregator
+        with patch("utils.cost_tracker.load_json_file", return_value={}):
+            from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                agg = OpenAIAggregator(client=mock_openai_client)
-                agg.cache_manager.cache_dir = str(tmp_cache_dir)
-                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
-                return agg
+            agg = OpenAIAggregator(client=mock_openai_client)
+            agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+            return agg

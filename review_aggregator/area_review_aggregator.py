@@ -131,9 +131,3 @@ class AreaRagAggregator(BaseModel):
         # Log cost and cache statistics
         self.openai_aggregator.cost_tracker.print_session_summary()
         self.openai_aggregator.cost_tracker.log_session()
-
-        cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
-        if cache_stats.get("enabled"):
-            logger.info(
-                f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
-            )

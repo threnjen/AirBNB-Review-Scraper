@@ -19,16 +19,13 @@ class TestDescriptionAnalyzer:
     def analyzer(self):
         """Create a DescriptionAnalyzer with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.description_analyzer import (
-                        DescriptionAnalyzer,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.description_analyzer import (
+                    DescriptionAnalyzer,
+                )
 
-                    return DescriptionAnalyzer(zipcode="97067")
+                return DescriptionAnalyzer(zipcode="97067")
 
     @pytest.fixture
     def sample_property_df(self):

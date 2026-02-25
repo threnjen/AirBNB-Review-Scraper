@@ -119,8 +119,9 @@ class PipelineCacheManager(BaseModel):
 
         A file is fresh if:
         1. Caching is enabled
-        2. The file is recorded in metadata with a timestamp within TTL
-        3. The file still exists on disk
+        2. The stage's force_refresh flag is False
+        3. The file is recorded in metadata with a timestamp within TTL
+        4. The file still exists on disk
 
         Args:
             stage_name: Pipeline stage identifier (e.g. "reviews").
@@ -130,6 +131,9 @@ class PipelineCacheManager(BaseModel):
             True if the file is fresh and can be skipped.
         """
         if not self.enable_cache:
+            return False
+
+        if self.force_refresh_flags.get(stage_name, False):
             return False
 
         metadata = self._load_metadata()

@@ -9,7 +9,6 @@ import tiktoken
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from utils.cache_manager import CacheManager
 from utils.cost_tracker import CostTracker
 from utils.tiny_file_handler import load_json_file
 
@@ -32,7 +31,6 @@ class OpenAIAggregator(BaseModel):
     retry_delay: float = 1.0
 
     # Integrated utilities
-    cache_manager: CacheManager = Field(default_factory=CacheManager)
     cost_tracker: CostTracker = Field(default_factory=CostTracker)
 
     class Config:
@@ -206,22 +204,6 @@ Unified Analysis:"""
 
         logger.info(f"Processing {len(reviews)} reviews for listing {listing_id}")
 
-        # Check cache first
-        cached_summary = self.cache_manager.get_cached_summary(
-            listing_id, prompt, reviews
-        )
-        if cached_summary:
-            # Track cache hit
-            self.cost_tracker.track_request(
-                listing_id=listing_id,
-                prompt=prompt,
-                reviews=reviews,
-                response=cached_summary,
-                success=True,
-                cached=True,
-            )
-            return cached_summary
-
         # Check if we need to chunk the reviews
         total_tokens = self.estimate_tokens(prompt) + sum(
             self.estimate_tokens(review) for review in reviews
@@ -302,9 +284,5 @@ Unified Analysis:"""
                 )
             else:
                 summary = chunk_summaries[0]
-
-        # Cache the result if we got a valid summary
-        if summary:
-            self.cache_manager.cache_summary(listing_id, prompt, reviews, summary)
 
         return summary

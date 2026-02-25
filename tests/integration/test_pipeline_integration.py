@@ -15,36 +15,33 @@ class TestPropertyAggregatorIntegration:
     """Integration tests for PropertyRagAggregator with OpenAI and caching."""
 
     @pytest.fixture
-    def property_aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def property_aggregator(self, tmp_logs_dir):
         """Create a PropertyRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
-                    "enable_caching": True,
                     "enable_cost_tracking": True,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.property_review_aggregator import (
-                        PropertyRagAggregator,
-                    )
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.property_review_aggregator import (
+                    PropertyRagAggregator,
+                )
 
-                    agg = PropertyRagAggregator(
-                        zipcode="97067",
-                        num_listings_to_summarize=3,
-                    )
-                    agg.openai_aggregator.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.openai_aggregator.cost_tracker.log_file = str(
-                        tmp_logs_dir / "cost.json"
-                    )
-                    return agg
+                agg = PropertyRagAggregator(
+                    zipcode="97067",
+                    num_listings_to_summarize=3,
+                )
+                agg.openai_aggregator.cost_tracker.log_file = str(
+                    tmp_logs_dir / "cost.json"
+                )
+                return agg
 
     def test_aggregator_to_cache_flow(
         self, property_aggregator, sample_reviews, sample_prompt
     ):
-        """Test that reviews flow through aggregator to cache."""
+        """Test that reviews flow through aggregator and return a summary."""
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Generated summary"
@@ -62,39 +59,6 @@ class TestPropertyAggregatorIntegration:
             )
 
             assert result == "Generated summary"
-
-    def test_cache_prevents_duplicate_api_calls(
-        self, property_aggregator, sample_reviews, sample_prompt
-    ):
-        """Test that cached responses prevent duplicate API calls."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Cached summary"
-
-        review_strings = [f"{r['rating']} {r['review']}" for r in sample_reviews]
-
-        with patch.object(
-            property_aggregator.openai_aggregator.client.chat.completions,
-            "create",
-            return_value=mock_response,
-        ) as mock_create:
-            # First call - should hit API
-            result1 = property_aggregator.openai_aggregator.generate_summary(
-                reviews=review_strings,
-                prompt=sample_prompt,
-                listing_id="cache_test",
-            )
-
-            # Second call with same inputs - should use cache
-            result2 = property_aggregator.openai_aggregator.generate_summary(
-                reviews=review_strings,
-                prompt=sample_prompt,
-                listing_id="cache_test",
-            )
-
-            assert result1 == result2
-            # API should only be called once if caching works
-            assert mock_create.call_count == 1
 
     def test_cost_tracker_accumulates_requests(
         self, property_aggregator, sample_reviews, sample_prompt
@@ -136,31 +100,28 @@ class TestAreaAggregatorIntegration:
     """Integration tests for AreaRagAggregator with filesystem and OpenAI."""
 
     @pytest.fixture
-    def area_aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def area_aggregator(self, tmp_logs_dir):
         """Create an AreaRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
-                    "enable_caching": False,
                     "enable_cost_tracking": True,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    agg = AreaRagAggregator(
-                        zipcode="97067",
-                        num_listings=5,
-                    )
-                    agg.openai_aggregator.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.openai_aggregator.cost_tracker.log_file = str(
-                        tmp_logs_dir / "cost.json"
-                    )
-                    return agg
+                agg = AreaRagAggregator(
+                    zipcode="97067",
+                    num_listings=5,
+                )
+                agg.openai_aggregator.cost_tracker.log_file = str(
+                    tmp_logs_dir / "cost.json"
+                )
+                return agg
 
     def test_area_aggregator_loads_and_aggregates_summaries(
         self, area_aggregator, sample_property_summary
@@ -217,28 +178,23 @@ class TestDataExtractorIntegration:
     """Integration tests for DataExtractor with OpenAI parsing."""
 
     @pytest.fixture
-    def data_extractor(self, tmp_cache_dir, tmp_logs_dir):
+    def data_extractor(self, tmp_logs_dir):
         """Create a DataExtractor with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
-                    "enable_caching": False,
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.data_extractor import DataExtractor
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.data_extractor import DataExtractor
 
-                    extractor = DataExtractor(zipcode="97067")
-                    extractor.openai_aggregator.cache_manager.cache_dir = str(
-                        tmp_cache_dir
-                    )
-                    extractor.openai_aggregator.cost_tracker.log_file = str(
-                        tmp_logs_dir / "cost.json"
-                    )
-                    return extractor
+                extractor = DataExtractor(zipcode="97067")
+                extractor.openai_aggregator.cost_tracker.log_file = str(
+                    tmp_logs_dir / "cost.json"
+                )
+                return extractor
 
     def test_extraction_parses_json_response(
         self, data_extractor, sample_property_summary, sample_extraction_response
@@ -294,65 +250,6 @@ class TestDataExtractorIntegration:
         assert "12345678" in summaries
         assert "87654321" in summaries
         assert "11111111" in summaries
-
-
-class TestCacheIntegration:
-    """Integration tests for CacheManager with aggregators."""
-
-    @pytest.fixture
-    def cache_manager(self, tmp_cache_dir):
-        """Create a CacheManager for testing."""
-        with patch("utils.cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {"openai": {"enable_caching": True}}
-            from utils.cache_manager import CacheManager
-
-            cm = CacheManager(cache_dir=str(tmp_cache_dir))
-            return cm
-
-    def test_cache_round_trip(self, cache_manager, sample_reviews, sample_prompt):
-        """Test caching and retrieving a summary."""
-        review_strings = [f"{r['rating']} {r['review']}" for r in sample_reviews]
-
-        # Verify no cached value initially
-        cached = cache_manager.get_cached_summary(
-            listing_id="round_trip_test",
-            prompt=sample_prompt,
-            reviews=review_strings,
-        )
-        assert cached is None
-
-        # Cache a value
-        cache_manager.cache_summary(
-            listing_id="round_trip_test",
-            prompt=sample_prompt,
-            reviews=review_strings,
-            summary="Cached test summary",
-        )
-
-        # Retrieve the cached value
-        cached = cache_manager.get_cached_summary(
-            listing_id="round_trip_test",
-            prompt=sample_prompt,
-            reviews=review_strings,
-        )
-        assert cached == "Cached test summary"
-
-    def test_cache_stats_tracking(self, cache_manager, sample_reviews, sample_prompt):
-        """Test that cache stats are tracked correctly."""
-        review_strings = [f"{r['rating']} {r['review']}" for r in sample_reviews]
-
-        # Cache some values
-        for i in range(3):
-            cache_manager.cache_summary(
-                listing_id=f"stats_test_{i}",
-                prompt=sample_prompt,
-                reviews=review_strings,
-                summary=f"Summary {i}",
-            )
-
-        stats = cache_manager.get_cache_stats()
-        assert stats["enabled"] is True
-        assert stats["valid_cache"] >= 3
 
 
 class TestCostTrackerIntegration:
@@ -426,62 +323,59 @@ class TestEndToEndPipeline:
     def test_property_to_area_pipeline(self, sample_property_summary):
         """Test flow from property summaries to area summary."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_config:
-            mock_config.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            mock_config.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    aggregator = AreaRagAggregator(zipcode="97067", num_listings=5)
+                aggregator = AreaRagAggregator(zipcode="97067", num_listings=5)
 
-                    mock_response = MagicMock()
-                    mock_response.choices = [MagicMock()]
-                    mock_response.choices[0].message.content = "Complete area summary"
+                mock_response = MagicMock()
+                mock_response.choices = [MagicMock()]
+                mock_response.choices[0].message.content = "Complete area summary"
 
-                    # Mock the filesystem interactions
+                # Mock the filesystem interactions
+                with patch(
+                    "os.listdir",
+                    return_value=[
+                        "generated_summaries_97067_123.json",
+                        "generated_summaries_97067_456.json",
+                    ],
+                ):
                     with patch(
-                        "os.listdir",
-                        return_value=[
-                            "generated_summaries_97067_123.json",
-                            "generated_summaries_97067_456.json",
-                        ],
-                    ):
+                        "review_aggregator.area_review_aggregator.load_json_file"
+                    ) as mock_load:
+                        mock_load.side_effect = [
+                            {"123": sample_property_summary},
+                            {"456": "Another property summary"},
+                            {
+                                "gpt4o_mini_generate_prompt_structured": "Summarize area {ZIP_CODE_HERE}"
+                            },
+                            {"iso_code": "us"},
+                        ]
+
                         with patch(
-                            "review_aggregator.area_review_aggregator.load_json_file"
-                        ) as mock_load:
-                            mock_load.side_effect = [
-                                {"123": sample_property_summary},
-                                {"456": "Another property summary"},
-                                {
-                                    "gpt4o_mini_generate_prompt_structured": "Summarize area {ZIP_CODE_HERE}"
-                                },
-                                {"iso_code": "us"},
-                            ]
+                            "review_aggregator.area_review_aggregator.save_json_file"
+                        ) as mock_save:
+                            with patch.object(
+                                aggregator.openai_aggregator.client.chat.completions,
+                                "create",
+                                return_value=mock_response,
+                            ):
+                                aggregator.rag_description_generation_chain()
 
-                            with patch(
-                                "review_aggregator.area_review_aggregator.save_json_file"
-                            ) as mock_save:
-                                with patch.object(
-                                    aggregator.openai_aggregator.client.chat.completions,
-                                    "create",
-                                    return_value=mock_response,
-                                ):
-                                    aggregator.rag_description_generation_chain()
-
-                                    # Verify the end result
-                                    assert mock_save.called
-                                    saved_data = mock_save.call_args.kwargs.get("data")
-                                    if saved_data is None:
-                                        saved_data = mock_save.call_args[0][1]
-                                    assert saved_data["zipcode"] == "97067"
-                                    assert saved_data["num_properties_analyzed"] == 2
-                                    assert (
-                                        saved_data["area_summary"]
-                                        == "Complete area summary"
-                                    )
+                                # Verify the end result
+                                assert mock_save.called
+                                saved_data = mock_save.call_args.kwargs.get("data")
+                                if saved_data is None:
+                                    saved_data = mock_save.call_args[0][1]
+                                assert saved_data["zipcode"] == "97067"
+                                assert saved_data["num_properties_analyzed"] == 2
+                                assert (
+                                    saved_data["area_summary"]
+                                    == "Complete area summary"
+                                )
 
 
 class TestPipelineCacheIntegration:

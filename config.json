@@ -3,11 +3,11 @@
     "pipeline_cache_ttl_days": 30,
     "force_refresh_airdna": false,
     "force_refresh_search": false,
-    "force_refresh_reviews": true,
-    "force_refresh_details": false,
-    "force_refresh_build_details": false,
-    "force_refresh_aggregate_reviews": false,
-    "force_refresh_aggregate_summaries": false,
+    "force_refresh_reviews": false,
+    "force_refresh_details": true,
+    "force_refresh_build_details": true,
+    "force_refresh_aggregate_reviews": true,
+    "force_refresh_aggregate_summaries": true,
     "scrape_airdna": true,
     "airdna_comp_set_ids": [
         "348454",
@@ -53,8 +53,6 @@
         "chunk_size": 20,
         "max_retries": 3,
         "retry_delay": 1.0,
-        "enable_caching": true,
-        "cache_ttl_days": 90,
         "enable_cost_tracking": true
     },
     "unused_comps": [

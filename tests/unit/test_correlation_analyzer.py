@@ -15,16 +15,13 @@ class TestCorrelationAnalyzer:
     def analyzer(self):
         """Create a CorrelationAnalyzer with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.correlation_analyzer import (
-                        CorrelationAnalyzer,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.correlation_analyzer import (
+                    CorrelationAnalyzer,
+                )
 
-                    return CorrelationAnalyzer(zipcode="97067")
+                return CorrelationAnalyzer(zipcode="97067")
 
     @pytest.fixture
     def sample_tier_with_string_false(self):
@@ -87,6 +84,6 @@ class TestCorrelationAnalyzer:
 
         # At least one amenity should NOT be 100% in high tier
         high_pcts = [v["high_tier_pct"] for v in result.values()]
-        assert not all(
-            pct == 100.0 for pct in high_pcts
-        ), "All amenities at 100% suggests string 'False' vs bool False bug"
+        assert not all(pct == 100.0 for pct in high_pcts), (
+            "All amenities at 100% suggests string 'False' vs bool False bug"
+        )

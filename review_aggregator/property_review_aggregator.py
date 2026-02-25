@@ -337,14 +337,3 @@ class PropertyRagAggregator(BaseModel):
         # logger.info cost summary and log session
         self.openai_aggregator.cost_tracker.print_session_summary()
         self.openai_aggregator.cost_tracker.log_session()
-
-        # logger.info cache statistics
-        cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
-        if cache_stats.get("enabled") and "valid_cache" in cache_stats:
-            logger.info(
-                f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
-            )
-
-        # Clean up expired cache
-        if cache_stats.get("expired_cache", 0) > 0:
-            self.openai_aggregator.cache_manager.clear_expired_cache()

@@ -14,7 +14,7 @@ An end-to-end pipeline that scrapes AirBNB property reviews by zip code, generat
   - Rating context vs. area average
 - **Area-Level Insights** - Roll up property summaries into area trends
 - **Data Extraction** - Parse numeric review data and cluster into categories with weighted aggregation
-- **Caching** - Reduce API costs with 7-day response cache
+- **Caching** - TTL-based pipeline cache prevents redundant scraping and API calls
 - **Cost Tracking** - Monitor OpenAI API usage
 
 ## Installation
@@ -83,7 +83,6 @@ Edit `config.json` to configure the pipeline:
 | `openai.temperature` | float | Response randomness (0.0-1.0) |
 | `openai.max_tokens` | int | Max tokens per response |
 | `openai.chunk_size` | int | Reviews per API call |
-| `openai.enable_caching` | bool | Cache responses to reduce costs |
 | `openai.enable_cost_tracking` | bool | Log API costs |
 
 ### Pipeline Caching (TTL)
@@ -106,7 +105,6 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 - Metadata is stored in `cache/pipeline_metadata.json`, recording when each output file was produced
 - On each run, the pipeline checks whether outputs exist and are within the TTL before executing a stage
 - The `force_refresh_*` flags let you bypass the cache for specific stages without affecting others
-- This is separate from the OpenAI response cache (`openai.enable_caching`), which caches LLM API call results
 
 **Example:** Run the full pipeline, then re-run immediately — all stages 0–6 will be skipped:
 ```bash
@@ -239,7 +237,6 @@ Zip Code Input
 | `property_generated_summaries/` | AI-generated summary per property |
 | `generated_summaries_{zip}.json` | Area-level AI summary |
 | `area_data_{zip}.json` | Aggregated numeric data with categories |
-| `cache/summaries/` | Cached OpenAI responses |
 | `logs/cost_tracking.json` | API cost logs |
 
 ## Architecture
@@ -258,7 +255,6 @@ main.py                          # Entry point
 │   ├── data_extractor.py              # Numeric extraction & clustering
 │   └── openai_aggregator.py           # OpenAI client with caching
 ├── utils/
-│   ├── cache_manager.py         # Response caching
 │   ├── cost_tracker.py          # API cost tracking
 │   └── tiny_file_handler.py     # JSON I/O helpers
 └── prompts/

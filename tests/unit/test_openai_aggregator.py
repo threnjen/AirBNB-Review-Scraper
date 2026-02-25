@@ -11,7 +11,7 @@ class TestOpenAIAggregator:
     """Tests for OpenAIAggregator class."""
 
     @pytest.fixture
-    def aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def aggregator(self, tmp_logs_dir):
         """Create an OpenAIAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -20,18 +20,15 @@ class TestOpenAIAggregator:
                     "temperature": 0.3,
                     "max_tokens": 16000,
                     "chunk_size": 20,
-                    "enable_caching": False,
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.openai_aggregator import OpenAIAggregator
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                    agg = OpenAIAggregator()
-                    agg.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
-                    return agg
+                agg = OpenAIAggregator()
+                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+                return agg
 
     def test_estimate_tokens_valid_text(self, aggregator):
         """Test token estimation for valid text."""
@@ -190,7 +187,7 @@ class TestOpenAIAggregator:
         assert result is not None
         mock_openai_client.chat.completions.create.assert_called()
 
-    def test_model_config_from_init(self, tmp_cache_dir, tmp_logs_dir):
+    def test_model_config_from_init(self, tmp_logs_dir):
         """Test that model configuration is loaded from config."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -201,23 +198,22 @@ class TestOpenAIAggregator:
                     "chunk_size": 30,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.openai_aggregator import OpenAIAggregator
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                    agg = OpenAIAggregator()
+                agg = OpenAIAggregator()
 
-                    assert agg.model == "gpt-4"
-                    assert agg.temperature == 0.5
-                    assert agg.max_tokens == 8000
-                    assert agg.chunk_size == 30
+                assert agg.model == "gpt-4"
+                assert agg.temperature == 0.5
+                assert agg.max_tokens == 8000
+                assert agg.chunk_size == 30
 
 
 class TestOpenAIAggregatorGenerateSummary:
     """Tests for OpenAIAggregator.generate_summary method."""
 
     @pytest.fixture
-    def aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def aggregator(self, tmp_logs_dir):
         """Create an OpenAIAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -226,20 +222,16 @@ class TestOpenAIAggregatorGenerateSummary:
                     "temperature": 0.3,
                     "max_tokens": 16000,
                     "chunk_size": 20,
-                    "enable_caching": False,
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.openai_aggregator import OpenAIAggregator
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                    agg = OpenAIAggregator()
-                    agg.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.cache_manager.enable_cache = False
-                    agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
-                    agg.cost_tracker.enable_tracking = False
-                    return agg
+                agg = OpenAIAggregator()
+                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+                agg.cost_tracker.enable_tracking = False
+                return agg
 
     def test_generate_summary_empty_reviews(self, aggregator):
         """Test generate_summary with empty reviews returns None."""
@@ -262,20 +254,6 @@ class TestOpenAIAggregatorGenerateSummary:
             reviews, "Analyze these reviews", "listing123"
         )
 
-        assert result is not None
-        mock_openai_client.chat.completions.create.assert_called_once()
-
-    def test_generate_summary_caches_result(self, aggregator, mock_openai_client):
-        """Test generate_summary caches the result after API call."""
-        aggregator.client = mock_openai_client
-        aggregator.cache_manager.enable_cache = True
-
-        reviews = ["Review A", "Review B"]
-        prompt = "Test prompt"
-
-        result = aggregator.generate_summary(reviews, prompt, "listing123")
-
-        # Verify API was called and result returned
         assert result is not None
         mock_openai_client.chat.completions.create.assert_called_once()
 
