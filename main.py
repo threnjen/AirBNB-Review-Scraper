@@ -1,3 +1,4 @@
+import glob
 import json
 import logging
 import os
@@ -27,8 +28,6 @@ class AirBnbReviewAggregator:
         self.num_listings_to_search = 3
         self.review_thresh_to_include_prop = 5
         self.num_summary_to_process = 3
-        self.use_custom_listings_file = False
-        self.custom_filepath = ""
         self.scrape_reviews = False
         self.scrape_details = False
         self.build_details = False
@@ -60,12 +59,6 @@ class AirBnbReviewAggregator:
         )
         self.num_summary_to_process = self.config.get("num_summary_to_process", 3)
 
-        self.use_custom_listings_file = self.config.get(
-            "use_custom_listings_file", False
-        )
-        self.custom_filepath = self.config.get(
-            "custom_filepath", "custom_listings.json"
-        )
         self.scrape_reviews = self.config.get("scrape_reviews", False)
         self.scrape_details = self.config.get("scrape_details", False)
         self.build_details = self.config.get("build_details", False)
@@ -89,13 +82,40 @@ class AirBnbReviewAggregator:
         )
         self.use_categoricals = self.config.get("dataset_use_categoricals", False)
 
+    def compile_comp_sets(self, output_dir="outputs/01_comp_sets"):
+        """Merge all per-comp-set JSON files into a single master file.
+
+        Reads compset_*.json from output_dir, merges with first-write-wins
+        for duplicate listing IDs, and writes comp_set_{zipcode}.json.
+        """
+        merged = {}
+        duplicates_skipped = 0
+        pattern = os.path.join(output_dir, "compset_*.json")
+
+        for filepath in sorted(glob.glob(pattern)):
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for listing_id, details in data.items():
+                if listing_id in merged:
+                    duplicates_skipped += 1
+                else:
+                    merged[listing_id] = details
+
+        master_path = os.path.join(output_dir, f"comp_set_{self.zipcode}.json")
+        with open(master_path, "w", encoding="utf-8") as f:
+            json.dump(merged, f, indent=4)
+
+        logger.info(
+            f"Compiled {len(merged)} listings into {master_path} "
+            f"({duplicates_skipped} duplicates skipped)."
+        )
+
     def get_area_search_results(self):
-        if self.use_custom_listings_file and os.path.isfile(self.custom_filepath):
-            with open(self.custom_filepath, "r", encoding="utf-8") as f:
+        comp_set_path = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+        if os.path.isfile(comp_set_path):
+            with open(comp_set_path, "r", encoding="utf-8") as f:
                 property_ids = json.load(f).keys()
-            logger.info(
-                f"Using {len(property_ids)} custom listing IDs from custom_listing_ids.json"
-            )
+            logger.info(f"Using {len(property_ids)} listing IDs from {comp_set_path}")
             search_results = []
             for room_id in property_ids:
                 search_results.append({"room_id": room_id})
@@ -124,6 +144,7 @@ class AirBnbReviewAggregator:
                 inspect_mode=self.airdna_inspect_mode,
             )
             airdna_scraper.run()
+            self.compile_comp_sets()
             logger.info("AirDNA comp set scraping completed.")
 
         if self.scrape_reviews:
@@ -148,8 +169,10 @@ class AirBnbReviewAggregator:
             )
 
         if self.build_details:
+            comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
             fileset_builder = DetailsFilesetBuilder(
-                use_categoricals=self.use_categoricals
+                use_categoricals=self.use_categoricals,
+                comp_set_filepath=comp_set_filepath,
             )
             fileset_builder.build_fileset()
             logger.info("Building details fileset completed.")

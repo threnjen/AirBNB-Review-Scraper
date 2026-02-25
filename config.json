@@ -1,5 +1,5 @@
 {
-    "scrape_airdna": false,
+    "scrape_airdna": true,
     "airdna_comp_set_ids": [
         "348454",
         "365541",
@@ -13,15 +13,15 @@
         "365538"
     ],
     "airdna_cdp_url": "http://localhost:9222",
-    "airdna_inspect_mode": false,
-    "scrape_reviews": false,
-    "scrape_details": false,
-    "build_details": false,
-    "aggregate_reviews": false,
-    "aggregate_summaries": false,
-    "extract_data": false,
-    "analyze_correlations": false,
-    "analyze_descriptions": false,
+    "airdna_inspect_mode": true,
+    "scrape_reviews": true,
+    "scrape_details": true,
+    "build_details": true,
+    "aggregate_reviews": true,
+    "aggregate_summaries": true,
+    "extract_data": true,
+    "analyze_correlations": true,
+    "analyze_descriptions": true,
     "correlation_metrics": [
         "adr",
         "occupancy"

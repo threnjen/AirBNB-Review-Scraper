@@ -9,10 +9,15 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
+DETAILS_SCRAPED_DIR = "outputs/04_details_scraped"
+
 
 class DetailsFilesetBuilder:
-    def __init__(self, use_categoricals: bool) -> None:
+    def __init__(
+        self, use_categoricals: bool, comp_set_filepath: str = "custom_listing_ids.json"
+    ) -> None:
         self.use_categoricals = use_categoricals
+        self.comp_set_filepath = comp_set_filepath
         self.property_details = {}
         self.house_rules = {}
         self.property_descriptions = {}
@@ -23,9 +28,9 @@ class DetailsFilesetBuilder:
         self.property_details[property_id]["ADR"] = adr
 
         occupancy_rate_based_on_available_days = property_details.get("Occupancy", 0)
-        self.property_details[property_id][
-            "Occ_Rate_Based_on_Avail"
-        ] = occupancy_rate_based_on_available_days
+        self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
+            occupancy_rate_based_on_available_days
+        )
 
         days_available = property_details.get("Days_Available", 0)
         self.property_details[property_id]["Days_Avail"] = days_available
@@ -132,8 +137,8 @@ class DetailsFilesetBuilder:
         logger.info("Building details fileset...")
         # Placeholder for actual implementation
 
-        if os.path.isfile("custom_listing_ids.json"):
-            with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
+        if os.path.isfile(self.comp_set_filepath):
+            with open(self.comp_set_filepath, "r", encoding="utf-8") as f:
                 properties = json.load(f)
 
             logger.info(f"Found {len(properties)} property details files.")
@@ -141,15 +146,15 @@ class DetailsFilesetBuilder:
             for property_id, occupancy_details in list(properties.items()):
                 self.property_details[property_id] = {}
 
-                self.property_details[property_id][
-                    "link"
-                ] = f"https://www.airbnb.com/rooms/{property_id}"
+                self.property_details[property_id]["link"] = (
+                    f"https://www.airbnb.com/rooms/{property_id}"
+                )
                 self.get_financials(
                     property_id=property_id, property_details=occupancy_details
                 )
 
                 file_name = f"property_details_{property_id}.json"
-                file = open(os.path.join("outputs/04_details_scraped", file_name), "r")
+                file = open(os.path.join(DETAILS_SCRAPED_DIR, file_name), "r")
                 property_details = json.load(file)
                 file.close()
 
@@ -160,7 +165,8 @@ class DetailsFilesetBuilder:
 
         else:
             logger.info(
-                "No custom_listing_ids.json file found. Please build a data fileset first."
+                f"No comp set file found at {self.comp_set_filepath}. "
+                "Please run AirDNA scraping first."
             )
             return
 
