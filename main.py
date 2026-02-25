@@ -117,6 +117,7 @@ class AirBnbReviewAggregator:
     def get_area_search_results(self):
         comp_set_path = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
         search_output = f"outputs/02_search_results/search_results_{self.zipcode}.json"
+        force_refresh = self.pipeline_cache.force_refresh_flags.get("search", False)
 
         if os.path.isfile(comp_set_path):
             with open(comp_set_path, "r", encoding="utf-8") as f:
@@ -125,19 +126,23 @@ class AirBnbReviewAggregator:
             search_results = []
             for room_id in property_ids:
                 search_results.append({"room_id": room_id})
-        elif self.pipeline_cache.is_file_fresh("search", search_output):
+        elif not force_refresh and self.pipeline_cache.is_file_fresh(
+            "search", search_output
+        ):
             with open(search_output, "r", encoding="utf-8") as f:
                 search_results = json.load(f)
             logger.info(
                 f"Loaded {len(search_results)} cached search results (still fresh)."
             )
-        elif os.path.isfile(search_output):
+        elif not force_refresh and os.path.isfile(search_output):
             with open(search_output, "r", encoding="utf-8") as f:
                 search_results = json.load(f)
             logger.info(
                 f"Loaded {len(search_results)} listings from existing search results file."
             )
         else:
+            if force_refresh:
+                logger.info("Force refresh enabled for search — re-running.")
             search_results = airbnb_searcher(self.zipcode, self.iso_code)
             self.pipeline_cache.record_output("search", search_output)
             self.pipeline_cache.record_stage_complete("search")

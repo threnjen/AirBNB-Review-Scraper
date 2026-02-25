@@ -12,11 +12,6 @@ from review_aggregator.openai_aggregator import OpenAIAggregator
 # import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
 
-try:
-    from utils.pipeline_cache_manager import PipelineCacheManager
-except ImportError:
-    PipelineCacheManager = None
-
 # from utils.nlp_functions import filter_stopwords
 
 

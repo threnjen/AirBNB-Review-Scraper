@@ -13,11 +13,6 @@ from review_aggregator.openai_aggregator import OpenAIAggregator
 # import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
 
-try:
-    from utils.pipeline_cache_manager import PipelineCacheManager
-except ImportError:
-    PipelineCacheManager = None
-
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 

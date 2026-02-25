@@ -49,7 +49,7 @@ class PipelineCacheManager(BaseModel):
                     "force_refresh_aggregate_summaries", False
                 ),
             }
-        except Exception as e:
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
             logger.warning(f"Failed to load pipeline cache config, using defaults: {e}")
 
         if self.enable_cache:
@@ -70,11 +70,14 @@ class PipelineCacheManager(BaseModel):
             logger.warning(f"Failed to load pipeline metadata: {e}")
             return {}
 
-    def _save_metadata(self, metadata: dict) -> None:
+    def _save_metadata(self, metadata: dict) -> bool:
         """Save pipeline metadata to disk atomically.
 
         Args:
             metadata: Stage-keyed metadata dict to persist.
+
+        Returns:
+            True if metadata was saved successfully, False otherwise.
         """
         try:
             Path(self.metadata_path).parent.mkdir(parents=True, exist_ok=True)
@@ -83,13 +86,17 @@ class PipelineCacheManager(BaseModel):
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2)
             os.replace(tmp_path, self.metadata_path)
+            return True
         except OSError as e:
             logger.warning(f"Failed to save pipeline metadata: {e}")
-            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+            if "tmp_path" in locals() and os.path.exists(tmp_path):
                 try:
                     os.unlink(tmp_path)
-                except OSError:
-                    pass
+                except OSError as cleanup_err:
+                    logger.warning(
+                        f"Failed to clean up temp file {tmp_path}: {cleanup_err}"
+                    )
+            return False
 
     def _is_timestamp_fresh(self, timestamp_str: str) -> bool:
         """Check if a recorded timestamp is within the TTL window.
@@ -190,15 +197,14 @@ class PipelineCacheManager(BaseModel):
             file_path: Path to the output file that was produced.
 
         Returns:
-            True if recorded successfully, False if caching is disabled.
+            True if recorded successfully, False if caching is disabled or save failed.
         """
         if not self.enable_cache:
             return False
 
         metadata = self._load_metadata()
         metadata.setdefault(stage_name, {})[file_path] = datetime.now().isoformat()
-        self._save_metadata(metadata)
-        return True
+        return self._save_metadata(metadata)
 
     def record_stage_complete(self, stage_name: str) -> bool:
         """Record that a pipeline stage completed successfully.
@@ -207,16 +213,17 @@ class PipelineCacheManager(BaseModel):
             stage_name: Pipeline stage identifier.
 
         Returns:
-            True if recorded successfully, False if caching is disabled.
+            True if recorded successfully, False if caching is disabled or save failed.
         """
         if not self.enable_cache:
             return False
 
         metadata = self._load_metadata()
         metadata.setdefault(stage_name, {})["_completed"] = datetime.now().isoformat()
-        self._save_metadata(metadata)
-        logger.info(f"Stage '{stage_name}' completed and cached")
-        return True
+        saved = self._save_metadata(metadata)
+        if saved:
+            logger.info(f"Stage '{stage_name}' completed and cached")
+        return saved
 
     def clear_stage(self, stage_name: str) -> None:
         """Remove all cached metadata for a stage.
@@ -250,7 +257,9 @@ class PipelineCacheManager(BaseModel):
         for stage_name, stage_data in metadata.items():
             output_files = {k: v for k, v in stage_data.items() if k != "_completed"}
             fresh_count = sum(
-                1 for ts in output_files.values() if self._is_timestamp_fresh(ts)
+                1
+                for fp, ts in output_files.items()
+                if self._is_timestamp_fresh(ts) and os.path.exists(fp)
             )
             stale_count = len(output_files) - fresh_count
 

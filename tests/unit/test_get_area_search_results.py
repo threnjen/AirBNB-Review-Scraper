@@ -25,6 +25,7 @@ class TestGetAreaSearchResultsFromCompSet:
             agg.pipeline_cache.is_file_fresh.return_value = False
             agg.pipeline_cache.record_output.return_value = True
             agg.pipeline_cache.record_stage_complete.return_value = True
+            agg.pipeline_cache.force_refresh_flags = {}
         return agg
 
     def test_reads_comp_set_file(self, aggregator):

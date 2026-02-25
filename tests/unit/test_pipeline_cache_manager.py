@@ -337,3 +337,82 @@ class TestPipelineCacheManager:
             f.write("<<<corrupted>>>")
 
         assert cache_manager.is_file_fresh("reviews", test_file) is False
+
+    def test_force_refresh_search_bypasses_file_freshness(self, tmp_path):
+        """Test that force_refresh_search flag is exposed for callers to check."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_search": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        test_file = str(tmp_path / "search_results.json")
+        with open(test_file, "w") as f:
+            json.dump([{"room_id": "123"}], f)
+        manager.record_output("search", test_file)
+        manager.record_stage_complete("search")
+
+        # File is fresh per TTL, but force_refresh should override
+        assert manager.is_file_fresh("search", test_file) is True
+        assert manager.force_refresh_flags.get("search", False) is True
+        assert manager.is_stage_fresh("search") is False
+
+    def test_save_metadata_failure_propagates_to_record_output(self, tmp_path):
+        """Test that record_output returns False when _save_metadata fails."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {"pipeline_cache_enabled": True}
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        test_file = str(tmp_path / "output.json")
+        with patch.object(manager, "_save_metadata", return_value=False):
+            result = manager.record_output("reviews", test_file)
+
+        assert result is False
+
+    def test_save_metadata_failure_propagates_to_record_stage_complete(self, tmp_path):
+        """Test that record_stage_complete returns False when _save_metadata fails."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {"pipeline_cache_enabled": True}
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        with patch.object(manager, "_save_metadata", return_value=False):
+            result = manager.record_stage_complete("reviews")
+
+        assert result is False
+
+    def test_get_cache_stats_excludes_deleted_files(self, cache_manager, tmp_path):
+        """Test that get_cache_stats counts deleted files as stale, not fresh."""
+        existing_file = str(tmp_path / "exists.json")
+        with open(existing_file, "w") as f:
+            json.dump({}, f)
+        cache_manager.record_output("reviews", existing_file)
+
+        deleted_file = str(tmp_path / "deleted.json")
+        with open(deleted_file, "w") as f:
+            json.dump({}, f)
+        cache_manager.record_output("reviews", deleted_file)
+        os.remove(deleted_file)
+
+        stats = cache_manager.get_cache_stats()
+
+        assert stats["stages"]["reviews"]["fresh"] == 1
+        assert stats["stages"]["reviews"]["stale"] == 1
+        assert stats["stages"]["reviews"]["total"] == 2
+
+    def test_clear_stage_nonexistent_is_noop(self, cache_manager):
+        """Test that clearing a nonexistent stage does not raise."""
+        cache_manager.clear_stage("nonexistent_stage")
+
+        metadata = cache_manager._load_metadata()
+        assert "nonexistent_stage" not in metadata
