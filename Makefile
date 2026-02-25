@@ -33,5 +33,19 @@ coverage:
 	$(PYTEST) --cov-report=term-missing --cov-report=html:coverage_html
 	@echo "Coverage report generated in coverage_html/"
 
+# AirDNA scraper targets
+chrome-debug:
+	@echo "Launching Chrome with remote debugging on port 9222..."
+	@echo "NOTE: Chrome must be fully quit first (Cmd+Q) or the debug port won't open."
+	@mkdir -p /tmp/chrome-debug-profile
+	/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+		--remote-debugging-port=9222 \
+		--user-data-dir=/tmp/chrome-debug-profile &
+	@echo "Chrome launched. Verify at http://localhost:9222/json, then log into AirDNA."
+	@echo "This uses a separate profile at /tmp/chrome-debug-profile — you may need to log into AirDNA again."
 
-.PHONY: default help setup test test-fast coverage run clean
+scrape-airdna:
+	$(PYTHON) -m scraper.airdna_scraper
+
+
+.PHONY: default help setup test test-fast coverage run clean chrome-debug scrape-airdna
