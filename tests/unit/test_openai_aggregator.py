@@ -19,7 +19,7 @@ class TestOpenAIAggregator:
                     "model": "gpt-4.1-mini",
                     "temperature": 0.3,
                     "max_tokens": 16000,
-                    "chunk_size": 20,
+                    "chunk_token_limit": 120000,
                     "enable_cost_tracking": False,
                 }
             }
@@ -76,17 +76,21 @@ class TestOpenAIAggregator:
         assert chunks[0] == reviews
 
     def test_chunk_reviews_multiple_chunks(self, aggregator):
-        """Test chunking when reviews exceed chunk_size."""
-        # Create more reviews than chunk_size
-        reviews = [f"Review number {i}" for i in range(25)]
+        """Test chunking when reviews exceed chunk_token_limit."""
+        # Set a very low token limit to force chunking
+        aggregator.chunk_token_limit = 100
+        # Each review is a few tokens; with a 100-token limit they won't all fit
+        reviews = [
+            f"Review number {i} with some extra text to add tokens" for i in range(10)
+        ]
         prompt = "Analyze these reviews"
 
-        # With chunk_size=20, should create 2 chunks
         chunks = aggregator.chunk_reviews(reviews, prompt)
 
-        assert len(chunks) == 2
-        assert len(chunks[0]) == 20
-        assert len(chunks[1]) == 5
+        assert len(chunks) > 1
+        # All reviews should still be present across chunks
+        all_reviews = [r for chunk in chunks for r in chunk]
+        assert set(all_reviews) == set(reviews)
 
     def test_chunk_reviews_empty_list(self, aggregator):
         """Test chunking with empty reviews list."""
@@ -96,6 +100,7 @@ class TestOpenAIAggregator:
 
     def test_chunk_reviews_preserves_all_reviews(self, aggregator):
         """Test that chunking preserves all reviews."""
+        aggregator.chunk_token_limit = 200
         reviews = [f"Review {i}" for i in range(45)]
         prompt = "Analyze"
 
@@ -105,6 +110,17 @@ class TestOpenAIAggregator:
         all_chunked_reviews = [r for chunk in chunks for r in chunk]
         assert len(all_chunked_reviews) == 45
         assert set(all_chunked_reviews) == set(reviews)
+
+    def test_many_short_reviews_single_chunk(self, aggregator):
+        """Test that many short reviews fit in a single chunk when under token limit."""
+        # Default chunk_token_limit=120000, so 100 short reviews should easily fit
+        reviews = [f"Great stay {i}" for i in range(100)]
+        prompt = "Analyze"
+
+        chunks = aggregator.chunk_reviews(reviews, prompt)
+
+        assert len(chunks) == 1
+        assert len(chunks[0]) == 100
 
     def test_create_chunk_prompt_format(self, aggregator):
         """Test chunk prompt formatting."""
@@ -195,7 +211,7 @@ class TestOpenAIAggregator:
                     "model": "gpt-4",
                     "temperature": 0.5,
                     "max_tokens": 8000,
-                    "chunk_size": 30,
+                    "chunk_token_limit": 80000,
                 }
             }
             with patch("utils.cost_tracker.load_json_file", return_value={}):
@@ -206,7 +222,7 @@ class TestOpenAIAggregator:
                 assert agg.model == "gpt-4"
                 assert agg.temperature == 0.5
                 assert agg.max_tokens == 8000
-                assert agg.chunk_size == 30
+                assert agg.chunk_token_limit == 80000
 
 
 class TestOpenAIAggregatorGenerateSummary:
@@ -221,7 +237,7 @@ class TestOpenAIAggregatorGenerateSummary:
                     "model": "gpt-4.1-mini",
                     "temperature": 0.3,
                     "max_tokens": 16000,
-                    "chunk_size": 20,
+                    "chunk_token_limit": 120000,
                     "enable_cost_tracking": False,
                 }
             }
@@ -260,9 +276,9 @@ class TestOpenAIAggregatorGenerateSummary:
     def test_generate_summary_chunked_reviews(self, aggregator, mock_openai_client):
         """Test generate_summary with large review set requiring chunking."""
         aggregator.client = mock_openai_client
-        aggregator.chunk_size = 5  # Force chunking
+        aggregator.chunk_token_limit = 50  # Force chunking with very low token limit
 
-        # Create more reviews than chunk_size
+        # Reviews will exceed the tiny token limit
         reviews = [f"Review number {i} with some text content" for i in range(12)]
 
         result = aggregator.generate_summary(reviews, "Analyze reviews", "listing123")

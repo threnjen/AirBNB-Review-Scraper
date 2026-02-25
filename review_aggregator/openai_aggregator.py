@@ -26,7 +26,7 @@ class OpenAIAggregator(BaseModel):
     model: str = "gpt-4.1-mini"
     temperature: float = 0.3
     max_tokens: int = 16000
-    chunk_size: int = 20  # Reviews per chunk
+    chunk_token_limit: int = 120000  # Max input tokens before chunking
     max_retries: int = 3
     retry_delay: float = 1.0
 
@@ -48,7 +48,9 @@ class OpenAIAggregator(BaseModel):
                 self.model = openai_config.get("model", self.model)
                 self.temperature = openai_config.get("temperature", self.temperature)
                 self.max_tokens = openai_config.get("max_tokens", self.max_tokens)
-                self.chunk_size = openai_config.get("chunk_size", self.chunk_size)
+                self.chunk_token_limit = openai_config.get(
+                    "chunk_token_limit", self.chunk_token_limit
+                )
         except Exception:
             # Continue with defaults if config loading fails
             pass
@@ -92,11 +94,8 @@ class OpenAIAggregator(BaseModel):
         for review in reviews:
             review_tokens = self.estimate_tokens(review)
 
-            # If adding this review would exceed limits or chunk size, start new chunk
-            if (
-                current_tokens + review_tokens > 120000  # Leave buffer for 128k context
-                or len(current_chunk) >= self.chunk_size
-            ):
+            # If adding this review would exceed token limit, start new chunk
+            if current_tokens + review_tokens > self.chunk_token_limit:
                 if current_chunk:
                     chunks.append(current_chunk)
                     current_chunk = [review]
@@ -211,7 +210,7 @@ Unified Analysis:"""
 
         summary = None
 
-        if total_tokens <= 120000 and len(reviews) <= self.chunk_size:
+        if total_tokens <= self.chunk_token_limit:
             # Process all reviews in single request
             full_prompt = self.create_chunk_prompt(prompt, reviews)
             summary = self.call_openai_with_retry(full_prompt, listing_id)
@@ -228,13 +227,15 @@ Unified Analysis:"""
         else:
             # Need to chunk reviews
             logger.info(
-                f"Large review set detected ({total_tokens} tokens), chunking into smaller pieces"
+                f"Review set exceeds token limit ({total_tokens} tokens > {self.chunk_token_limit}), chunking into smaller pieces"
             )
             chunks = self.chunk_reviews(reviews, prompt)
             chunk_summaries = []
 
             for i, chunk in enumerate(chunks):
-                chunk_info = f"Processing chunk {i + 1} of {len(chunks)} (reviews {i * self.chunk_size + 1}-{i * self.chunk_size + len(chunk)})"
+                chunk_info = (
+                    f"Processing chunk {i + 1} of {len(chunks)} ({len(chunk)} reviews)"
+                )
                 chunk_prompt = self.create_chunk_prompt(prompt, chunk, chunk_info)
 
                 chunk_summary = self.call_openai_with_retry(
