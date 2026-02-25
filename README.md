@@ -4,6 +4,7 @@ An end-to-end pipeline that scrapes AirBNB property reviews by zip code, generat
 
 ## Features
 
+- **AirDNA Comp Set Scraper** - Scrape AirDNA comp sets via Playwright, extracting Airbnb listing IDs with ADR, Occupancy, and Days Available
 - **Property Search** - Find AirBNB listings within a geographic area using zip code
 - **Review Scraping** - Pull all reviews for discovered listings
 - **Property Details** - Scrape amenities, descriptions, house rules
@@ -41,6 +42,7 @@ Edit `config.json` to configure the pipeline:
 
 | Key | Type | Description |
 |-----|------|-------------|
+| `scrape_airdna` | bool | Scrape AirDNA comp sets for property metrics |
 | `scrape_reviews` | bool | Scrape reviews for listings in the zipcode |
 | `scrape_details` | bool | Scrape property details (amenities, rules) |
 | `build_details` | bool | Transform scraped details into structured datasets |
@@ -57,6 +59,14 @@ Edit `config.json` to configure the pipeline:
 | `num_listings_to_search` | int | Max listings to find in search |
 | `num_listings_to_summarize` | int | Max listings to process with AI |
 | `review_thresh_to_include_prop` | int | Minimum reviews required to process a listing |
+
+### AirDNA Settings
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `airdna_comp_set_ids` | array | List of AirDNA comp set IDs to scrape |
+| `airdna_cdp_url` | string | Chrome DevTools Protocol URL (default: `http://localhost:9222`) |
+| `airdna_inspect_mode` | bool | Pause after navigation for DOM selector discovery |
 
 ### Custom Listings
 
@@ -77,6 +87,47 @@ Edit `config.json` to configure the pipeline:
 | `openai.enable_cost_tracking` | bool | Log API costs |
 
 ## Usage
+
+### AirDNA Comp Set Scraping
+
+Scrape property metrics (ADR, Occupancy, Days Available) from your AirDNA comp sets.
+
+**Prerequisites:**
+1. Install Playwright browsers: `pipenv run playwright install chromium`
+2. Launch Chrome with remote debugging:
+   ```bash
+   make chrome-debug
+   # Or manually:
+   open -a "Google Chrome" --args --remote-debugging-port=9222
+   ```
+3. In the Chrome window that opens, navigate to [AirDNA](https://app.airdna.co) and log in with your account
+
+**Scrape a comp set:**
+```bash
+# 1. Set your comp set IDs in config.json:
+#    "scrape_airdna": true,
+#    "airdna_comp_set_ids": ["365519"]
+
+# 2. Run the pipeline (or standalone):
+pipenv run python main.py
+# Or:
+make scrape-airdna
+```
+
+**Output:** `compset_{id}.json` — one file per comp set, matching the `custom_listing_ids.json` format:
+```json
+{
+    "1050769200886027711": {"ADR": 945.57, "Occupancy": 39, "Days_Available": 335},
+    "549180550450067551": {"ADR": 377.19, "Occupancy": 88, "Days_Available": 357}
+}
+```
+
+To use scraped data in downstream pipeline stages, set `custom_filepath` to the output file:
+```json
+{"use_custom_listings_file": true, "custom_filepath": "compset_365519.json"}
+```
+
+**Inspect mode:** If selectors break (AirDNA UI changes), enable `"airdna_inspect_mode": true` to pause the browser and use Playwright Inspector to discover new selectors.
 
 ### Basic Workflow
 
@@ -147,6 +198,7 @@ Zip Code Input
 
 | Directory/File | Content |
 |----------------|---------|
+| `compset_{id}.json` | Scraped AirDNA comp set metrics per listing |
 | `property_search_results/` | Search results by zipcode |
 | `property_reviews_scraped/` | Raw review JSON per listing |
 | `property_details_scraped/` | Property details (amenities, rules) |
@@ -163,6 +215,7 @@ Zip Code Input
 main.py                          # Entry point
 ├── scraper/
 │   ├── airbnb_searcher.py       # Zip code → listing search
+│   ├── airdna_scraper.py        # AirDNA comp set scraper (Playwright/CDP)
 │   ├── reviews_scraper.py       # Fetch reviews per listing
 │   ├── details_scraper.py       # Fetch property details
 │   └── details_fileset_build.py # Transform to structured data

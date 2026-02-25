@@ -9,6 +9,7 @@ from review_aggregator.data_extractor import DataExtractor
 from review_aggregator.description_analyzer import DescriptionAnalyzer
 from review_aggregator.property_review_aggregator import PropertyRagAggregator
 from scraper.airbnb_searcher import airbnb_searcher
+from scraper.airdna_scraper import AirDNAScraper
 from scraper.details_fileset_build import DetailsFilesetBuilder
 from scraper.details_scraper import scrape_details
 from scraper.reviews_scraper import scrape_reviews
@@ -36,6 +37,10 @@ class AirBnbReviewAggregator:
         self.extract_data = False
         self.analyze_correlations = False
         self.analyze_descriptions = False
+        self.scrape_airdna = False
+        self.airdna_comp_set_ids = []
+        self.airdna_cdp_url = "http://localhost:9222"
+        self.airdna_inspect_mode = False
         self.correlation_metrics = ["adr", "occupancy"]
         self.correlation_top_percentile = 25
         self.correlation_bottom_percentile = 25
@@ -69,6 +74,10 @@ class AirBnbReviewAggregator:
         self.extract_data = self.config.get("extract_data", False)
         self.analyze_correlations = self.config.get("analyze_correlations", False)
         self.analyze_descriptions = self.config.get("analyze_descriptions", False)
+        self.scrape_airdna = self.config.get("scrape_airdna", False)
+        self.airdna_comp_set_ids = self.config.get("airdna_comp_set_ids", [])
+        self.airdna_cdp_url = self.config.get("airdna_cdp_url", "http://localhost:9222")
+        self.airdna_inspect_mode = self.config.get("airdna_inspect_mode", False)
         self.correlation_metrics = self.config.get(
             "correlation_metrics", ["adr", "occupancy"]
         )
@@ -108,6 +117,15 @@ class AirBnbReviewAggregator:
         return search_results
 
     def run_tasks_from_config(self):
+        if self.scrape_airdna:
+            airdna_scraper = AirDNAScraper(
+                cdp_url=self.airdna_cdp_url,
+                comp_set_ids=self.airdna_comp_set_ids,
+                inspect_mode=self.airdna_inspect_mode,
+            )
+            airdna_scraper.run()
+            logger.info("AirDNA comp set scraping completed.")
+
         if self.scrape_reviews:
             search_results = self.get_area_search_results()
             scrape_reviews(
