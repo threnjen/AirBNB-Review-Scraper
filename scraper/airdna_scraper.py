@@ -468,7 +468,7 @@ class AirDNAScraper:
         self,
         comp_set_id: str,
         data: dict,
-        output_dir: str = "property_comp_sets",
+        output_dir: str = "outputs/01_comp_sets",
     ) -> None:
         """Save scraped data to a JSON file.
 

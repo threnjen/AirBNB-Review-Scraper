@@ -100,10 +100,10 @@ class AirBnbReviewAggregator:
             for room_id in property_ids:
                 search_results.append({"room_id": room_id})
         elif os.path.isfile(
-            f"property_search_results/search_results_{self.zipcode}.json"
+            f"outputs/02_search_results/search_results_{self.zipcode}.json"
         ):
             with open(
-                f"property_search_results/search_results_{self.zipcode}.json",
+                f"outputs/02_search_results/search_results_{self.zipcode}.json",
                 "r",
                 encoding="utf-8",
             ) as f:

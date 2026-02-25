@@ -212,3 +212,4 @@ __marimo__/
 *.csv
 *.ipynb
 property_*
+outputs/

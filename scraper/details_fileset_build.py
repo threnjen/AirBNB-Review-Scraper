@@ -149,7 +149,7 @@ class DetailsFilesetBuilder:
                 )
 
                 file_name = f"property_details_{property_id}.json"
-                file = open(os.path.join("property_details_scraped", file_name), "r")
+                file = open(os.path.join("outputs/04_details_scraped", file_name), "r")
                 property_details = json.load(file)
                 file.close()
 
@@ -172,22 +172,23 @@ class DetailsFilesetBuilder:
 
         amenities_df.index.name = "property_id"
 
-        amenities_df.to_csv("property_details_results/property_amenities_matrix.csv")
+        os.makedirs("outputs/05_details_results", exist_ok=True)
+        amenities_df.to_csv("outputs/05_details_results/property_amenities_matrix.csv")
         logger.info(
-            "Details fileset built and saved to property_details_results/property_amenities_matrix.csv"
+            "Details fileset built and saved to outputs/05_details_results/property_amenities_matrix.csv"
         )
 
         with open(
-            "property_details_results/house_rules_details.json", "w"
+            "outputs/05_details_results/house_rules_details.json", "w"
         ) as house_rules_file:
             json.dump(self.house_rules, house_rules_file, indent=4)
 
         with open(
-            "property_details_results/property_descriptions.json", "w"
+            "outputs/05_details_results/property_descriptions.json", "w"
         ) as descriptions_file:
             json.dump(self.property_descriptions, descriptions_file, indent=4)
 
         with open(
-            "property_details_results/neighborhood_highlights.json", "w"
+            "outputs/05_details_results/neighborhood_highlights.json", "w"
         ) as highlights_file:
             json.dump(self.neighborhood_highlights, highlights_file, indent=4)

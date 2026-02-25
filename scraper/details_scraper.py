@@ -33,8 +33,9 @@ def scrape_details(search_results, num_listings):
             properties_scraped += 1
 
             # Save the details data to a JSON file
+            os.makedirs("outputs/04_details_scraped", exist_ok=True)
             with open(
-                f"property_details_scraped/property_details_{room_id}.json",
+                f"outputs/04_details_scraped/property_details_{room_id}.json",
                 "w",
                 encoding="utf-8",
             ) as f:

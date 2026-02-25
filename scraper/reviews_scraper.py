@@ -51,8 +51,9 @@ def scrape_reviews(zipcode, search_results, num_listings):
             properties_scraped += 1
 
             # Save the reviews data to a JSON file
+            os.makedirs("outputs/03_reviews_scraped", exist_ok=True)
             with open(
-                f"property_reviews_scraped/reviews_{zipcode}_{id}.json",
+                f"outputs/03_reviews_scraped/reviews_{zipcode}_{id}.json",
                 "w",
                 encoding="utf-8",
             ) as f:

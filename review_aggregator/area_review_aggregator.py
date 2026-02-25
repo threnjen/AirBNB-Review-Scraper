@@ -64,7 +64,7 @@ class AreaRagAggregator(BaseModel):
         # Load all property summaries from the output directory
         summary_files = [
             x
-            for x in os.listdir("property_generated_summaries/")
+            for x in os.listdir("outputs/06_generated_summaries/")
             if x.startswith(f"generated_summaries_{self.zipcode}_")
         ]
 
@@ -81,7 +81,7 @@ class AreaRagAggregator(BaseModel):
         # Collect all summaries
         all_summaries = []
         for file in summary_files[: self.num_listings]:
-            file_path = f"property_generated_summaries/{file}"
+            file_path = f"outputs/06_generated_summaries/{file}"
             summary_data = load_json_file(filename=file_path)
             # Each file is {listing_id: summary_text}
             for listing_id, summary_text in summary_data.items():

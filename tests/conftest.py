@@ -209,8 +209,8 @@ def sample_extraction_response():
 @pytest.fixture
 def mock_summary_files_dir(tmp_path, sample_property_summary):
     """Create a temp directory with sample property summary files."""
-    summary_dir = tmp_path / "property_generated_summaries"
-    summary_dir.mkdir()
+    summary_dir = tmp_path / "outputs" / "06_generated_summaries"
+    summary_dir.mkdir(parents=True)
 
     # Create sample summary files for zipcode 97067
     summaries = [
@@ -239,8 +239,8 @@ def mock_summary_files_dir(tmp_path, sample_property_summary):
 @pytest.fixture
 def mock_review_files_dir(tmp_path, sample_reviews):
     """Create a temp directory with sample property review files."""
-    review_dir = tmp_path / "property_reviews_scraped"
-    review_dir.mkdir()
+    review_dir = tmp_path / "outputs" / "03_reviews_scraped"
+    review_dir.mkdir(parents=True)
 
     # Create sample review files
     for i, listing_id in enumerate(["12345678", "87654321", "11111111"]):

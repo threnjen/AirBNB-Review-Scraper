@@ -211,7 +211,7 @@ class PropertyRagAggregator(BaseModel):
         for empty_id in empty_aggregated_reviews:
             del generated_summaries[empty_id]
             os.remove(
-                f"property_generated_summaries/generated_summaries_{self.zipcode}_{empty_id}.json"
+                f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{empty_id}.json"
             )
 
         return generated_summaries
@@ -224,18 +224,18 @@ class PropertyRagAggregator(BaseModel):
 
         review_files = [
             x
-            for x in os.listdir("property_reviews_scraped/")
+            for x in os.listdir("outputs/03_reviews_scraped/")
             if x.startswith("reviews_")
         ]
 
         for file in review_files:
-            one_property = load_json_file(filename=f"property_reviews_scraped/{file}")
+            one_property = load_json_file(filename=f"outputs/03_reviews_scraped/{file}")
             reviews.update(one_property)
         logger.info(f"Total property loaded: {len(reviews)}")
 
         generated_summaries_files = [
             x
-            for x in os.listdir("property_generated_summaries/")
+            for x in os.listdir("outputs/06_generated_summaries/")
             if x.startswith("generated_summaries_")
         ]
         # logger.info(f"Generated summaries files found: {generated_summaries_files}")
@@ -243,7 +243,7 @@ class PropertyRagAggregator(BaseModel):
         for file in generated_summaries_files:
             # logger.info(f"Using generated summaries file: {file}")
             one_property = load_json_file(
-                filename=f"property_generated_summaries/{file}"
+                filename=f"outputs/06_generated_summaries/{file}"
             )
             generated_summaries.update(one_property)
 
@@ -273,6 +273,7 @@ class PropertyRagAggregator(BaseModel):
         end_index = start_index + self.num_listings_to_summarize
 
         # First pass: process each unprocessed listing up to the configured limit
+        os.makedirs("outputs/06_generated_summaries", exist_ok=True)
         for listing_id in unprocessed_reviews_ids[start_index:end_index]:
             generated_summaries[listing_id] = self.process_single_listing(
                 one_property_reviews=unprocessed_reviews[listing_id],
@@ -282,7 +283,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"property_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
+                filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
         logger.info("First pass of RAG description generation chain completed.")
@@ -305,7 +306,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"property_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
+                filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
         logger.info("RAG description generation chain completed.")
