@@ -3,11 +3,13 @@ AirDNA comp set scraper using Playwright.
 
 Connects to an already-open Chrome browser via CDP (Chrome DevTools Protocol),
 navigates to AirDNA comp set pages, handles infinite scroll, and extracts
-property metrics (Airbnb listing ID, ADR, Occupancy, Days Available).
+property metrics (Airbnb listing ID, Revenue, ADR, Occupancy, Bedrooms,
+Bathrooms).
 """
 
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -20,6 +22,7 @@ logger = logging.getLogger(__name__)
 AIRDNA_BASE_URL = "https://app.airdna.co/data/comp-sets"
 SCROLL_PAUSE_SECONDS = 2.0
 SCROLL_MAX_RETRIES = 5
+PAGE_LOAD_WAIT_SECONDS = 5
 
 
 class AirDNAScraper:
@@ -27,7 +30,7 @@ class AirDNAScraper:
 
     Connects to a running Chrome instance via CDP remote debugging,
     navigates to comp set URLs, scrolls through infinite-scroll listings,
-    and extracts ADR, Occupancy, and Days Available per property.
+    and extracts Revenue, ADR, Occupancy, Bedrooms, and Bathrooms per property.
 
     Args:
         cdp_url: Chrome DevTools Protocol URL (e.g. http://localhost:9222).
@@ -94,6 +97,36 @@ class AirDNAScraper:
             return int(match.group())
         raise ValueError(f"Could not parse days from: {value}")
 
+    def _parse_revenue(self, value: str) -> float:
+        """Parse a revenue string like '$47.8K' or '$174.9K' to a float.
+
+        Args:
+            value: String like '$47.8K', '$1.2M', or '$47800'.
+
+        Returns:
+            Numeric value as float.
+        """
+        cleaned = value.replace("$", "").replace(",", "").strip()
+        multiplier = 1.0
+        if cleaned.upper().endswith("K"):
+            multiplier = 1_000
+            cleaned = cleaned[:-1]
+        elif cleaned.upper().endswith("M"):
+            multiplier = 1_000_000
+            cleaned = cleaned[:-1]
+        return float(cleaned) * multiplier
+
+    def _parse_bedrooms(self, value: str) -> float:
+        """Parse a bedrooms/bathrooms value that may be a decimal.
+
+        Args:
+            value: String like '3', '2.5', or '4'.
+
+        Returns:
+            Numeric value as float.
+        """
+        return float(value.strip())
+
     def _should_continue_scrolling(
         self,
         previous_count: int,
@@ -116,11 +149,62 @@ class AirDNAScraper:
             return True
         return retry_count < max_retries
 
+    def _find_scroll_container(self, page):
+        """Find the scrollable container for the comp set list.
+
+        The AirDNA page has the property list in a scrollable panel,
+        not the document body. This method finds that container.
+
+        Args:
+            page: Playwright page object.
+
+        Returns:
+            Playwright element handle for the scrollable container,
+            or None if not found (falls back to body scroll).
+        """
+        candidates = [
+            "div[class*='comp-set']",
+            "div[class*='compset']",
+            "div[class*='listing']",
+            "div[class*='table-container']",
+            "div[class*='scroll']",
+        ]
+        for selector in candidates:
+            el = page.query_selector(selector)
+            if el:
+                logger.info(f"Found scroll container: {selector}")
+                return el
+
+        # Fallback: find the element containing the table that has overflow scroll
+        container = page.evaluate("""() => {
+            const tables = document.querySelectorAll('table');
+            for (const table of tables) {
+                let el = table.parentElement;
+                while (el && el !== document.body) {
+                    const style = window.getComputedStyle(el);
+                    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                        return true;
+                    }
+                    el = el.parentElement;
+                }
+            }
+            return false;
+        }""")
+
+        if container:
+            # Use JS-based scrolling for the detected container
+            logger.info("Found scrollable parent via computed style.")
+            return None  # Will use JS-based approach in _scroll_to_bottom
+
+        logger.info("No scroll container found, will scroll document body.")
+        return None
+
     def _scroll_to_bottom(self, page) -> None:
         """Scroll the page to load all infinite-scroll content.
 
-        Repeatedly scrolls down and waits for new property elements to
-        appear. Stops when element count stabilizes after max retries.
+        Tries to scroll the specific comp set container first. If no
+        scrollable container is found, falls back to scrolling the
+        document body and the first scrollable ancestor of the table.
 
         Args:
             page: Playwright page object.
@@ -129,7 +213,22 @@ class AirDNAScraper:
         retry_count = 0
 
         while True:
-            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            # Scroll both the body and any scrollable table ancestor
+            page.evaluate("""() => {
+                window.scrollTo(0, document.body.scrollHeight);
+                const tables = document.querySelectorAll('table');
+                for (const table of tables) {
+                    let el = table.parentElement;
+                    while (el && el !== document.body) {
+                        const style = window.getComputedStyle(el);
+                        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                            el.scrollTop = el.scrollHeight;
+                            break;
+                        }
+                        el = el.parentElement;
+                    }
+                }
+            }""")
             time.sleep(SCROLL_PAUSE_SECONDS)
 
             current_count = len(page.query_selector_all("tr[data-testid]"))
@@ -158,65 +257,146 @@ class AirDNAScraper:
     def _extract_listing_id(self, row) -> str | None:
         """Extract the Airbnb listing ID from a table row element.
 
-        Looks for links containing airbnb.com/rooms/ or data attributes
-        containing the listing ID.
+        AirDNA embeds listing images from muscache.com (Airbnb's CDN)
+        with URLs like:
+          https://a0.muscache.com/.../Hosting-1050769200886027711/original/...
+
+        VRBO listings use a different CDN, so only muscache.com images
+        indicate Airbnb listings. Returns None for non-Airbnb rows.
 
         Args:
             row: Playwright element handle for a table row.
 
         Returns:
-            Listing ID string, or None if not found.
+            Listing ID string for Airbnb listings, or None if not found
+            or not an Airbnb listing.
         """
+        # Primary: extract from Airbnb image URL (muscache.com CDN)
+        images = row.query_selector_all("img")
+        for img in images:
+            src = img.get_attribute("src") or ""
+            if "muscache.com" in src:
+                match = re.search(r"Hosting-(\d+)", src)
+                if match:
+                    return match.group(1)
+
+        # Fallback: links containing airbnb.com/rooms/
         links = row.query_selector_all("a[href]")
         for link in links:
             href = link.get_attribute("href") or ""
             match = re.search(r"airbnb\.com/rooms/(\d+)", href)
             if match:
                 return match.group(1)
-
-        row_text = row.inner_text()
-        data_id = row.get_attribute("data-testid") or ""
-        id_match = re.search(r"(\d{6,})", data_id)
-        if id_match:
-            return id_match.group(1)
+            # AirDNA internal links with listing_id=abnb_{id}
+            match = re.search(r"listing_id=abnb_(\d+)", href)
+            if match:
+                return match.group(1)
 
         return None
 
     def _extract_property_data(self, row) -> tuple[str | None, dict]:
         """Extract metrics from a single property row element.
 
+        Known AirDNA comp set column order (indices):
+          [0] Listing name
+          [1] Revenue     ($132.8K)
+          [2] ADR         ($969.19)
+          [3] Occupancy   (42%)
+          [4] Bedrooms    (6)
+          [5] Bathrooms   (3.5)
+          [6] Max Guests  (15)
+          [7] Days Avail  (330)
+          [8] LY Revenue  ($141.4K)
+          [9] Rating      (4.8 (35))
+          [10] (action)
+
         Args:
             row: Playwright element handle for a property row.
 
         Returns:
             Tuple of (listing_id, metrics_dict). listing_id may be None
-            if extraction fails. metrics_dict has ADR, Occupancy,
-            Days_Available keys.
+            if extraction fails or the listing is not from Airbnb.
         """
         listing_id = self._extract_listing_id(row)
 
         cells = row.query_selector_all("td")
-        metrics = {"ADR": 0.0, "Occupancy": 0, "Days_Available": 0}
+        metrics = {
+            "ADR": 0.0,
+            "Occupancy": 0,
+            "Revenue": 0.0,
+            "Bedrooms": 0,
+            "Bathrooms": 0.0,
+            "Max_Guests": 0,
+            "Days_Available": 0,
+            "LY_Revenue": 0.0,
+            "Rating": 0.0,
+            "Review_Count": 0,
+        }
 
         cell_texts = [cell.inner_text().strip() for cell in cells]
-        logger.info(f"Row cells: {cell_texts}")
+        logger.debug(f"Row cells: {cell_texts}")
 
-        for text in cell_texts:
-            if "$" in text:
-                try:
-                    metrics["ADR"] = self._parse_currency(text)
-                except (ValueError, IndexError):
-                    pass
-            elif "%" in text:
-                try:
-                    metrics["Occupancy"] = self._parse_percentage(text)
-                except (ValueError, IndexError):
-                    pass
+        if len(cell_texts) < 8:
+            logger.warning(f"Row has only {len(cell_texts)} cells, expected 10+. Skipping.")
+            return listing_id, metrics
 
-        for text in cell_texts:
-            if text.isdigit() and 1 <= int(text) <= 365:
+        # Positional extraction based on known column order
+        # [1] Revenue
+        try:
+            metrics["Revenue"] = self._parse_revenue(cell_texts[1])
+        except (ValueError, IndexError):
+            pass
+
+        # [2] ADR
+        try:
+            metrics["ADR"] = self._parse_currency(cell_texts[2])
+        except (ValueError, IndexError):
+            pass
+
+        # [3] Occupancy
+        try:
+            metrics["Occupancy"] = self._parse_percentage(cell_texts[3])
+        except (ValueError, IndexError):
+            pass
+
+        # [4] Bedrooms
+        try:
+            metrics["Bedrooms"] = int(float(cell_texts[4]))
+        except (ValueError, IndexError):
+            pass
+
+        # [5] Bathrooms
+        try:
+            metrics["Bathrooms"] = self._parse_bedrooms(cell_texts[5])
+        except (ValueError, IndexError):
+            pass
+
+        # [6] Max Guests
+        try:
+            metrics["Max_Guests"] = int(cell_texts[6])
+        except (ValueError, IndexError):
+            pass
+
+        # [7] Days Available
+        try:
+            metrics["Days_Available"] = self._parse_days(cell_texts[7])
+        except (ValueError, IndexError):
+            pass
+
+        # [8] LY Revenue
+        try:
+            metrics["LY_Revenue"] = self._parse_revenue(cell_texts[8])
+        except (ValueError, IndexError):
+            pass
+
+        # [9] Rating (format: "4.8 (35)" or "-- (0)")
+        if len(cell_texts) > 9:
+            rating_text = cell_texts[9]
+            rating_match = re.match(r"([\d.]+)\s*\((\d+)\)", rating_text)
+            if rating_match:
                 try:
-                    metrics["Days_Available"] = self._parse_days(text)
+                    metrics["Rating"] = float(rating_match.group(1))
+                    metrics["Review_Count"] = int(rating_match.group(2))
                 except ValueError:
                     pass
 
@@ -234,7 +414,19 @@ class AirDNAScraper:
         """
         url = self._build_comp_set_url(comp_set_id)
         logger.info(f"Navigating to comp set: {url}")
-        page.goto(url, wait_until="networkidle")
+        page.goto(url, wait_until="domcontentloaded")
+
+        # Wait for the table to appear rather than networkidle,
+        # since the map tiles keep firing network requests forever.
+        try:
+            page.wait_for_selector(
+                "table", state="attached", timeout=30_000
+            )
+            logger.info("Table element detected on page.")
+        except Exception:
+            logger.warning(
+                "Table not found within 30s. Page may not have loaded correctly."
+            )
 
         if self.inspect_mode:
             logger.info(
@@ -243,13 +435,11 @@ class AirDNAScraper:
             logger.info("Close the inspector or press 'Resume' to continue.")
             page.pause()
 
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(int(PAGE_LOAD_WAIT_SECONDS * 1000))
 
         self._scroll_to_bottom(page)
 
-        rows = page.query_selector_all("tr[data-testid]")
-        if not rows:
-            rows = page.query_selector_all("table tbody tr")
+        rows = page.query_selector_all("table tbody tr")
         if not rows:
             logger.warning(
                 f"No property rows found for comp set {comp_set_id}. "
@@ -257,7 +447,7 @@ class AirDNAScraper:
             )
             return {}
 
-        logger.info(f"Extracting data from {len(rows)} property rows.")
+        logger.info(f"Found {len(rows)} table rows. Extracting Airbnb listings...")
         results = {}
         skipped = 0
 
@@ -269,7 +459,8 @@ class AirDNAScraper:
                 skipped += 1
 
         logger.info(
-            f"Extracted {len(results)} listings. Skipped {skipped} rows (no listing ID found)."
+            f"Extracted {len(results)} Airbnb listings. "
+            f"Skipped {skipped} rows (non-Airbnb or no listing ID)."
         )
         return results
 
@@ -277,7 +468,7 @@ class AirDNAScraper:
         self,
         comp_set_id: str,
         data: dict,
-        output_dir: str = ".",
+        output_dir: str = "property_comp_sets",
     ) -> None:
         """Save scraped data to a JSON file.
 
@@ -286,8 +477,9 @@ class AirDNAScraper:
             data: Dict mapping listing ID strings to metric dicts.
             output_dir: Directory to write the output file to.
         """
+        os.makedirs(output_dir, exist_ok=True)
         filename = f"compset_{comp_set_id}.json"
-        filepath = f"{output_dir}/{filename}"
+        filepath = os.path.join(output_dir, filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)

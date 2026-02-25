@@ -9,12 +9,18 @@ Manual testing guide for the AirDNA comp set scraper. Use this to verify end-to-
 Before running any tests, confirm each item:
 
 - [ ] **Chrome launched with remote debugging**
-  ```bash
-  make chrome-debug
-  ```
-  This runs: `open -a "Google Chrome" --args --remote-debugging-port=9222`
+  1. **Quit Chrome completely first** (Cmd+Q). If Chrome is already running, the debug flag is silently ignored.
+  2. Run:
+     ```bash
+     make chrome-debug
+     ```
+     This launches Chrome directly via its binary with `--remote-debugging-port=9222`. If `make chrome-debug` doesn't work, run the binary manually:
+     ```bash
+     /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 &
+     ```
+  3. **Verify debugging is active** — open `http://localhost:9222/json` in that Chrome. You should see a JSON array listing your open tabs. If the page doesn't load, Chrome was not launched correctly — quit and retry from step 1.
 
-- [ ] **Logged into AirDNA** — navigate to `https://app.airdna.co` in the debug Chrome and sign in
+- [ ] **Logged into AirDNA** — in the same Chrome window, navigate to `https://app.airdna.co` and sign in
 
 - [ ] **Comp set ID is valid** — visit `https://app.airdna.co/data/comp-sets/{id}` in Chrome and confirm the page loads with property rows
 
@@ -65,9 +71,11 @@ A quick end-to-end run to confirm the scraper works.
 
    | Field | JSON Value | AirDNA UI Value | Match? |
    |-------|-----------|-----------------|--------|
+   | Revenue | | | |
    | ADR | | | |
    | Occupancy | | | |
-   | Days_Available | | | |
+   | Bedrooms | | | |
+   | Bathrooms | | | |
 
 ### Expected Results
 
@@ -82,11 +90,11 @@ A quick end-to-end run to confirm the scraper works.
 
 | Symptom | Error / Log Message | Cause | Fix |
 |---------|-------------------|-------|-----|
-| **Crash on startup** | `ConnectionError: Could not connect to Chrome at http://localhost:9222. Is Chrome running with --remote-debugging-port=9222?` | Chrome not running with debug port | Run `make chrome-debug` first |
+| **Crash on startup** | `ConnectionError: Could not connect to Chrome at http://localhost:9222. Is Chrome running with --remote-debugging-port=9222?` | Chrome not running with debug port, or was already running when `make chrome-debug` was called (the `--args` flag is silently ignored if Chrome is already open) | Quit Chrome completely (Cmd+Q), then run `make chrome-debug`. Verify at `http://localhost:9222/json`. |
 | **Crash after connect** | `RuntimeError: No browser contexts available in Chrome.` | Chrome launched but no windows open | Open at least one Chrome tab/window |
 | **Empty JSON output, no error** | `No property rows found for comp set {id}. Run with inspect_mode=True to discover selectors.` (warning) | AirDNA login expired, or selectors are stale | Re-login to AirDNA in Chrome; if still empty, run with inspect mode (see Selector Maintenance below) |
 | **Partial data — some rows skipped** | `Extracted N listings. Skipped M rows (no listing ID found).` | Rows don't contain `airbnb.com/rooms/{id}` links or a numeric `data-testid` | Use inspect mode to check how listing IDs are embedded in the DOM |
-| **ADR/Occupancy/Days show as 0** | No explicit error — metrics silently default to 0 | Cell text format changed (e.g. no `$`, no `%`) | Use inspect mode; check `Row cells:` log lines for actual cell text |
+| **ADR/Occupancy/Revenue show as 0** | No explicit error — metrics silently default to 0 | Cell text format changed (e.g. no `$`, no `%`, no `K` suffix) | Use inspect mode; check `Row cells:` log lines for actual cell text |
 | **Script hangs indefinitely** | No output after `Navigating to comp set...` | `wait_until="networkidle"` timeout on slow network | Check internet connection; the page may be loading very slowly |
 | **Playwright unhandled error** | `playwright._impl._errors.TimeoutError` | Network timeout during page navigation | Retry; check AirDNA is reachable in Chrome first |
 | **Inspect mode blocks forever** | `Inspect mode enabled. Use Playwright Inspector to find selectors.` | Expected behavior — `page.pause()` waits for user | Click "Resume" in the Playwright Inspector or close it to continue |
@@ -109,22 +117,26 @@ After a successful run, verify the `compset_{id}.json` file:
   print(f'All {len(data)} listing IDs are valid numeric strings')
   "
   ```
-- [ ] **Each listing has all 3 metric keys** — `ADR`, `Occupancy`, `Days_Available`:
+- [ ] **Each listing has all 5 metric keys** — `ADR`, `Occupancy`, `Revenue`, `Bedrooms`, `Bathrooms`:
   ```bash
   pipenv run python -c "
-  import json
-  with open('compset_348454.json') as f:
-      data = json.load(f)
-  for lid, metrics in data.items():
-      assert 'ADR' in metrics, f'{lid} missing ADR'
-      assert 'Occupancy' in metrics, f'{lid} missing Occupancy'
-      assert 'Days_Available' in metrics, f'{lid} missing Days_Available'
-  print(f'All {len(data)} listings have required keys')
+import json
+with open('compset_348454.json') as f:
+    data = json.load(f)
+for lid, metrics in data.items():
+    assert 'ADR' in metrics, f'{lid} missing ADR'
+    assert 'Occupancy' in metrics, f'{lid} missing Occupancy'
+    assert 'Revenue' in metrics, f'{lid} missing Revenue'
+    assert 'Bedrooms' in metrics, f'{lid} missing Bedrooms'
+    assert 'Bathrooms' in metrics, f'{lid} missing Bathrooms'
+print(f'All {len(data)} listings have required keys')
   "
   ```
 - [ ] **ADR values are positive floats** — `ADR > 0.0` for active properties
 - [ ] **Occupancy values are 0–100 integers** — `0 <= Occupancy <= 100`
-- [ ] **Days_Available values are 0–365 integers** — `0 <= Days_Available <= 365`
+- [ ] **Revenue values are positive floats** — typically in thousands (e.g. 47800.0 for $47.8K)
+- [ ] **Bedrooms values are non-negative integers**
+- [ ] **Bathrooms values are non-negative floats** — may be decimals like 2.5
 - [ ] **Listing count matches AirDNA UI** — compare `len(data)` with the visible row count on the comp set page
 - [ ] **Spot-check 2–3 listings against AirDNA UI** — values should match within rounding tolerance
 
@@ -145,8 +157,12 @@ for lid, m in data.items():
         errors.append(f'{lid}: ADR={m.get(\"ADR\")} invalid')
     if not isinstance(m.get('Occupancy'), int) or not 0 <= m['Occupancy'] <= 100:
         errors.append(f'{lid}: Occupancy={m.get(\"Occupancy\")} invalid')
-    if not isinstance(m.get('Days_Available'), int) or not 0 <= m['Days_Available'] <= 365:
-        errors.append(f'{lid}: Days_Available={m.get(\"Days_Available\")} invalid')
+    if not isinstance(m.get('Revenue'), (int, float)) or m['Revenue'] < 0:
+        errors.append(f'{lid}: Revenue={m.get(\"Revenue\")} invalid')
+    if not isinstance(m.get('Bedrooms'), int) or m['Bedrooms'] < 0:
+        errors.append(f'{lid}: Bedrooms={m.get(\"Bedrooms\")} invalid')
+    if not isinstance(m.get('Bathrooms'), (int, float)) or m['Bathrooms'] < 0:
+        errors.append(f'{lid}: Bathrooms={m.get(\"Bathrooms\")} invalid')
 
 if errors:
     print(f'FAIL — {len(errors)} errors:')
@@ -186,16 +202,17 @@ When AirDNA changes their UI, the scraper's CSS selectors will break — typical
 
    | What | Current Selector | Used In |
    |------|-----------------|---------|
-   | Property rows (primary) | `tr[data-testid]` | `_scroll_to_bottom` (line 139), `scrape_comp_set` (line 254) |
-   | Property rows (fallback) | `table tbody tr` | `_scroll_to_bottom` (line 141), `scrape_comp_set` (line 256) |
-   | Listing ID links | `a[href]` containing `airbnb.com/rooms/{id}` | `_extract_listing_id` (line 173) |
-   | Listing ID fallback | `data-testid` attribute with 6+ digit number | `_extract_listing_id` (line 180) |
-   | Metric cells | `td` elements within each row | `_extract_property_data` (line 199) |
+   | Property rows (primary) | `tr[data-testid]` | `_scroll_to_bottom`, `scrape_comp_set` |
+   | Property rows (fallback) | `table tbody tr` | `_scroll_to_bottom`, `scrape_comp_set` |
+   | Listing ID links | `a[href]` containing `airbnb.com/rooms/{id}` | `_extract_listing_id` |
+   | Listing ID fallback | `data-testid` attribute with 6+ digit number | `_extract_listing_id` |
+   | Metric cells | `td` elements within each row | `_extract_property_data` |
 
 5. **Check cell text format** — click into a row and inspect `<td>` elements:
-   - ADR cell should contain `$` (e.g. `$945.57`)
-   - Occupancy cell should contain `%` (e.g. `88%`)
-   - Days_Available cell should be a plain number 1–365
+   - Revenue cell should contain `$` + `K`/`M` suffix (e.g. `$47.8K`)
+   - ADR cell should contain `$` without K/M (e.g. `$240.07`)
+   - Occupancy cell should contain `%` (e.g. `70%`)
+   - Bedrooms and Bathrooms are plain numbers (e.g. `3`, `2.5`)
 
 6. **If selectors changed**, update the corresponding lines in `scraper/airdna_scraper.py` (see table above)
 
@@ -246,7 +263,7 @@ These behaviors produce no error — be aware of them during QA:
 
 | Behavior | What Happens | How to Detect |
 |----------|-------------|---------------|
-| **Metric parse failure** | `ADR`, `Occupancy`, or `Days_Available` defaults to `0` / `0.0` | Check output for suspicious zero values on properties you know are active |
+| **Metric parse failure** | `ADR`, `Occupancy`, `Revenue`, `Bedrooms`, or `Bathrooms` defaults to `0` / `0.0` | Check output for suspicious zero values on properties you know are active |
 | **Row without listing ID** | Row is silently skipped | Compare listing count in JSON vs row count in AirDNA UI; check `Skipped N rows` log message |
 | **AirDNA auth expired** | Page loads login screen instead of data; scraper finds 0 rows | Output file has `{}` — re-login in Chrome and re-run |
 | **Coverage gap** | `scraper.airdna_scraper` is not listed in `pytest.ini` `--cov` flags | Unit tests run but coverage is not tracked for this module |

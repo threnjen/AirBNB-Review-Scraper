@@ -111,6 +111,26 @@ class TestAirDNAScraperParseMetrics:
         """Test parsing days string with trailing label."""
         assert scraper._parse_days("335 days") == 335
 
+    def test_parse_revenue_with_k_suffix(self, scraper):
+        """Test parsing revenue with K abbreviation."""
+        assert scraper._parse_revenue("$47.8K") == 47800.0
+
+    def test_parse_revenue_with_m_suffix(self, scraper):
+        """Test parsing revenue with M abbreviation."""
+        assert scraper._parse_revenue("$1.2M") == 1200000.0
+
+    def test_parse_revenue_plain_number(self, scraper):
+        """Test parsing revenue as plain dollar amount."""
+        assert scraper._parse_revenue("$174900") == 174900.0
+
+    def test_parse_bedrooms_integer(self, scraper):
+        """Test parsing whole number bedrooms."""
+        assert scraper._parse_bedrooms("3") == 3.0
+
+    def test_parse_bedrooms_decimal(self, scraper):
+        """Test parsing decimal bathrooms value."""
+        assert scraper._parse_bedrooms("2.5") == 2.5
+
 
 class TestAirDNAScraperSaveResults:
     """Tests for saving results to JSON files."""
@@ -128,9 +148,16 @@ class TestAirDNAScraperSaveResults:
         """Test that save_results creates a JSON file."""
         data = {
             "1050769200886027711": {
-                "ADR": 945.57,
-                "Occupancy": 39,
-                "Days_Available": 335,
+                "ADR": 969.19,
+                "Occupancy": 42,
+                "Revenue": 132800.0,
+                "Bedrooms": 6,
+                "Bathrooms": 3.5,
+                "Max_Guests": 15,
+                "Days_Available": 330,
+                "LY_Revenue": 141400.0,
+                "Rating": 4.8,
+                "Review_Count": 35,
             }
         }
         output_path = tmp_path / "compset_365519.json"
@@ -142,14 +169,28 @@ class TestAirDNAScraperSaveResults:
         """Test that saved JSON matches the expected format."""
         data = {
             "1050769200886027711": {
-                "ADR": 945.57,
-                "Occupancy": 39,
-                "Days_Available": 335,
+                "ADR": 969.19,
+                "Occupancy": 42,
+                "Revenue": 132800.0,
+                "Bedrooms": 6,
+                "Bathrooms": 3.5,
+                "Max_Guests": 15,
+                "Days_Available": 330,
+                "LY_Revenue": 141400.0,
+                "Rating": 4.8,
+                "Review_Count": 35,
             },
             "549180550450067551": {
-                "ADR": 377.19,
-                "Occupancy": 88,
-                "Days_Available": 357,
+                "ADR": 371.81,
+                "Occupancy": 89,
+                "Revenue": 118600.0,
+                "Bedrooms": 4,
+                "Bathrooms": 2.0,
+                "Max_Guests": 8,
+                "Days_Available": 359,
+                "LY_Revenue": 120300.0,
+                "Rating": 5.0,
+                "Review_Count": 279,
             },
         }
         scraper.save_results("365519", data, output_dir=str(tmp_path))
@@ -164,9 +205,16 @@ class TestAirDNAScraperSaveResults:
         """Test that output keys are string listing IDs."""
         data = {
             "49019599": {
-                "ADR": 464.92,
-                "Occupancy": 63,
-                "Days_Available": 353,
+                "ADR": 240.07,
+                "Occupancy": 70,
+                "Revenue": 47800.0,
+                "Bedrooms": 3,
+                "Bathrooms": 2.0,
+                "Max_Guests": 8,
+                "Days_Available": 286,
+                "LY_Revenue": 62700.0,
+                "Rating": 5.0,
+                "Review_Count": 55,
             }
         }
         scraper.save_results("365519", data, output_dir=str(tmp_path))
@@ -179,12 +227,19 @@ class TestAirDNAScraperSaveResults:
             assert isinstance(key, str)
 
     def test_save_results_values_have_required_fields(self, scraper, tmp_path):
-        """Test that each listing value contains ADR, Occupancy, Days_Available."""
+        """Test that each listing has all expected metric keys."""
         data = {
             "49019599": {
-                "ADR": 464.92,
-                "Occupancy": 63,
-                "Days_Available": 353,
+                "ADR": 240.07,
+                "Occupancy": 70,
+                "Revenue": 47800.0,
+                "Bedrooms": 3,
+                "Bathrooms": 2.0,
+                "Max_Guests": 8,
+                "Days_Available": 286,
+                "LY_Revenue": 62700.0,
+                "Rating": 5.0,
+                "Review_Count": 55,
             }
         }
         scraper.save_results("365519", data, output_dir=str(tmp_path))
@@ -193,10 +248,12 @@ class TestAirDNAScraperSaveResults:
         with open(output_path) as f:
             loaded = json.load(f)
 
+        expected_keys = {
+            "ADR", "Occupancy", "Revenue", "Bedrooms", "Bathrooms",
+            "Max_Guests", "Days_Available", "LY_Revenue", "Rating", "Review_Count",
+        }
         for listing_id, metrics in loaded.items():
-            assert "ADR" in metrics
-            assert "Occupancy" in metrics
-            assert "Days_Available" in metrics
+            assert set(metrics.keys()) == expected_keys
 
     def test_save_results_empty_data_writes_empty_json(self, scraper, tmp_path):
         """Test that empty data writes an empty JSON object."""
