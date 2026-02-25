@@ -20,7 +20,7 @@ class TestPropertyAggregatorIntegration:
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "enable_caching": True,
                     "enable_cost_tracking": True,
                 }
@@ -141,7 +141,7 @@ class TestAreaAggregatorIntegration:
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "enable_caching": False,
                     "enable_cost_tracking": True,
                 }
@@ -222,7 +222,7 @@ class TestDataExtractorIntegration:
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "enable_caching": False,
                     "enable_cost_tracking": False,
                 }
@@ -390,13 +390,13 @@ class TestCostTrackerIntegration:
 
     def test_cost_calculation(self, cost_tracker):
         """Test cost calculation with known token counts."""
-        # Cost for 1M input tokens = $0.15, 1M output tokens = $0.60
+        # Cost for 1M input tokens = $0.40, 1M output tokens = $1.60
         # 1000 input + 500 output should be:
-        # (1000 / 1_000_000) * 0.15 + (500 / 1_000_000) * 0.60
-        # = 0.00015 + 0.0003 = 0.00045
+        # (1000 / 1_000_000) * 0.40 + (500 / 1_000_000) * 1.60
+        # = 0.0004 + 0.0008 = 0.0012
         cost = cost_tracker.calculate_cost(input_tokens=1000, output_tokens=500)
 
-        assert cost == pytest.approx(0.00045, rel=0.01)
+        assert cost == pytest.approx(0.0012, rel=0.01)
 
     def test_reset_session(self, cost_tracker, sample_reviews, sample_prompt):
         """Test session reset clears accumulated stats."""

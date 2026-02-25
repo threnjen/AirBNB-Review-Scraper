@@ -261,9 +261,9 @@ def mocked_openai_aggregator(mock_openai_client, tmp_cache_dir, tmp_logs_dir):
     with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
         mock_load.return_value = {
             "openai": {
-                "model": "gpt-4o-mini",
+                "model": "gpt-4.1-mini",
                 "temperature": 0.3,
-                "max_tokens": 4000,
+                "max_tokens": 16000,
                 "chunk_size": 20,
                 "enable_caching": True,
                 "enable_cost_tracking": True,

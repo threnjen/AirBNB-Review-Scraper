@@ -8,7 +8,7 @@ An end-to-end pipeline that scrapes AirBNB property reviews by zip code, generat
 - **Property Search** - Find AirBNB listings within a geographic area using zip code
 - **Review Scraping** - Pull all reviews for discovered listings
 - **Property Details** - Scrape amenities, descriptions, house rules
-- **AI Summaries** - Generate structured summaries per property using GPT-4o-mini:
+- **AI Summaries** - Generate structured summaries per property using GPT-4.1-mini:
   - Pros/cons with mention percentages
   - Amenities analysis
   - Rating context vs. area average
@@ -79,7 +79,7 @@ Edit `config.json` to configure the pipeline:
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `openai.model` | string | Model to use (default: "gpt-4o-mini") |
+| `openai.model` | string | Model to use (default: "gpt-4.1-mini") |
 | `openai.temperature` | float | Response randomness (0.0-1.0) |
 | `openai.max_tokens` | int | Max tokens per response |
 | `openai.chunk_size` | int | Reviews per API call |

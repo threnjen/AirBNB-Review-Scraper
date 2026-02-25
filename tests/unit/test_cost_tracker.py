@@ -59,25 +59,25 @@ class TestCostTracker:
 
     def test_calculate_cost_input_only(self, cost_tracker):
         """Test cost calculation with only input tokens."""
-        # 1M input tokens at $0.15 per 1M
+        # 1M input tokens at $0.40 per 1M
         cost = cost_tracker.calculate_cost(1_000_000, 0)
 
-        assert cost == 0.15
+        assert cost == 0.4
 
     def test_calculate_cost_output_only(self, cost_tracker):
         """Test cost calculation with only output tokens."""
-        # 1M output tokens at $0.60 per 1M
+        # 1M output tokens at $1.60 per 1M
         cost = cost_tracker.calculate_cost(0, 1_000_000)
 
-        assert cost == 0.6
+        assert cost == 1.6
 
     def test_calculate_cost_combined(self, cost_tracker):
         """Test cost calculation with both input and output tokens."""
         # 500k input + 500k output
-        # (500k/1M * $0.15) + (500k/1M * $0.60) = $0.075 + $0.30 = $0.375
+        # (500k/1M * $0.40) + (500k/1M * $1.60) = $0.20 + $0.80 = $1.00
         cost = cost_tracker.calculate_cost(500_000, 500_000)
 
-        assert cost == 0.375
+        assert cost == 1.0
 
     def test_calculate_cost_small_amounts(self, cost_tracker):
         """Test cost calculation with small token counts."""
@@ -86,7 +86,7 @@ class TestCostTracker:
 
         # Should be a small positive number
         assert cost > 0
-        assert cost < 0.001
+        assert cost < 0.002
 
     def test_track_request_updates_session_stats(self, cost_tracker):
         """Test that track_request updates session statistics."""

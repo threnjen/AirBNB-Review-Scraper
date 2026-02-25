@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 class OpenAIAggregator(BaseModel):
     """
-    OpenAI client for aggregating Airbnb reviews using GPT-4o-mini.
+    OpenAI client for aggregating Airbnb reviews using GPT-4.1-mini.
     Handles token management, chunking, and cost-efficient processing.
     """
 
     client: OpenAI = Field(default_factory=lambda: OpenAI())
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
     temperature: float = 0.3
-    max_tokens: int = 4000
+    max_tokens: int = 16000
     chunk_size: int = 20  # Reviews per chunk
     max_retries: int = 3
     retry_delay: float = 1.0

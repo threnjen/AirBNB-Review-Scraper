@@ -16,9 +16,9 @@ class TestOpenAIAggregator:
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "temperature": 0.3,
-                    "max_tokens": 4000,
+                    "max_tokens": 16000,
                     "chunk_size": 20,
                     "enable_caching": False,
                     "enable_cost_tracking": False,
@@ -222,9 +222,9 @@ class TestOpenAIAggregatorGenerateSummary:
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "temperature": 0.3,
-                    "max_tokens": 4000,
+                    "max_tokens": 16000,
                     "chunk_size": 20,
                     "enable_caching": False,
                     "enable_cost_tracking": False,
