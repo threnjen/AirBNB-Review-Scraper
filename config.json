@@ -8,6 +8,9 @@
     "force_refresh_build_details": false,
     "force_refresh_aggregate_reviews": true,
     "force_refresh_aggregate_summaries": true,
+    "force_refresh_extract_data": false,
+    "force_refresh_analyze_correlations": false,
+    "force_refresh_analyze_descriptions": false,
     "scrape_airdna": true,
     "airdna_comp_set_ids": [
         "348454",

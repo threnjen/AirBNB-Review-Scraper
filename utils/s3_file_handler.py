@@ -10,15 +10,14 @@ import pandas as pd
 
 from utils.file_handler import FileHandler
 
-S3_SCRAPER_BUCKET = f'{os.environ.get("TF_VAR_S3_SCRAPER_BUCKET")}-{os.environ.get("TF_VAR_RESOURCE_ENV")}'
+S3_SCRAPER_BUCKET = f"{os.environ.get('TF_VAR_S3_SCRAPER_BUCKET')}-{os.environ.get('TF_VAR_RESOURCE_ENV')}"
 REGION_NAME = os.environ.get("TF_VAR_REGION", "us-west-2")
 TERRAFORM_STATE_BUCKET = (
-    f'{os.environ.get("TF_VAR_STATE_BUCKET")}-{os.environ.get("TF_VAR_RESOURCE_ENV")}'
+    f"{os.environ.get('TF_VAR_STATE_BUCKET')}-{os.environ.get('TF_VAR_RESOURCE_ENV')}"
 )
 
 
 class S3FileHandler(FileHandler):
-
     def __init__(self):
         self._check_s3_access()
         self.s3_client = boto3.client("s3", region_name=REGION_NAME)
@@ -129,3 +128,9 @@ class S3FileHandler(FileHandler):
     def list_files(self, directory: str) -> list[str]:
 
         return wr.s3.list_objects(directory)
+
+    def clear_directory(self, directory: str) -> None:
+        """Remove all objects under *directory* in S3."""
+        objects = wr.s3.list_objects(directory)
+        for obj in objects:
+            self.s3_client.delete_object(Bucket=S3_SCRAPER_BUCKET, Key=obj)

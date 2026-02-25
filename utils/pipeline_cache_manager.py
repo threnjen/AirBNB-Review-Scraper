@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from utils.local_file_handler import LocalFileHandler
 from utils.tiny_file_handler import load_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -21,6 +22,32 @@ class PipelineCacheManager(BaseModel):
     Tracks when each stage's output files were produced and skips
     re-execution if all outputs are still fresh within the configured TTL.
     """
+
+    STAGE_ORDER: list[str] = [
+        "airdna",
+        "search",
+        "reviews",
+        "details",
+        "build_details",
+        "aggregate_reviews",
+        "aggregate_summaries",
+        "extract_data",
+        "analyze_correlations",
+        "analyze_descriptions",
+    ]
+
+    STAGE_OUTPUT_DIRS: dict[str, str] = {
+        "airdna": "outputs/01_comp_sets",
+        "search": "outputs/02_search_results",
+        "reviews": "outputs/03_reviews_scraped",
+        "details": "outputs/04_details_scraped",
+        "build_details": "outputs/05_details_results",
+        "aggregate_reviews": "outputs/06_generated_summaries",
+        "aggregate_summaries": "reports",
+        "extract_data": "outputs/07_extracted_data",
+        "analyze_correlations": "outputs/08_correlation_results",
+        "analyze_descriptions": "outputs/09_description_analysis",
+    }
 
     metadata_path: str = "cache/pipeline_metadata.json"
     ttl_hours: int = 24 * 7
@@ -48,7 +75,15 @@ class PipelineCacheManager(BaseModel):
                 "aggregate_summaries": config.get(
                     "force_refresh_aggregate_summaries", False
                 ),
+                "extract_data": config.get("force_refresh_extract_data", False),
+                "analyze_correlations": config.get(
+                    "force_refresh_analyze_correlations", False
+                ),
+                "analyze_descriptions": config.get(
+                    "force_refresh_analyze_descriptions", False
+                ),
             }
+            self._apply_init_cascade()
         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
             logger.warning(f"Failed to load pipeline cache config, using defaults: {e}")
 
@@ -230,16 +265,71 @@ class PipelineCacheManager(BaseModel):
         return saved
 
     def clear_stage(self, stage_name: str) -> None:
-        """Remove all cached metadata for a stage.
+        """Remove all cached metadata for a stage and wipe its output directory.
 
         Args:
             stage_name: Pipeline stage identifier to clear.
         """
+        output_dir = self.STAGE_OUTPUT_DIRS.get(stage_name)
+        if output_dir:
+            LocalFileHandler().clear_directory(output_dir)
+            logger.info(
+                f"Wiped output directory '{output_dir}' for stage '{stage_name}'"
+            )
+
         metadata = self._load_metadata()
         if stage_name in metadata:
             del metadata[stage_name]
             self._save_metadata(metadata)
             logger.info(f"Cleared cache metadata for stage '{stage_name}'")
+
+    def _apply_init_cascade(self) -> None:
+        """Cascade force-refresh flags at init time.
+
+        If any ``force_refresh_*`` flag loaded from config is ``True``, every
+        stage that comes *after* it in :pyattr:`STAGE_ORDER` is also set to
+        ``True``.  This guarantees that refreshing an upstream stage always
+        invalidates all downstream outputs.
+        """
+        cascade_active = False
+        cascaded: list[str] = []
+        for stage in self.STAGE_ORDER:
+            if cascade_active:
+                if not self.force_refresh_flags.get(stage, False):
+                    cascaded.append(stage)
+                self.force_refresh_flags[stage] = True
+            elif self.force_refresh_flags.get(stage, False):
+                cascade_active = True
+
+        if cascaded:
+            logger.info(
+                "Init cascade: auto-set force_refresh for downstream stages: "
+                f"{', '.join(cascaded)}"
+            )
+
+    def cascade_force_refresh(self, stage_name: str) -> None:
+        """Force-refresh all stages that come after *stage_name* in the pipeline.
+
+        This ensures downstream outputs built from the refreshed stage's data
+        are also regenerated.
+
+        Args:
+            stage_name: The stage whose refresh should cascade downstream.
+        """
+        if stage_name not in self.STAGE_ORDER:
+            logger.warning(f"Unknown stage '{stage_name}' — cascade skipped.")
+            return
+
+        stage_index = self.STAGE_ORDER.index(stage_name)
+        downstream = self.STAGE_ORDER[stage_index + 1 :]
+
+        if downstream:
+            for later_stage in downstream:
+                self.force_refresh_flags[later_stage] = True
+            logger.info(
+                f"Stage '{stage_name}' refreshed — cascading force_refresh to: "
+                f"{', '.join(downstream)}"
+            )
 
     def get_cache_stats(self) -> dict:
         """Get statistics about cached pipeline outputs.

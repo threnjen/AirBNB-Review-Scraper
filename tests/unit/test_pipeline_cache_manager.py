@@ -29,6 +29,9 @@ class TestPipelineCacheManager:
                 "force_refresh_build_details": False,
                 "force_refresh_aggregate_reviews": False,
                 "force_refresh_aggregate_summaries": False,
+                "force_refresh_extract_data": False,
+                "force_refresh_analyze_correlations": False,
+                "force_refresh_analyze_descriptions": False,
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
@@ -448,3 +451,168 @@ class TestPipelineCacheManager:
 
         metadata = cache_manager._load_metadata()
         assert "nonexistent_stage" not in metadata
+
+    def test_clear_stage_wipes_output_directory(self, cache_manager, tmp_path):
+        """Test that clear_stage wipes the output directory contents."""
+        # Create a fake output directory with files
+        output_dir = tmp_path / "outputs" / "03_reviews_scraped"
+        output_dir.mkdir(parents=True)
+        (output_dir / "reviews_97067_123.json").write_text("{}")
+        (output_dir / "reviews_97067_456.json").write_text("{}")
+
+        # Point stage output dirs to our tmp dir
+        cache_manager.STAGE_OUTPUT_DIRS = {"reviews": str(output_dir)}
+        cache_manager.clear_stage("reviews")
+
+        # Directory still exists but is empty
+        assert output_dir.exists()
+        assert list(output_dir.iterdir()) == []
+
+    def test_clear_stage_preserves_directory_itself(self, cache_manager, tmp_path):
+        """Test that clear_stage keeps the directory after wiping contents."""
+        output_dir = tmp_path / "outputs" / "05_details_results"
+        output_dir.mkdir(parents=True)
+        (output_dir / "data.csv").write_text("a,b")
+
+        cache_manager.STAGE_OUTPUT_DIRS = {"build_details": str(output_dir)}
+        cache_manager.clear_stage("build_details")
+
+        assert output_dir.exists()
+        assert output_dir.is_dir()
+
+    def test_clear_stage_handles_missing_directory(self, cache_manager, tmp_path):
+        """Test that clear_stage doesn't raise when output dir doesn't exist."""
+        missing_dir = str(tmp_path / "outputs" / "nonexistent")
+
+        cache_manager.STAGE_OUTPUT_DIRS = {"reviews": missing_dir}
+        # Should not raise
+        cache_manager.clear_stage("reviews")
+
+    def test_cascade_force_refresh_sets_all_later_stages(self, cache_manager):
+        """Test that cascade_force_refresh sets all downstream stages to True."""
+        cache_manager.cascade_force_refresh("reviews")
+
+        # Upstream stages should be unchanged (False)
+        assert cache_manager.force_refresh_flags.get("airdna") is False
+        assert cache_manager.force_refresh_flags.get("search") is False
+
+        # The triggering stage itself should NOT be changed
+        assert cache_manager.force_refresh_flags.get("reviews") is False
+
+        # All downstream stages should be True
+        assert cache_manager.force_refresh_flags.get("details") is True
+        assert cache_manager.force_refresh_flags.get("build_details") is True
+        assert cache_manager.force_refresh_flags.get("aggregate_reviews") is True
+        assert cache_manager.force_refresh_flags.get("aggregate_summaries") is True
+        assert cache_manager.force_refresh_flags.get("extract_data") is True
+        assert cache_manager.force_refresh_flags.get("analyze_correlations") is True
+        assert cache_manager.force_refresh_flags.get("analyze_descriptions") is True
+
+    def test_cascade_from_last_stage_is_noop(self, cache_manager):
+        """Test that cascade from the last stage changes nothing."""
+        original_flags = dict(cache_manager.force_refresh_flags)
+
+        cache_manager.cascade_force_refresh("analyze_descriptions")
+
+        assert cache_manager.force_refresh_flags == original_flags
+
+    def test_cascade_from_first_stage_sets_all_others(self, cache_manager):
+        """Test that cascade from the first stage sets all 9 remaining stages."""
+        cache_manager.cascade_force_refresh("airdna")
+
+        # airdna itself unchanged
+        assert cache_manager.force_refresh_flags.get("airdna") is False
+
+        # All others set to True
+        for stage in [
+            "search",
+            "reviews",
+            "details",
+            "build_details",
+            "aggregate_reviews",
+            "aggregate_summaries",
+            "extract_data",
+            "analyze_correlations",
+            "analyze_descriptions",
+        ]:
+            assert cache_manager.force_refresh_flags.get(stage) is True, (
+                f"Expected {stage} to be True after cascade from airdna"
+            )
+
+    def test_cascade_unknown_stage_is_noop(self, cache_manager):
+        """Test that cascade with an unknown stage name does nothing."""
+        original_flags = dict(cache_manager.force_refresh_flags)
+
+        cache_manager.cascade_force_refresh("nonexistent_stage")
+
+        assert cache_manager.force_refresh_flags == original_flags
+
+    def test_new_force_refresh_flags_loaded_from_config(self, tmp_path):
+        """Test that the 3 new force_refresh flags are loaded from config.
+
+        With init-time cascade, setting extract_data=True auto-sets all
+        downstream flags (analyze_correlations, analyze_descriptions) to True.
+        """
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_extract_data": True,
+                "force_refresh_analyze_correlations": False,
+                "force_refresh_analyze_descriptions": False,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        assert manager.force_refresh_flags["extract_data"] is True
+        # Cascade: both downstream flags auto-set to True
+        assert manager.force_refresh_flags["analyze_correlations"] is True
+        assert manager.force_refresh_flags["analyze_descriptions"] is True
+
+    def test_init_cascade_sets_downstream_flags(self, tmp_path):
+        """Test that on init, a True flag cascades to all later stages."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_reviews": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        # Upstream stages stay False
+        assert manager.force_refresh_flags["airdna"] is False
+        assert manager.force_refresh_flags["search"] is False
+
+        # Triggering stage is True (from config)
+        assert manager.force_refresh_flags["reviews"] is True
+
+        # All downstream stages auto-set to True
+        assert manager.force_refresh_flags["details"] is True
+        assert manager.force_refresh_flags["build_details"] is True
+        assert manager.force_refresh_flags["aggregate_reviews"] is True
+        assert manager.force_refresh_flags["aggregate_summaries"] is True
+        assert manager.force_refresh_flags["extract_data"] is True
+        assert manager.force_refresh_flags["analyze_correlations"] is True
+        assert manager.force_refresh_flags["analyze_descriptions"] is True
+
+    def test_init_no_cascade_when_no_flags_set(self, tmp_path):
+        """Test that no cascade occurs when all force_refresh flags are False."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            manager = PipelineCacheManager(metadata_path=metadata_path)
+
+        for stage in manager.STAGE_ORDER:
+            assert manager.force_refresh_flags[stage] is False, (
+                f"Expected {stage} to be False when no flags are set"
+            )

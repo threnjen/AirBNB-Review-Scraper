@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -88,3 +89,14 @@ class LocalFileHandler(FileHandler):
 
     def list_files(self, directory: str) -> list[str]:
         return [file for file in os.listdir(directory)]
+
+    def clear_directory(self, directory: str) -> None:
+        """Remove all files and subdirectories inside *directory*, keeping it."""
+        if not os.path.isdir(directory):
+            return
+        for entry in os.listdir(directory):
+            entry_path = os.path.join(directory, entry)
+            if os.path.isdir(entry_path):
+                shutil.rmtree(entry_path)
+            else:
+                os.remove(entry_path)

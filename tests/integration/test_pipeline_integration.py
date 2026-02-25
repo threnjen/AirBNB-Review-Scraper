@@ -447,3 +447,72 @@ class TestPipelineCacheIntegration:
         os.remove(output_file)
 
         assert pipeline_cache.is_file_fresh("details", output_file) is False
+
+    def test_force_refresh_wipes_output_directory(self, tmp_path):
+        """Test that clear_stage wipes the output directory when force_refresh is set."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        output_dir = tmp_path / "outputs" / "03_reviews_scraped"
+        output_dir.mkdir(parents=True)
+
+        # Plant a stale file that should be cleaned up
+        stale_file = output_dir / "reviews_97067_old_listing.json"
+        stale_file.write_text("{}")
+
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_reviews": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            cache = PipelineCacheManager(metadata_path=metadata_path)
+
+        # Simulate what main.py does: check freshness, then clear_stage
+        assert cache.is_stage_fresh("reviews") is False
+
+        cache.STAGE_OUTPUT_DIRS = {"reviews": str(output_dir)}
+        cache.clear_stage("reviews")
+
+        # Stale file should be gone, directory should remain
+        assert output_dir.exists()
+        assert not stale_file.exists()
+        assert list(output_dir.iterdir()) == []
+
+    def test_expired_cache_cascades_downstream(self, tmp_path):
+        """Test that an expired stage causes all downstream stages to be marked stale."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            cache = PipelineCacheManager(metadata_path=metadata_path)
+
+        # Record reviews as completed (fresh)
+        review_file = str(tmp_path / "reviews.json")
+        with open(review_file, "w") as f:
+            json.dump({}, f)
+        cache.record_output("reviews", review_file)
+        cache.record_stage_complete("reviews")
+
+        # Record details as completed (fresh)
+        detail_file = str(tmp_path / "details.json")
+        with open(detail_file, "w") as f:
+            json.dump({}, f)
+        cache.record_output("details", detail_file)
+        cache.record_stage_complete("details")
+
+        # Both should initially be fresh
+        assert cache.is_stage_fresh("reviews") is True
+        assert cache.is_stage_fresh("details") is True
+
+        # Simulate reviews being not-fresh → cascade downstream
+        cache.cascade_force_refresh("reviews")
+
+        # details (downstream) should now be forced to refresh
+        assert cache.is_stage_fresh("details") is False
+        assert cache.force_refresh_flags["details"] is True

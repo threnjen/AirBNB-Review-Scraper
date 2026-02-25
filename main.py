@@ -143,6 +143,8 @@ class AirBnbReviewAggregator:
         else:
             if force_refresh:
                 logger.info("Force refresh enabled for search — re-running.")
+            self.pipeline_cache.clear_stage("search")
+            self.pipeline_cache.cascade_force_refresh("search")
             search_results = airbnb_searcher(self.zipcode, self.iso_code)
             self.pipeline_cache.record_output("search", search_output)
             self.pipeline_cache.record_stage_complete("search")
@@ -154,6 +156,8 @@ class AirBnbReviewAggregator:
             if self.pipeline_cache.is_stage_fresh("airdna"):
                 logger.info("Skipping AirDNA scraping — cached outputs are fresh.")
             else:
+                self.pipeline_cache.clear_stage("airdna")
+                self.pipeline_cache.cascade_force_refresh("airdna")
                 airdna_scraper = AirDNAScraper(
                     cdp_url=self.airdna_cdp_url,
                     comp_set_ids=self.airdna_comp_set_ids,
@@ -170,6 +174,8 @@ class AirBnbReviewAggregator:
             if self.pipeline_cache.is_stage_fresh("reviews"):
                 logger.info("Skipping reviews scraping — cached outputs are fresh.")
             else:
+                self.pipeline_cache.clear_stage("reviews")
+                self.pipeline_cache.cascade_force_refresh("reviews")
                 search_results = self.get_area_search_results()
                 scrape_reviews(
                     zipcode=self.zipcode,
@@ -186,6 +192,8 @@ class AirBnbReviewAggregator:
             if self.pipeline_cache.is_stage_fresh("details"):
                 logger.info("Skipping details scraping — cached outputs are fresh.")
             else:
+                self.pipeline_cache.clear_stage("details")
+                self.pipeline_cache.cascade_force_refresh("details")
                 search_results = self.get_area_search_results()
                 scrape_details(
                     search_results=search_results,
@@ -203,6 +211,8 @@ class AirBnbReviewAggregator:
                     "Skipping details fileset build — cached outputs are fresh."
                 )
             else:
+                self.pipeline_cache.clear_stage("build_details")
+                self.pipeline_cache.cascade_force_refresh("build_details")
                 comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
                 fileset_builder = DetailsFilesetBuilder(
                     use_categoricals=self.use_categoricals,
@@ -223,6 +233,8 @@ class AirBnbReviewAggregator:
             if self.pipeline_cache.is_stage_fresh("aggregate_reviews"):
                 logger.info("Skipping review aggregation — cached outputs are fresh.")
             else:
+                self.pipeline_cache.clear_stage("aggregate_reviews")
+                self.pipeline_cache.cascade_force_refresh("aggregate_reviews")
                 rag_property = PropertyRagAggregator(
                     num_listings_to_summarize=self.num_listings_to_summarize,
                     review_thresh_to_include_prop=self.review_thresh_to_include_prop,
@@ -241,6 +253,8 @@ class AirBnbReviewAggregator:
                     "Skipping area summary aggregation — cached outputs are fresh."
                 )
             else:
+                self.pipeline_cache.clear_stage("aggregate_summaries")
+                self.pipeline_cache.cascade_force_refresh("aggregate_summaries")
                 rag_area = AreaRagAggregator(
                     num_listings=self.num_summary_to_process,
                     review_thresh_to_include_prop=self.review_thresh_to_include_prop,
@@ -254,26 +268,55 @@ class AirBnbReviewAggregator:
                 )
 
         if self.extract_data:
-            extractor = DataExtractor(zipcode=self.zipcode)
-            extractor.run_extraction()
-            logger.info(f"Data extraction for zipcode {self.zipcode} completed.")
+            if self.pipeline_cache.is_stage_fresh("extract_data"):
+                logger.info("Skipping data extraction — cached outputs are fresh.")
+            else:
+                self.pipeline_cache.clear_stage("extract_data")
+                self.pipeline_cache.cascade_force_refresh("extract_data")
+                extractor = DataExtractor(zipcode=self.zipcode)
+                extractor.run_extraction()
+                output_file = f"outputs/07_extracted_data/area_data_{self.zipcode}.json"
+                self.pipeline_cache.record_output("extract_data", output_file)
+                self.pipeline_cache.record_stage_complete("extract_data")
+                logger.info(f"Data extraction for zipcode {self.zipcode} completed.")
 
         if self.analyze_correlations:
-            analyzer = CorrelationAnalyzer(
-                zipcode=self.zipcode,
-                metrics=self.correlation_metrics,
-                top_percentile=self.correlation_top_percentile,
-                bottom_percentile=self.correlation_bottom_percentile,
-            )
-            analyzer.run_analysis()
-            logger.info(f"Correlation analysis for zipcode {self.zipcode} completed.")
+            if self.pipeline_cache.is_stage_fresh("analyze_correlations"):
+                logger.info("Skipping correlation analysis — cached outputs are fresh.")
+            else:
+                self.pipeline_cache.clear_stage("analyze_correlations")
+                self.pipeline_cache.cascade_force_refresh("analyze_correlations")
+                analyzer = CorrelationAnalyzer(
+                    zipcode=self.zipcode,
+                    metrics=self.correlation_metrics,
+                    top_percentile=self.correlation_top_percentile,
+                    bottom_percentile=self.correlation_bottom_percentile,
+                )
+                analyzer.run_analysis()
+                for metric in self.correlation_metrics:
+                    output_file = f"outputs/08_correlation_results/correlation_stats_{metric}_{self.zipcode}.json"
+                    self.pipeline_cache.record_output(
+                        "analyze_correlations", output_file
+                    )
+                self.pipeline_cache.record_stage_complete("analyze_correlations")
+                logger.info(
+                    f"Correlation analysis for zipcode {self.zipcode} completed."
+                )
 
         if self.analyze_descriptions:
-            desc_analyzer = DescriptionAnalyzer(zipcode=self.zipcode)
-            desc_analyzer.run_analysis()
-            logger.info(
-                f"Description quality analysis for zipcode {self.zipcode} completed."
-            )
+            if self.pipeline_cache.is_stage_fresh("analyze_descriptions"):
+                logger.info("Skipping description analysis — cached outputs are fresh.")
+            else:
+                self.pipeline_cache.clear_stage("analyze_descriptions")
+                self.pipeline_cache.cascade_force_refresh("analyze_descriptions")
+                desc_analyzer = DescriptionAnalyzer(zipcode=self.zipcode)
+                desc_analyzer.run_analysis()
+                output_file = f"outputs/09_description_analysis/description_quality_stats_{self.zipcode}.json"
+                self.pipeline_cache.record_output("analyze_descriptions", output_file)
+                self.pipeline_cache.record_stage_complete("analyze_descriptions")
+                logger.info(
+                    f"Description quality analysis for zipcode {self.zipcode} completed."
+                )
 
         # Things to do
         # Aggregrate the aggreated reviews into a single review per zip code

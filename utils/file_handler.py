@@ -149,6 +149,14 @@ class FileHandler(ABC):
         pass
 
     @abstractmethod
+    def clear_directory(self, directory: str) -> None:
+        """
+        Remove all files and subdirectories inside a directory,
+        but keep the directory itself. No-op if the directory does not exist.
+        """
+        pass
+
+    @abstractmethod
     def file_exists(self, file_path: str) -> bool:
         """
         Check if a file exists.
