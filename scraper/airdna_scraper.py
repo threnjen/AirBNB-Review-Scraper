@@ -337,7 +337,9 @@ class AirDNAScraper:
         logger.debug(f"Row cells: {cell_texts}")
 
         if len(cell_texts) < 8:
-            logger.warning(f"Row has only {len(cell_texts)} cells, expected 10+. Skipping.")
+            logger.warning(
+                f"Row has only {len(cell_texts)} cells, expected 10+. Skipping."
+            )
             return listing_id, metrics
 
         # Positional extraction based on known column order
@@ -419,9 +421,7 @@ class AirDNAScraper:
         # Wait for the table to appear rather than networkidle,
         # since the map tiles keep firing network requests forever.
         try:
-            page.wait_for_selector(
-                "table", state="attached", timeout=30_000
-            )
+            page.wait_for_selector("table", state="attached", timeout=30_000)
             logger.info("Table element detected on page.")
         except Exception:
             logger.warning(

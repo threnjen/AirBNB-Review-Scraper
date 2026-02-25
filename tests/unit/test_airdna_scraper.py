@@ -249,8 +249,16 @@ class TestAirDNAScraperSaveResults:
             loaded = json.load(f)
 
         expected_keys = {
-            "ADR", "Occupancy", "Revenue", "Bedrooms", "Bathrooms",
-            "Max_Guests", "Days_Available", "LY_Revenue", "Rating", "Review_Count",
+            "ADR",
+            "Occupancy",
+            "Revenue",
+            "Bedrooms",
+            "Bathrooms",
+            "Max_Guests",
+            "Days_Available",
+            "LY_Revenue",
+            "Rating",
+            "Review_Count",
         }
         for listing_id, metrics in loaded.items():
             assert set(metrics.keys()) == expected_keys
