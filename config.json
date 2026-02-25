@@ -1,7 +1,7 @@
 {
     "scrape_airdna": false,
     "airdna_comp_set_ids": [
-        "365519"
+        "348454"
     ],
     "airdna_cdp_url": "http://localhost:9222",
     "airdna_inspect_mode": false,
@@ -38,5 +38,16 @@
         "enable_caching": true,
         "cache_ttl_days": 90,
         "enable_cost_tracking": true
-    }
+    },
+    "unused_comps": [
+        "365541",
+        "365540",
+        "365539",
+        "365520",
+        "365522",
+        "365523",
+        "365525",
+        "365535",
+        "365538"
+    ]
 }
