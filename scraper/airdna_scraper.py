@@ -46,6 +46,7 @@ class AirDNAScraper:
         listing_ids: List of Airbnb listing IDs to look up.
         inspect_mode: When True, pauses after navigation for selector discovery.
         min_days_available: Minimum Days Available to include a listing (default 100).
+        pipeline_cache: Optional PipelineCacheManager for per-listing TTL caching.
     """
 
     def __init__(
@@ -54,11 +55,13 @@ class AirDNAScraper:
         listing_ids: list[str],
         inspect_mode: bool = False,
         min_days_available: int = 100,
+        pipeline_cache=None,
     ) -> None:
         self.cdp_url = cdp_url
         self.listing_ids = listing_ids
         self.inspect_mode = inspect_mode
         self.min_days_available = min_days_available
+        self.pipeline_cache = pipeline_cache
 
     def _build_rentalizer_url(self, listing_id: str) -> str:
         """Build the AirDNA rentalizer URL for a single listing.
@@ -149,6 +152,25 @@ class AirDNAScraper:
             True if the listing should be included, False otherwise.
         """
         return metrics.get("Days_Available", 0) >= self.min_days_available
+
+    def _is_empty_result(self, metrics: dict) -> bool:
+        """Check if scraped metrics are empty (AirDNA rejected the request).
+
+        A result is considered empty when all key financial metrics are
+        at their zero defaults, indicating the page didn't load properly.
+
+        Args:
+            metrics: Dict of scraped metric values.
+
+        Returns:
+            True if the result appears empty/failed.
+        """
+        return (
+            metrics.get("ADR", 0) == 0
+            and metrics.get("Revenue", 0) == 0
+            and metrics.get("Occupancy", 0) == 0
+            and metrics.get("Days_Available", 0) == 0
+        )
 
     def _extract_header_metrics(self, page) -> dict:
         """Extract Bedrooms, Bathrooms, Max Guests, Rating, Review Count from header.
@@ -379,12 +401,44 @@ class AirDNAScraper:
 
         logger.info(f"Saved listing {listing_id} to {filepath}")
 
+    # Maximum fraction of listings that can be missing before triggering a retry
+    MISSING_THRESHOLD = 0.25
+    # Seconds to wait between retry passes
+    RETRY_WAIT_SECONDS = 180
+
+    def _is_listing_cached(self, listing_id: str) -> bool:
+        """Check if a listing's output file exists and is fresh.
+
+        Checks the pipeline cache first (TTL-based), then falls back
+        to checking whether the file exists on disk.
+
+        Args:
+            listing_id: The Airbnb listing ID.
+
+        Returns:
+            True if the listing should be skipped.
+        """
+        output_path = os.path.join(
+            "outputs", "02_comp_sets", f"listing_{listing_id}.json"
+        )
+        if self.pipeline_cache and self.pipeline_cache.is_file_fresh(
+            "airdna", output_path
+        ):
+            return True
+        if os.path.isfile(output_path):
+            return True
+        return False
+
     def run(self) -> None:
         """Execute the full scraping workflow.
 
         Connects to Chrome via CDP, iterates over listing IDs,
         scrapes each one from the rentalizer page, filters by
         min_days_available, and saves results to per-listing JSON files.
+
+        If more than 25% of listings are missing after a pass (due to
+        AirDNA rejecting requests), waits 3 minutes and retries,
+        skipping already-cached listings.
         """
         logger.info(f"Connecting to Chrome at {self.cdp_url}")
 
@@ -414,31 +468,102 @@ class AirDNAScraper:
             context = contexts[0]
             page = context.new_page()
 
+            total = len(self.listing_ids)
             scraped = 0
             filtered = 0
+            cached = 0
+            failed = 0
+            pass_number = 0
+            # Track all resolved listings so we never re-visit them
+            resolved = set()
 
-            for listing_id in self.listing_ids:
-                logger.info(f"Scraping listing: {listing_id}")
-                metrics = self.scrape_listing(page, listing_id)
+            while True:
+                pass_number += 1
+                pass_scraped = 0
+                pass_failed = 0
 
-                if self.should_include_listing(metrics):
-                    self.save_listing_result(listing_id, metrics)
-                    scraped += 1
-                else:
-                    logger.info(
-                        f"Skipping listing {listing_id}: "
-                        f"Days_Available={metrics.get('Days_Available', 0)} "
-                        f"< {self.min_days_available}"
+                logger.info(
+                    f"--- Pass {pass_number} | "
+                    f"{total} total listings, {len(resolved)} resolved ---"
+                )
+
+                for listing_id in self.listing_ids:
+                    # Skip anything already resolved (cached, scraped, or filtered)
+                    if listing_id in resolved:
+                        continue
+
+                    # Per-listing cache check — skip before loading the page
+                    if self._is_listing_cached(listing_id):
+                        cached += 1
+                        resolved.add(listing_id)
+                        continue
+
+                    logger.info(f"Scraping listing: {listing_id}")
+                    metrics = self.scrape_listing(page, listing_id)
+
+                    # Detect a failed/empty response (AirDNA rejected the request)
+                    if self._is_empty_result(metrics):
+                        logger.warning(
+                            f"Empty result for listing {listing_id} — "
+                            "AirDNA may be rate-limiting."
+                        )
+                        pass_failed += 1
+                        failed += 1
+                        # NOT added to resolved — will be retried next pass
+                    elif self.should_include_listing(metrics):
+                        output_path = os.path.join(
+                            "outputs",
+                            "02_comp_sets",
+                            f"listing_{listing_id}.json",
+                        )
+                        self.save_listing_result(listing_id, metrics)
+                        if self.pipeline_cache:
+                            self.pipeline_cache.record_output("airdna", output_path)
+                        scraped += 1
+                        pass_scraped += 1
+                        resolved.add(listing_id)
+                    else:
+                        logger.info(
+                            f"Filtered listing {listing_id}: "
+                            f"Days_Available={metrics.get('Days_Available', 0)} "
+                            f"< {self.min_days_available}"
+                        )
+                        filtered += 1
+                        resolved.add(listing_id)
+
+                    # Rate limiting between requests
+                    delay = random.uniform(10, 15)
+                    logger.info(f"Sleeping {delay:.1f}s before next request...")
+                    time.sleep(delay)
+
+                # Summary for this pass
+                missing = total - len(resolved)
+                logger.info(
+                    f"Pass {pass_number} complete: "
+                    f"scraped={scraped}, cached={cached}, "
+                    f"filtered={filtered}, failed(this pass)={pass_failed}, "
+                    f"missing={missing}/{total}"
+                )
+
+                # Check if we need to retry
+                if total > 0 and missing / total > self.MISSING_THRESHOLD:
+                    logger.warning(
+                        f"{missing}/{total} listings still missing "
+                        f"(>{self.MISSING_THRESHOLD:.0%}). "
+                        f"Waiting {self.RETRY_WAIT_SECONDS}s before retrying..."
                     )
-                    filtered += 1
-
-                # Rate limiting between requests
-                time.sleep(random.uniform(2, 5))
+                    # Reset failed count for the next pass
+                    failed = 0
+                    time.sleep(self.RETRY_WAIT_SECONDS)
+                else:
+                    break
 
             page.close()
 
         logger.info(
-            f"AirDNA scraping complete. Saved {scraped} listings, filtered {filtered}."
+            f"AirDNA scraping complete. "
+            f"Saved {scraped}, filtered {filtered}, cached {cached}. "
+            f"({len(resolved)}/{total} resolved)"
         )
 
 

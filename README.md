@@ -1,6 +1,6 @@
 # AirBNB Review Scraper & Analyzer
 
-An end-to-end pipeline for short-term rental market analysis. Given a zip code, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, builds structured amenity and financial datasets by merging Airbnb data with AirDNA comp set metrics, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
+An end-to-end pipeline for short-term rental market analysis. Given a zip code, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, enriches each listing with AirDNA financial metrics via per-listing rentalizer lookups, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
 
 ## Prerequisites
 
@@ -21,28 +21,18 @@ For a typical run of ~300 listings, expect significant API usage. The pipeline i
 
 ### 2. Paid AirDNA Subscription
 
-[AirDNA](https://www.airdna.co/) is a third-party short-term rental analytics platform. A **paid subscription** is required to access comp set features, which provide financial metrics not available from Airbnb directly:
+[AirDNA](https://www.airdna.co/) is a third-party short-term rental analytics platform. A **paid subscription** is required to access rentalizer data, which provides financial metrics not available from Airbnb directly:
 
 - **ADR** (Average Daily Rate) — average price per booked night
 - **Occupancy** — percentage of available days that are booked
+- **Revenue** — annual rental revenue
 - **Days Available** — how many days the property is listed per year
 
-Without AirDNA data, the correlation analysis and description quality analysis stages will lack the financial metrics needed to function.
-
-### 3. Manually Created AirDNA Comp Sets
-
-You must **manually create comp sets** in the AirDNA web app for your area of interest before running the pipeline. A comp set is a user-curated group of comparable Airbnb listings that AirDNA tracks together. The scraper reads existing comp sets but does not create them.
-
-**To set up comp sets:**
-1. Log into [AirDNA](https://app.airdna.co)
-2. Navigate to the Comp Sets section
-3. Create one or more comp sets containing listings in your target area
-4. Copy each comp set's ID from the URL (e.g., `https://app.airdna.co/data/comp-sets/365519` → ID is `365519`)
-5. Add the IDs to `config.json` under `airdna_comp_set_ids`
+The pipeline automatically looks up each listing discovered in the Airbnb search on AirDNA's rentalizer page — no manual comp set creation required. Without AirDNA data, the correlation analysis and description quality analysis stages will lack the financial metrics needed to function.
 
 ## Features
 
-- **AirDNA Comp Set Scraping** — Extract listing IDs with ADR, Occupancy, and Days Available via Playwright/CDP
+- **AirDNA Per-Listing Lookup** — Enrich each listing with ADR, Occupancy, Revenue, and Days Available via Playwright/CDP rentalizer pages
 - **Property Search** — Find Airbnb listings within a geographic area using zip code and `pyairbnb`
 - **Review Scraping** — Pull all reviews for discovered listings with per-file caching
 - **Property Details Scraping** — Scrape amenities, descriptions, house rules, and neighborhood info
@@ -83,7 +73,7 @@ The pipeline combines two data sources and four LLM use cases to produce market 
 
 **Data Sources:**
 - **Airbnb** (via `pyairbnb`) — listing search by geographic bounding box, review text, property details, amenities, descriptions, and house rules
-- **AirDNA** (via Playwright/CDP) — financial metrics (ADR, Occupancy, Days Available) scraped from a logged-in Chrome session connected over Chrome DevTools Protocol
+- **AirDNA** (via Playwright/CDP) — financial metrics (ADR, Occupancy, Revenue, Days Available) scraped per-listing from AirDNA's rentalizer page via a logged-in Chrome session connected over Chrome DevTools Protocol
 
 **AI Processing:**
 - All OpenAI calls go through `review_aggregator/openai_aggregator.py`, which handles token estimation via `tiktoken`, automatic chunking at 120K tokens with a merge step, and 3 retries with exponential backoff
@@ -155,7 +145,7 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `airdna_comp_set_ids` | array | List of AirDNA comp set IDs to scrape |
+| `min_days_available` | int | Minimum Days Available to include a listing (default: `100`) |
 | `airdna_cdp_url` | string | Chrome DevTools Protocol URL (default: `http://localhost:9222`) |
 | `airdna_inspect_mode` | bool | Pause after navigation for DOM selector discovery |
 
@@ -215,9 +205,9 @@ To force a single stage to re-run:
 
 ## Usage
 
-### AirDNA Comp Set Scraping
+### AirDNA Per-Listing Lookup
 
-Scrape property metrics (ADR, Occupancy, Days Available) from your AirDNA comp sets.
+Enrich each discovered listing with financial metrics (ADR, Occupancy, Revenue, Days Available) from AirDNA's rentalizer page. The pipeline automatically feeds listing IDs from the Airbnb search into AirDNA — no manual comp set creation needed.
 
 **Setup:**
 1. Launch Chrome with remote debugging:
@@ -228,23 +218,20 @@ Scrape property metrics (ADR, Occupancy, Days Available) from your AirDNA comp s
    ```
 2. In the Chrome window that opens, navigate to [AirDNA](https://app.airdna.co) and log in with your account
 
-**Scrape a comp set:**
+**Run:**
 ```bash
-# 1. Set your comp set IDs in config.json:
-#    "scrape_airdna": true,
-#    "airdna_comp_set_ids": ["365519"]
-
-# 2. Run the pipeline (or standalone):
+# Set config.json: "scrape_airdna": true
 pipenv run python main.py
 # Or:
 make scrape-airdna
 ```
 
+The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}` for each listing and extracts header metrics (Bedrooms, Bathrooms, Max Guests, Rating, Review Count) and KPI cards (Revenue, Days Available, Annual Revenue, Occupancy, ADR). Listings with fewer than `min_days_available` days (default: 100) are filtered out.
+
 **Output:** `listing_{id}.json` — one file per listing in `outputs/02_comp_sets/`:
 ```json
 {
-    "1050769200886027711": {"ADR": 945.57, "Occupancy": 39, "Days_Available": 335},
-    "549180550450067551": {"ADR": 377.19, "Occupancy": 88, "Days_Available": 357}
+    "1050769200886027711": {"ADR": 487.5, "Occupancy": 32, "Revenue": 51700.0, "Days_Available": 333, "Bedrooms": 4, "Bathrooms": 3, "Max_Guests": 15, "Rating": 4.7, "Review_Count": 287, "LY_Revenue": 0.0}
 }
 ```
 
@@ -381,7 +368,7 @@ Zip Code + config.json
 main.py                          # Entry point — config-driven pipeline orchestrator
 ├── scraper/
 │   ├── airbnb_searcher.py       # Zip code → geo bounding box → listing search
-│   ├── airdna_scraper.py        # AirDNA comp set scraper (Playwright/CDP)
+│   ├── airdna_scraper.py        # AirDNA per-listing rentalizer scraper (Playwright/CDP)
 │   ├── reviews_scraper.py       # Fetch reviews per listing
 │   ├── details_scraper.py       # Fetch property details
 │   ├── details_fileset_build.py # Transform to structured data + merge AirDNA financials

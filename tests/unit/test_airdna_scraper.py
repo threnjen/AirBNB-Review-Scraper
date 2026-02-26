@@ -64,6 +64,24 @@ class TestAirDNAScraperInit:
         )
         assert scraper.min_days_available == 100
 
+    def test_init_stores_pipeline_cache(self):
+        """Test that __init__ stores pipeline_cache."""
+        mock_cache = "fake_cache"
+        scraper = AirDNAScraper(
+            cdp_url="http://localhost:9222",
+            listing_ids=["17134562"],
+            pipeline_cache=mock_cache,
+        )
+        assert scraper.pipeline_cache == "fake_cache"
+
+    def test_init_default_pipeline_cache_is_none(self):
+        """Test that pipeline_cache defaults to None."""
+        scraper = AirDNAScraper(
+            cdp_url="http://localhost:9222",
+            listing_ids=["17134562"],
+        )
+        assert scraper.pipeline_cache is None
+
 
 class TestAirDNAScraperBuildUrl:
     """Tests for rentalizer URL construction."""
@@ -287,3 +305,84 @@ class TestAirDNAScraperDaysFilter:
             min_days_available=0,
         )
         assert scraper.should_include_listing({"Days_Available": 0}) is True
+
+
+class TestAirDNAScraperIsEmptyResult:
+    """Tests for _is_empty_result detection."""
+
+    @pytest.fixture
+    def scraper(self):
+        return AirDNAScraper(
+            cdp_url="http://localhost:9222",
+            listing_ids=["17134562"],
+        )
+
+    def test_all_zeros_is_empty(self, scraper):
+        """All-zero metrics indicate a failed/rejected page load."""
+        metrics = {"ADR": 0, "Revenue": 0, "Occupancy": 0, "Days_Available": 0}
+        assert scraper._is_empty_result(metrics) is True
+
+    def test_all_zero_floats_is_empty(self, scraper):
+        """Zero floats are also empty."""
+        metrics = {"ADR": 0.0, "Revenue": 0.0, "Occupancy": 0, "Days_Available": 0}
+        assert scraper._is_empty_result(metrics) is True
+
+    def test_any_nonzero_adr_is_not_empty(self, scraper):
+        """A nonzero ADR means the page loaded."""
+        metrics = {"ADR": 487.5, "Revenue": 0, "Occupancy": 0, "Days_Available": 0}
+        assert scraper._is_empty_result(metrics) is False
+
+    def test_any_nonzero_revenue_is_not_empty(self, scraper):
+        """A nonzero Revenue means the page loaded."""
+        metrics = {"ADR": 0, "Revenue": 51700.0, "Occupancy": 0, "Days_Available": 0}
+        assert scraper._is_empty_result(metrics) is False
+
+    def test_full_metrics_is_not_empty(self, scraper):
+        """Normal metrics are not empty."""
+        metrics = {
+            "ADR": 487.5,
+            "Revenue": 51700.0,
+            "Occupancy": 32,
+            "Days_Available": 333,
+        }
+        assert scraper._is_empty_result(metrics) is False
+
+    def test_empty_dict_is_empty(self, scraper):
+        """An empty dict defaults to all zeros."""
+        assert scraper._is_empty_result({}) is True
+
+
+class TestAirDNAScraperIsCached:
+    """Tests for _is_listing_cached."""
+
+    @pytest.fixture
+    def scraper(self):
+        return AirDNAScraper(
+            cdp_url="http://localhost:9222",
+            listing_ids=["17134562"],
+        )
+
+    def test_uncached_listing_without_pipeline_cache(self, scraper, tmp_path):
+        """Without a cache manager and no file on disk, listing is not cached."""
+        assert scraper._is_listing_cached("99999") is False
+
+    def test_cached_listing_via_pipeline_cache(self):
+        """Listing is cached when pipeline_cache says it's fresh."""
+        from unittest.mock import MagicMock
+
+        mock_cache = MagicMock()
+        mock_cache.is_file_fresh.return_value = True
+        scraper = AirDNAScraper(
+            cdp_url="http://localhost:9222",
+            listing_ids=["17134562"],
+            pipeline_cache=mock_cache,
+        )
+        assert scraper._is_listing_cached("17134562") is True
+
+    def test_cached_listing_via_file_on_disk(self, scraper, tmp_path, monkeypatch):
+        """Listing is cached when the output file exists on disk."""
+        output_dir = tmp_path / "outputs" / "02_comp_sets"
+        output_dir.mkdir(parents=True)
+        (output_dir / "listing_17134562.json").write_text("{}")
+        monkeypatch.chdir(tmp_path)
+        assert scraper._is_listing_cached("17134562") is True

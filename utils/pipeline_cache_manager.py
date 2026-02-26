@@ -183,7 +183,7 @@ class PipelineCacheManager(BaseModel):
 
         return self._is_timestamp_fresh(timestamp)
 
-    def is_stage_fresh(self, stage_name: str) -> bool:
+    def is_stage_fresh(self, stage_name: str, zipcode: str | None = None) -> bool:
         """Check if an entire pipeline stage can be skipped.
 
         A stage is fresh if:
@@ -192,8 +192,12 @@ class PipelineCacheManager(BaseModel):
         3. The stage has a completion timestamp within TTL
         4. All recorded output files are still fresh
 
+        When *zipcode* is provided, only checks `_completed:{zipcode}` and
+        output files whose paths contain the zipcode string.
+
         Args:
             stage_name: Pipeline stage identifier (e.g. "airdna").
+            zipcode: Optional zipcode to scope the freshness check.
 
         Returns:
             True if the entire stage can be skipped.
@@ -211,11 +215,22 @@ class PipelineCacheManager(BaseModel):
         if not stage_data:
             return False
 
-        completed = stage_data.get("_completed")
+        completed_key = f"_completed:{zipcode}" if zipcode else "_completed"
+        completed = stage_data.get(completed_key)
         if not completed or not self._is_timestamp_fresh(completed):
             return False
 
-        output_files = {k: v for k, v in stage_data.items() if k != "_completed"}
+        internal_keys = {k for k in stage_data if k.startswith("_completed")}
+        if zipcode:
+            output_files = {
+                k: v
+                for k, v in stage_data.items()
+                if k not in internal_keys and zipcode in k
+            }
+        else:
+            output_files = {
+                k: v for k, v in stage_data.items() if k not in internal_keys
+            }
 
         if not output_files:
             return False
@@ -245,11 +260,17 @@ class PipelineCacheManager(BaseModel):
         metadata.setdefault(stage_name, {})[file_path] = datetime.now().isoformat()
         return self._save_metadata(metadata)
 
-    def record_stage_complete(self, stage_name: str) -> bool:
+    def record_stage_complete(
+        self, stage_name: str, zipcode: str | None = None
+    ) -> bool:
         """Record that a pipeline stage completed successfully.
+
+        When *zipcode* is provided, writes a `_completed:{zipcode}` key so
+        that completion is tracked per-zipcode independently.
 
         Args:
             stage_name: Pipeline stage identifier.
+            zipcode: Optional zipcode to scope completion tracking.
 
         Returns:
             True if recorded successfully, False if caching is disabled or save failed.
@@ -257,8 +278,9 @@ class PipelineCacheManager(BaseModel):
         if not self.enable_cache:
             return False
 
+        completed_key = f"_completed:{zipcode}" if zipcode else "_completed"
         metadata = self._load_metadata()
-        metadata.setdefault(stage_name, {})["_completed"] = datetime.now().isoformat()
+        metadata.setdefault(stage_name, {})[completed_key] = datetime.now().isoformat()
         saved = self._save_metadata(metadata)
         if saved:
             logger.info(f"Stage '{stage_name}' completed and cached")
@@ -266,6 +288,9 @@ class PipelineCacheManager(BaseModel):
 
     def clear_stage(self, stage_name: str) -> None:
         """Remove all cached metadata for a stage and wipe its output directory.
+
+        .. deprecated::
+            Use :meth:`clear_stage_for_zipcode` for zipcode-scoped clearing.
 
         Args:
             stage_name: Pipeline stage identifier to clear.
@@ -282,6 +307,120 @@ class PipelineCacheManager(BaseModel):
             del metadata[stage_name]
             self._save_metadata(metadata)
             logger.info(f"Cleared cache metadata for stage '{stage_name}'")
+
+    def clear_stage_for_zipcode(self, stage_name: str, zipcode: str) -> None:
+        """Remove cached files and metadata for a single zipcode within a stage.
+
+        For stages whose output files contain the zipcode in the filename,
+        only those files are removed.  For ``details`` and ``build_details``
+        (which use listing IDs instead of zipcodes in filenames), listing IDs
+        are derived from the search results file for the given zipcode.
+
+        Args:
+            stage_name: Pipeline stage identifier to clear.
+            zipcode: Zipcode whose outputs should be removed.
+        """
+        handler = LocalFileHandler()
+        output_dir = self.STAGE_OUTPUT_DIRS.get(stage_name)
+
+        removed = 0
+        if output_dir:
+            if stage_name in ("details", "build_details"):
+                listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+                for lid in listing_ids:
+                    removed += handler.clear_files_matching(output_dir, f"_{lid}.")
+            else:
+                removed = handler.clear_files_matching(output_dir, zipcode)
+            logger.info(
+                f"Cleared {removed} files for zipcode {zipcode} in stage '{stage_name}'"
+            )
+
+        metadata = self._load_metadata()
+        stage_data = metadata.get(stage_name, {})
+        if stage_data:
+            keys_to_remove = []
+            if stage_name in ("details", "build_details"):
+                listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+                for key in stage_data:
+                    if key == f"_completed:{zipcode}":
+                        keys_to_remove.append(key)
+                    elif not key.startswith("_completed") and any(
+                        f"_{lid}." in key or f"_{lid}/" in key for lid in listing_ids
+                    ):
+                        keys_to_remove.append(key)
+            else:
+                for key in stage_data:
+                    if key == f"_completed:{zipcode}":
+                        keys_to_remove.append(key)
+                    elif not key.startswith("_completed") and zipcode in key:
+                        keys_to_remove.append(key)
+
+            for key in keys_to_remove:
+                del stage_data[key]
+
+            if not stage_data:
+                del metadata[stage_name]
+
+            self._save_metadata(metadata)
+            if keys_to_remove:
+                logger.info(
+                    f"Cleared {len(keys_to_remove)} metadata entries "
+                    f"for zipcode {zipcode} in stage '{stage_name}'"
+                )
+
+    def _get_listing_ids_for_zipcode(self, zipcode: str) -> list[str]:
+        """Derive listing IDs from the search results file for a zipcode.
+
+        Args:
+            zipcode: Zipcode whose search results are read.
+
+        Returns:
+            List of listing ID strings.  Empty list if the file is missing.
+        """
+        search_dir = self.STAGE_OUTPUT_DIRS.get("search", "outputs/01_search_results")
+        search_path = os.path.join(search_dir, f"search_results_{zipcode}.json")
+        if not os.path.isfile(search_path):
+            logger.warning(
+                f"Search results file not found at {search_path} — "
+                "cannot derive listing IDs for scoped clear."
+            )
+            return []
+        try:
+            with open(search_path, "r", encoding="utf-8") as f:
+                results = json.load(f)
+            return [
+                str(r.get("room_id", r.get("id", "")))
+                for r in results
+                if r.get("room_id") or r.get("id")
+            ]
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Failed to read search results for {zipcode}: {e}")
+            return []
+
+    def should_run_stage(self, stage_name: str, zipcode: str) -> str:
+        """Determine what action a stage should take.
+
+        Returns one of:
+        - ``"skip"``: Stage is fresh, no work needed.
+        - ``"resume"``: Stage is incomplete but no force-refresh — resume
+          without wiping existing outputs.
+        - ``"clear_and_run"``: Force-refresh is active — wipe outputs for
+          this zipcode, then run from scratch.
+
+        Args:
+            stage_name: Pipeline stage identifier.
+            zipcode: Active zipcode.
+
+        Returns:
+            Action string: ``"skip"``, ``"resume"``, or ``"clear_and_run"``.
+        """
+        if self.force_refresh_flags.get(stage_name, False):
+            return "clear_and_run"
+
+        if self.is_stage_fresh(stage_name, zipcode):
+            return "skip"
+
+        return "resume"
 
     def _apply_init_cascade(self) -> None:
         """Cascade force-refresh flags at init time.
@@ -349,7 +488,9 @@ class PipelineCacheManager(BaseModel):
         }
 
         for stage_name, stage_data in metadata.items():
-            output_files = {k: v for k, v in stage_data.items() if k != "_completed"}
+            output_files = {
+                k: v for k, v in stage_data.items() if not k.startswith("_completed")
+            }
             fresh_count = sum(
                 1
                 for fp, ts in output_files.items()

@@ -1,7 +1,7 @@
 {
     "pipeline_cache_enabled": true,
     "pipeline_cache_ttl_days": 30,
-    "force_refresh_search": true,
+    "force_refresh_search": false,
     "scrape_airdna": true,
     "force_refresh_scrape_airdna": false,
     "min_days_available": 100,
