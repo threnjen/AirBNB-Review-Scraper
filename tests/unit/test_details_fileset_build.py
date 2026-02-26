@@ -232,3 +232,95 @@ class TestCleanAmenitiesDfFiltering:
             comp_set_filepath="unused.json",
         )
         assert builder.min_days_available == 100
+
+
+class TestHasAirdnaDataFlag:
+    """Tests for the has_airdna_data flag set during build_fileset."""
+
+    def test_flag_true_for_properties_in_comp_set(self, tmp_path):
+        """Properties present in comp_set_data should have has_airdna_data=True."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        comp_set_data = {
+            "111": {
+                "ADR": 200.0,
+                "Occupancy": 70,
+                "Days_Available": 300,
+                "Revenue": 60000.0,
+            }
+        }
+        comp_set_file = tmp_path / "comp_set.json"
+        comp_set_file.write_text(json.dumps(comp_set_data))
+
+        details_dir = tmp_path / "details_scraped"
+        details_dir.mkdir()
+        (details_dir / "property_details_111.json").write_text(
+            json.dumps(
+                {
+                    "room_type": "Entire home/apt",
+                    "person_capacity": 6,
+                    "rating": {},
+                    "sub_description": {
+                        "items": ["guests", "2 bedrooms", "3 beds", "1 baths"]
+                    },
+                    "amenities": [],
+                    "house_rules": {},
+                    "highlights": [],
+                }
+            )
+        )
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath=str(comp_set_file),
+        )
+
+        with patch(
+            "scraper.details_fileset_build.DETAILS_SCRAPED_DIR",
+            str(details_dir),
+        ):
+            with patch("os.makedirs"):
+                with patch("pandas.DataFrame.to_csv"):
+                    builder.build_fileset()
+
+        assert builder.property_details["111"]["has_airdna_data"] is True
+
+    def test_flag_false_for_properties_not_in_comp_set(self, tmp_path):
+        """Properties absent from comp_set_data should have has_airdna_data=False."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        comp_set_file = tmp_path / "comp_set.json"
+        comp_set_file.write_text(json.dumps({}))
+
+        details_dir = tmp_path / "details_scraped"
+        details_dir.mkdir()
+        (details_dir / "property_details_222.json").write_text(
+            json.dumps(
+                {
+                    "room_type": "Entire home/apt",
+                    "person_capacity": 4,
+                    "rating": {},
+                    "sub_description": {
+                        "items": ["guests", "1 bedrooms", "2 beds", "1 baths"]
+                    },
+                    "amenities": [],
+                    "house_rules": {},
+                    "highlights": [],
+                }
+            )
+        )
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath=str(comp_set_file),
+        )
+
+        with patch(
+            "scraper.details_fileset_build.DETAILS_SCRAPED_DIR",
+            str(details_dir),
+        ):
+            with patch("os.makedirs"):
+                with patch("pandas.DataFrame.to_csv"):
+                    builder.build_fileset()
+
+        assert builder.property_details["222"].get("has_airdna_data") is not True

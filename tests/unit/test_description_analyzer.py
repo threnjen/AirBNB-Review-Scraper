@@ -584,3 +584,64 @@ class TestComputeResidualsWithBadFeatures(TestDescriptionAnalyzer):
 
         assert "c" not in residuals.index
         assert len(residuals) == 5
+
+
+class TestLoadPropertyDataAirdnaFilter(TestDescriptionAnalyzer):
+    """Tests for AirDNA-data filtering in load_property_data."""
+
+    def test_excludes_rows_without_airdna_data(self, analyzer):
+        """Properties with has_airdna_data=False should be excluded."""
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0, 300.0, 150.0],
+                "has_airdna_data": [True, True, False],
+                "capacity": [4, 6, 3],
+                "bedrooms": [2, 3, 1],
+            },
+            index=["p1", "p2", "p3"],
+        )
+        df.index.name = "property_id"
+
+        with patch("os.path.exists", return_value=True):
+            with patch("pandas.read_csv", return_value=df):
+                result = analyzer.load_property_data()
+
+        assert "p1" in result.index
+        assert "p2" in result.index
+        assert "p3" not in result.index
+        assert "has_airdna_data" not in result.columns
+
+    def test_backward_compat_no_flag_column(self, analyzer):
+        """CSVs without has_airdna_data column should load all rows."""
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0, 300.0],
+                "capacity": [4, 6],
+            },
+            index=["p1", "p2"],
+        )
+        df.index.name = "property_id"
+
+        with patch("os.path.exists", return_value=True):
+            with patch("pandas.read_csv", return_value=df):
+                result = analyzer.load_property_data()
+
+        assert len(result) == 2
+
+    def test_flag_not_used_as_regression_feature(self, analyzer):
+        """has_airdna_data column must not appear in regression features."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 400, 500, 200, 350, 450],
+                "capacity": [4, 6, 8, 3, 5, 7],
+                "bedrooms": [2, 3, 3, 1, 2, 3],
+                "has_airdna_data": [True, True, True, True, True, True],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        with patch("os.path.exists", return_value=True):
+            with patch("pandas.read_csv", return_value=df):
+                loaded = analyzer.load_property_data()
+
+        assert "has_airdna_data" not in loaded.columns

@@ -87,3 +87,83 @@ class TestCorrelationAnalyzer:
         assert not all(pct == 100.0 for pct in high_pcts), (
             "All amenities at 100% suggests string 'False' vs bool False bug"
         )
+
+
+class TestLoadPropertyDataAirdnaFilter:
+    """Tests for AirDNA-data filtering in load_property_data."""
+
+    @pytest.fixture
+    def analyzer(self):
+        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.correlation_analyzer import CorrelationAnalyzer
+
+                return CorrelationAnalyzer(zipcode="97067")
+
+    def test_excludes_rows_without_airdna_data(self, analyzer, tmp_path):
+        """Properties with has_airdna_data=False should be excluded."""
+        csv_path = tmp_path / "property_amenities_matrix_97067.csv"
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0, 300.0, 150.0],
+                "Occ_Rate_Based_on_Avail": [60, 80, 50],
+                "has_airdna_data": [True, True, False],
+                "capacity": [4, 6, 3],
+            },
+            index=["p1", "p2", "p3"],
+        )
+        df.index.name = "property_id"
+        df.to_csv(csv_path)
+
+        with patch(
+            "os.path.exists",
+            return_value=True,
+        ):
+            with patch("pandas.read_csv", return_value=df):
+                result = analyzer.load_property_data()
+
+        assert "p1" in result.index
+        assert "p2" in result.index
+        assert "p3" not in result.index
+        assert "has_airdna_data" not in result.columns
+
+    def test_backward_compat_no_flag_column(self, analyzer, tmp_path):
+        """CSVs without has_airdna_data column should load all rows."""
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0, 300.0],
+                "capacity": [4, 6],
+            },
+            index=["p1", "p2"],
+        )
+        df.index.name = "property_id"
+
+        with patch("os.path.exists", return_value=True):
+            with patch("pandas.read_csv", return_value=df):
+                result = analyzer.load_property_data()
+
+        assert len(result) == 2
+
+    def test_logs_filtering_count(self, analyzer):
+        """Should log how many properties were filtered."""
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0, 300.0, 150.0],
+                "has_airdna_data": [True, False, False],
+                "capacity": [4, 6, 3],
+            },
+            index=["p1", "p2", "p3"],
+        )
+        df.index.name = "property_id"
+
+        with patch("os.path.exists", return_value=True):
+            with patch("pandas.read_csv", return_value=df):
+                with patch(
+                    "review_aggregator.correlation_analyzer.logger"
+                ) as mock_logger:
+                    analyzer.load_property_data()
+
+        mock_logger.info.assert_any_call(
+            "Filtered 2 properties without AirDNA data (1 remaining)"
+        )

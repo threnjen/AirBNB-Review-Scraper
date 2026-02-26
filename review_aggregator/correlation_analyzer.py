@@ -91,6 +91,19 @@ class CorrelationAnalyzer(BaseModel):
 
         df = pd.read_csv(csv_path, index_col="property_id")
         logger.info(f"Loaded {len(df)} properties from {csv_path}")
+
+        # Filter to properties with successful AirDNA scrapes
+        if "has_airdna_data" in df.columns:
+            before = len(df)
+            df = df[df["has_airdna_data"] == True].copy()  # noqa: E712
+            df = df.drop(columns=["has_airdna_data"])
+            after = len(df)
+            if before > after:
+                logger.info(
+                    f"Filtered {before - after} properties without AirDNA data "
+                    f"({after} remaining)"
+                )
+
         return df
 
     def load_descriptions(self) -> dict[str, str]:

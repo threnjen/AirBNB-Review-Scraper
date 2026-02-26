@@ -235,6 +235,7 @@ class DetailsFilesetBuilder:
                     property_id=property_id,
                     property_details=comp_set_data[property_id],
                 )
+                self.property_details[property_id]["has_airdna_data"] = True
 
             file_path = os.path.join(DETAILS_SCRAPED_DIR, file_name)
             with open(file_path, "r") as file:
