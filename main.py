@@ -205,30 +205,6 @@ class AirBnbReviewAggregator:
                     f"Scraping details for zipcode {self.zipcode} in country {self.iso_code} completed."
                 )
 
-        if self.build_details:
-            if self.pipeline_cache.is_stage_fresh("build_details"):
-                logger.info(
-                    "Skipping details fileset build — cached outputs are fresh."
-                )
-            else:
-                self.pipeline_cache.clear_stage("build_details")
-                self.pipeline_cache.cascade_force_refresh("build_details")
-                comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
-                fileset_builder = DetailsFilesetBuilder(
-                    use_categoricals=self.use_categoricals,
-                    comp_set_filepath=comp_set_filepath,
-                )
-                fileset_builder.build_fileset()
-                for output_file in [
-                    "outputs/05_details_results/property_amenities_matrix.csv",
-                    "outputs/05_details_results/house_rules_details.json",
-                    "outputs/05_details_results/property_descriptions.json",
-                    "outputs/05_details_results/neighborhood_highlights.json",
-                ]:
-                    self.pipeline_cache.record_output("build_details", output_file)
-                self.pipeline_cache.record_stage_complete("build_details")
-                logger.info("Building details fileset completed.")
-
         if self.aggregate_reviews:
             if self.pipeline_cache.is_stage_fresh("aggregate_reviews"):
                 logger.info("Skipping review aggregation — cached outputs are fresh.")
@@ -266,6 +242,30 @@ class AirBnbReviewAggregator:
                 logger.info(
                     f"Aggregating area summary for zipcode {self.zipcode} completed."
                 )
+
+        if self.build_details:
+            if self.pipeline_cache.is_stage_fresh("build_details"):
+                logger.info(
+                    "Skipping details fileset build — cached outputs are fresh."
+                )
+            else:
+                self.pipeline_cache.clear_stage("build_details")
+                self.pipeline_cache.cascade_force_refresh("build_details")
+                comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+                fileset_builder = DetailsFilesetBuilder(
+                    use_categoricals=self.use_categoricals,
+                    comp_set_filepath=comp_set_filepath,
+                )
+                fileset_builder.build_fileset()
+                for output_file in [
+                    "outputs/05_details_results/property_amenities_matrix.csv",
+                    "outputs/05_details_results/house_rules_details.json",
+                    "outputs/05_details_results/property_descriptions.json",
+                    "outputs/05_details_results/neighborhood_highlights.json",
+                ]:
+                    self.pipeline_cache.record_output("build_details", output_file)
+                self.pipeline_cache.record_stage_complete("build_details")
+                logger.info("Building details fileset completed.")
 
         if self.extract_data:
             if self.pipeline_cache.is_stage_fresh("extract_data"):

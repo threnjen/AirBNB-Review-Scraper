@@ -54,7 +54,8 @@ class DescriptionAnalyzer(BaseModel):
             logger.error(f"Property amenities matrix not found at {csv_path}")
             return pd.DataFrame()
 
-        df = pd.read_csv(csv_path, index_col="property_id")
+        df = pd.read_csv(csv_path, index_col=0)
+        df.index.name = "property_id"
         logger.info(f"Loaded {len(df)} properties from {csv_path}")
         return df
 

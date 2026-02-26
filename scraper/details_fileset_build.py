@@ -107,6 +107,7 @@ class DetailsFilesetBuilder:
     def clean_amenities_df(self, df: pd.DataFrame) -> pd.DataFrame:
         drop_cols = [
             "link",
+            "property_id",
             "Occ_Rate_Based_on_Avail",
             "Abs_Occ_Rate",
             "Avail_Rate",
@@ -120,23 +121,24 @@ class DetailsFilesetBuilder:
             "value",
             "guest_satisfaction",
         ]
-        df = df.drop(columns=drop_cols)
+        df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
 
         # replace any remaining False values with 0
-        # find False values in dataframe and replace with 0
-        df = df.replace("False", 0)
-        df = df.replace(False, 0)
-
-        df = df.reset_index(drop=True)
-        df = df.drop(columns=["property_id"])
+        with pd.option_context("future.no_silent_downcasting", True):
+            df = df.replace("False", 0).infer_objects(copy=False)
+            df = df.replace(False, 0).infer_objects(copy=False)
 
         system_colums = [x for x in df.columns if x.startswith("SYSTEM_")]
-        df[system_colums] = df[system_colums].astype(bool)
-        df[system_colums] = df[system_colums].astype(int)
+        if system_colums:
+            df[system_colums] = df[system_colums].astype(bool)
+            df[system_colums] = df[system_colums].astype(int)
 
-        df["beds"] = df["beds"].astype(int)
-        df["bathrooms"] = df["bathrooms"].astype(float)
-        df["bedrooms"] = df["bedrooms"].astype(int)
+        if "beds" in df.columns:
+            df["beds"] = df["beds"].astype(int)
+        if "bathrooms" in df.columns:
+            df["bathrooms"] = df["bathrooms"].astype(float)
+        if "bedrooms" in df.columns:
+            df["bedrooms"] = df["bedrooms"].astype(int)
 
         return df
 
@@ -231,7 +233,8 @@ class DetailsFilesetBuilder:
             self.property_details, orient="index"
         ).fillna(False)
 
-        amenities_df = amenities_df.sort_values(by="ADR", ascending=False)
+        if "ADR" in amenities_df.columns:
+            amenities_df = amenities_df.sort_values(by="ADR", ascending=False)
 
         amenities_df.index.name = "property_id"
 

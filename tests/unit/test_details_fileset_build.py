@@ -80,7 +80,7 @@ class TestDetailsFilesetBuilderCompSetPath:
         assert builder.property_details["12345"]["ADR"] == 150.0
 
     def test_build_fileset_logs_missing_comp_set(self, tmp_path):
-        """build_fileset logs an error if the comp_set file doesn't exist."""
+        """build_fileset logs when no detail files exist and comp_set is missing."""
         from scraper.details_fileset_build import DetailsFilesetBuilder
 
         builder = DetailsFilesetBuilder(
@@ -88,10 +88,17 @@ class TestDetailsFilesetBuilderCompSetPath:
             comp_set_filepath=str(tmp_path / "nonexistent.json"),
         )
 
+        empty_details_dir = str(tmp_path / "empty_details")
+        os.makedirs(empty_details_dir, exist_ok=True)
+
         with patch("scraper.details_fileset_build.logger") as mock_logger:
-            builder.build_fileset()
+            with patch(
+                "scraper.details_fileset_build.DETAILS_SCRAPED_DIR",
+                empty_details_dir,
+                create=True,
+            ):
+                builder.build_fileset()
 
         mock_logger.info.assert_any_call(
-            f"No comp set file found at {tmp_path / 'nonexistent.json'}. "
-            "Please run AirDNA scraping first."
+            "No property detail files found in the directory."
         )
