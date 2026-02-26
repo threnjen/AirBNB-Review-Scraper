@@ -15,39 +15,33 @@ class TestAreaRagAggregator:
     def aggregator(self):
         """Create an AreaRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    return AreaRagAggregator(
-                        zipcode="97067",
-                        num_listings=5,
-                        review_thresh_to_include_prop=5,
-                    )
+                return AreaRagAggregator(
+                    zipcode="97067",
+                    num_listings=5,
+                    review_thresh_to_include_prop=5,
+                )
 
     def test_initialization_defaults(self):
         """Test AreaRagAggregator initializes with default values."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    agg = AreaRagAggregator()
+                agg = AreaRagAggregator()
 
-                    assert agg.num_listings == 3
-                    assert agg.review_thresh_to_include_prop == 5
-                    assert agg.zipcode == "00501"
-                    assert agg.overall_mean == 0.0
+                assert agg.num_listings == 3
+                assert agg.review_thresh_to_include_prop == 5
+                assert agg.zipcode == "00501"
+                assert agg.overall_mean == 0.0
 
     def test_initialization_custom_params(self, aggregator):
         """Test AreaRagAggregator initializes with custom parameters."""
@@ -119,19 +113,16 @@ class TestAreaRagAggregator:
     def test_rag_chain_limits_to_num_listings(self):
         """Test that only num_listings files are processed."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_cfg:
-            mock_cfg.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            mock_cfg.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    limited_aggregator = AreaRagAggregator(
-                        zipcode="97067",
-                        num_listings=2,
-                    )
+                limited_aggregator = AreaRagAggregator(
+                    zipcode="97067",
+                    num_listings=2,
+                )
 
         mock_files = [
             "generated_summaries_97067_a.json",
@@ -256,20 +247,17 @@ class TestSaveResults:
     def aggregator(self):
         """Create an AreaRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    return AreaRagAggregator(
-                        zipcode="97067",
-                        num_listings=5,
-                        review_thresh_to_include_prop=5,
-                    )
+                return AreaRagAggregator(
+                    zipcode="97067",
+                    num_listings=5,
+                    review_thresh_to_include_prop=5,
+                )
 
     def test_creates_output_files(self, aggregator, tmp_path):
         """Should create JSON stats and Markdown report files."""

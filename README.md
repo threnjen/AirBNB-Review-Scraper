@@ -8,13 +8,13 @@ An end-to-end pipeline that scrapes AirBNB property reviews by zip code, generat
 - **Property Search** - Find AirBNB listings within a geographic area using zip code
 - **Review Scraping** - Pull all reviews for discovered listings
 - **Property Details** - Scrape amenities, descriptions, house rules
-- **AI Summaries** - Generate structured summaries per property using GPT-4o-mini:
+- **AI Summaries** - Generate structured summaries per property using GPT-4.1-mini:
   - Pros/cons with mention percentages
   - Amenities analysis
   - Rating context vs. area average
 - **Area-Level Insights** - Roll up property summaries into area trends
 - **Data Extraction** - Parse numeric review data and cluster into categories with weighted aggregation
-- **Caching** - Reduce API costs with 7-day response cache
+- **Caching** - TTL-based pipeline cache prevents redundant scraping and API calls
 - **Cost Tracking** - Monitor OpenAI API usage
 
 ## Installation
@@ -79,12 +79,43 @@ Edit `config.json` to configure the pipeline:
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `openai.model` | string | Model to use (default: "gpt-4o-mini") |
+| `openai.model` | string | Model to use (default: "gpt-4.1-mini") |
 | `openai.temperature` | float | Response randomness (0.0-1.0) |
 | `openai.max_tokens` | int | Max tokens per response |
 | `openai.chunk_size` | int | Reviews per API call |
-| `openai.enable_caching` | bool | Cache responses to reduce costs |
 | `openai.enable_cost_tracking` | bool | Log API costs |
+
+### Pipeline Caching (TTL)
+
+The pipeline includes a TTL-based cache that prevents redundant scraping and processing. When enabled, each stage's outputs are tracked with timestamps. If all outputs for a stage are still within the TTL window, the stage is skipped entirely on the next run. For per-file stages (reviews, details), individual listings are skipped when their cached files are fresh.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `pipeline_cache_enabled` | bool | `true` | Enable/disable pipeline-level TTL caching |
+| `pipeline_cache_ttl_days` | int | `7` | Number of days before cached outputs expire |
+| `force_refresh_scrape_airdna` | bool | `false` | Force re-run AirDNA scraping even if cached |
+| `force_refresh_search` | bool | `false` | Force re-run area search |
+| `force_refresh_reviews` | bool | `false` | Force re-scrape all reviews |
+| `force_refresh_scrape_details` | bool | `false` | Force re-scrape all property details |
+| `force_refresh_build_details` | bool | `false` | Force rebuild details fileset |
+| `force_refresh_aggregate_reviews` | bool | `false` | Force regenerate property summaries |
+| `force_refresh_aggregate_summaries` | bool | `false` | Force regenerate area summary |
+
+**How it works:**
+- Metadata is stored in `cache/pipeline_metadata.json`, recording when each output file was produced
+- On each run, the pipeline checks whether outputs exist and are within the TTL before executing a stage
+- The `force_refresh_*` flags let you bypass the cache for specific stages without affecting others
+
+**Example:** Run the full pipeline, then re-run immediately — all stages 0–6 will be skipped:
+```bash
+pipenv run python main.py   # First run: executes all enabled stages
+pipenv run python main.py   # Second run: skips cached stages
+```
+
+To force a single stage to re-run:
+```json
+{"force_refresh_reviews": true}
+```
 
 ## Usage
 
@@ -206,7 +237,6 @@ Zip Code Input
 | `property_generated_summaries/` | AI-generated summary per property |
 | `generated_summaries_{zip}.json` | Area-level AI summary |
 | `area_data_{zip}.json` | Aggregated numeric data with categories |
-| `cache/summaries/` | Cached OpenAI responses |
 | `logs/cost_tracking.json` | API cost logs |
 
 ## Architecture
@@ -225,7 +255,6 @@ main.py                          # Entry point
 │   ├── data_extractor.py              # Numeric extraction & clustering
 │   └── openai_aggregator.py           # OpenAI client with caching
 ├── utils/
-│   ├── cache_manager.py         # Response caching
 │   ├── cost_tracker.py          # API cost tracking
 │   └── tiny_file_handler.py     # JSON I/O helpers
 └── prompts/

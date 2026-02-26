@@ -21,11 +21,11 @@ class CostTracker(BaseModel):
     Logs token usage, API calls, and provides cost estimates.
     """
 
-    # GPT-4o-mini pricing (per 1M tokens)
-    input_cost_per_million: float = 0.15  # $0.15 per 1M input tokens
-    output_cost_per_million: float = 0.60  # $0.60 per 1M output tokens
+    # GPT-4.1-mini pricing (per 1M tokens)
+    input_cost_per_million: float = 0.40  # $0.40 per 1M input tokens
+    output_cost_per_million: float = 1.60  # $1.60 per 1M output tokens
 
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
     enable_tracking: bool = True
     log_file: str = "logs/cost_tracking.json"
 

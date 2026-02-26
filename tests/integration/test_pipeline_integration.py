@@ -15,36 +15,33 @@ class TestPropertyAggregatorIntegration:
     """Integration tests for PropertyRagAggregator with OpenAI and caching."""
 
     @pytest.fixture
-    def property_aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def property_aggregator(self, tmp_logs_dir):
         """Create a PropertyRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
-                    "enable_caching": True,
+                    "model": "gpt-4.1-mini",
                     "enable_cost_tracking": True,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.property_review_aggregator import (
-                        PropertyRagAggregator,
-                    )
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.property_review_aggregator import (
+                    PropertyRagAggregator,
+                )
 
-                    agg = PropertyRagAggregator(
-                        zipcode="97067",
-                        num_listings_to_summarize=3,
-                    )
-                    agg.openai_aggregator.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.openai_aggregator.cost_tracker.log_file = str(
-                        tmp_logs_dir / "cost.json"
-                    )
-                    return agg
+                agg = PropertyRagAggregator(
+                    zipcode="97067",
+                    num_listings_to_summarize=3,
+                )
+                agg.openai_aggregator.cost_tracker.log_file = str(
+                    tmp_logs_dir / "cost.json"
+                )
+                return agg
 
     def test_aggregator_to_cache_flow(
         self, property_aggregator, sample_reviews, sample_prompt
     ):
-        """Test that reviews flow through aggregator to cache."""
+        """Test that reviews flow through aggregator and return a summary."""
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Generated summary"
@@ -62,39 +59,6 @@ class TestPropertyAggregatorIntegration:
             )
 
             assert result == "Generated summary"
-
-    def test_cache_prevents_duplicate_api_calls(
-        self, property_aggregator, sample_reviews, sample_prompt
-    ):
-        """Test that cached responses prevent duplicate API calls."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Cached summary"
-
-        review_strings = [f"{r['rating']} {r['review']}" for r in sample_reviews]
-
-        with patch.object(
-            property_aggregator.openai_aggregator.client.chat.completions,
-            "create",
-            return_value=mock_response,
-        ) as mock_create:
-            # First call - should hit API
-            result1 = property_aggregator.openai_aggregator.generate_summary(
-                reviews=review_strings,
-                prompt=sample_prompt,
-                listing_id="cache_test",
-            )
-
-            # Second call with same inputs - should use cache
-            result2 = property_aggregator.openai_aggregator.generate_summary(
-                reviews=review_strings,
-                prompt=sample_prompt,
-                listing_id="cache_test",
-            )
-
-            assert result1 == result2
-            # API should only be called once if caching works
-            assert mock_create.call_count == 1
 
     def test_cost_tracker_accumulates_requests(
         self, property_aggregator, sample_reviews, sample_prompt
@@ -136,31 +100,28 @@ class TestAreaAggregatorIntegration:
     """Integration tests for AreaRagAggregator with filesystem and OpenAI."""
 
     @pytest.fixture
-    def area_aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def area_aggregator(self, tmp_logs_dir):
         """Create an AreaRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
-                    "enable_caching": False,
+                    "model": "gpt-4.1-mini",
                     "enable_cost_tracking": True,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    agg = AreaRagAggregator(
-                        zipcode="97067",
-                        num_listings=5,
-                    )
-                    agg.openai_aggregator.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.openai_aggregator.cost_tracker.log_file = str(
-                        tmp_logs_dir / "cost.json"
-                    )
-                    return agg
+                agg = AreaRagAggregator(
+                    zipcode="97067",
+                    num_listings=5,
+                )
+                agg.openai_aggregator.cost_tracker.log_file = str(
+                    tmp_logs_dir / "cost.json"
+                )
+                return agg
 
     def test_area_aggregator_loads_and_aggregates_summaries(
         self, area_aggregator, sample_property_summary
@@ -217,28 +178,23 @@ class TestDataExtractorIntegration:
     """Integration tests for DataExtractor with OpenAI parsing."""
 
     @pytest.fixture
-    def data_extractor(self, tmp_cache_dir, tmp_logs_dir):
+    def data_extractor(self, tmp_logs_dir):
         """Create a DataExtractor with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
-                    "enable_caching": False,
+                    "model": "gpt-4.1-mini",
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.data_extractor import DataExtractor
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.data_extractor import DataExtractor
 
-                    extractor = DataExtractor(zipcode="97067")
-                    extractor.openai_aggregator.cache_manager.cache_dir = str(
-                        tmp_cache_dir
-                    )
-                    extractor.openai_aggregator.cost_tracker.log_file = str(
-                        tmp_logs_dir / "cost.json"
-                    )
-                    return extractor
+                extractor = DataExtractor(zipcode="97067")
+                extractor.openai_aggregator.cost_tracker.log_file = str(
+                    tmp_logs_dir / "cost.json"
+                )
+                return extractor
 
     def test_extraction_parses_json_response(
         self, data_extractor, sample_property_summary, sample_extraction_response
@@ -296,65 +252,6 @@ class TestDataExtractorIntegration:
         assert "11111111" in summaries
 
 
-class TestCacheIntegration:
-    """Integration tests for CacheManager with aggregators."""
-
-    @pytest.fixture
-    def cache_manager(self, tmp_cache_dir):
-        """Create a CacheManager for testing."""
-        with patch("utils.cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {"openai": {"enable_caching": True}}
-            from utils.cache_manager import CacheManager
-
-            cm = CacheManager(cache_dir=str(tmp_cache_dir))
-            return cm
-
-    def test_cache_round_trip(self, cache_manager, sample_reviews, sample_prompt):
-        """Test caching and retrieving a summary."""
-        review_strings = [f"{r['rating']} {r['review']}" for r in sample_reviews]
-
-        # Verify no cached value initially
-        cached = cache_manager.get_cached_summary(
-            listing_id="round_trip_test",
-            prompt=sample_prompt,
-            reviews=review_strings,
-        )
-        assert cached is None
-
-        # Cache a value
-        cache_manager.cache_summary(
-            listing_id="round_trip_test",
-            prompt=sample_prompt,
-            reviews=review_strings,
-            summary="Cached test summary",
-        )
-
-        # Retrieve the cached value
-        cached = cache_manager.get_cached_summary(
-            listing_id="round_trip_test",
-            prompt=sample_prompt,
-            reviews=review_strings,
-        )
-        assert cached == "Cached test summary"
-
-    def test_cache_stats_tracking(self, cache_manager, sample_reviews, sample_prompt):
-        """Test that cache stats are tracked correctly."""
-        review_strings = [f"{r['rating']} {r['review']}" for r in sample_reviews]
-
-        # Cache some values
-        for i in range(3):
-            cache_manager.cache_summary(
-                listing_id=f"stats_test_{i}",
-                prompt=sample_prompt,
-                reviews=review_strings,
-                summary=f"Summary {i}",
-            )
-
-        stats = cache_manager.get_cache_stats()
-        assert stats["enabled"] is True
-        assert stats["valid_cache"] >= 3
-
-
 class TestCostTrackerIntegration:
     """Integration tests for CostTracker."""
 
@@ -390,13 +287,13 @@ class TestCostTrackerIntegration:
 
     def test_cost_calculation(self, cost_tracker):
         """Test cost calculation with known token counts."""
-        # Cost for 1M input tokens = $0.15, 1M output tokens = $0.60
+        # Cost for 1M input tokens = $0.40, 1M output tokens = $1.60
         # 1000 input + 500 output should be:
-        # (1000 / 1_000_000) * 0.15 + (500 / 1_000_000) * 0.60
-        # = 0.00015 + 0.0003 = 0.00045
+        # (1000 / 1_000_000) * 0.40 + (500 / 1_000_000) * 1.60
+        # = 0.0004 + 0.0008 = 0.0012
         cost = cost_tracker.calculate_cost(input_tokens=1000, output_tokens=500)
 
-        assert cost == pytest.approx(0.00045, rel=0.01)
+        assert cost == pytest.approx(0.0012, rel=0.01)
 
     def test_reset_session(self, cost_tracker, sample_reviews, sample_prompt):
         """Test session reset clears accumulated stats."""
@@ -426,59 +323,196 @@ class TestEndToEndPipeline:
     def test_property_to_area_pipeline(self, sample_property_summary):
         """Test flow from property summaries to area summary."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_config:
-            mock_config.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.area_review_aggregator import (
-                        AreaRagAggregator,
-                    )
+            mock_config.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.area_review_aggregator import (
+                    AreaRagAggregator,
+                )
 
-                    aggregator = AreaRagAggregator(zipcode="97067", num_listings=5)
+                aggregator = AreaRagAggregator(zipcode="97067", num_listings=5)
 
-                    mock_response = MagicMock()
-                    mock_response.choices = [MagicMock()]
-                    mock_response.choices[0].message.content = "Complete area summary"
+                mock_response = MagicMock()
+                mock_response.choices = [MagicMock()]
+                mock_response.choices[0].message.content = "Complete area summary"
 
-                    # Mock the filesystem interactions
+                # Mock the filesystem interactions
+                with patch(
+                    "os.listdir",
+                    return_value=[
+                        "generated_summaries_97067_123.json",
+                        "generated_summaries_97067_456.json",
+                    ],
+                ):
                     with patch(
-                        "os.listdir",
-                        return_value=[
-                            "generated_summaries_97067_123.json",
-                            "generated_summaries_97067_456.json",
-                        ],
-                    ):
+                        "review_aggregator.area_review_aggregator.load_json_file"
+                    ) as mock_load:
+                        mock_load.side_effect = [
+                            {"123": sample_property_summary},
+                            {"456": "Another property summary"},
+                            {
+                                "gpt4o_mini_generate_prompt_structured": "Summarize area {ZIP_CODE_HERE}"
+                            },
+                            {"iso_code": "us"},
+                        ]
+
                         with patch(
-                            "review_aggregator.area_review_aggregator.load_json_file"
-                        ) as mock_load:
-                            mock_load.side_effect = [
-                                {"123": sample_property_summary},
-                                {"456": "Another property summary"},
-                                {
-                                    "gpt4o_mini_generate_prompt_structured": "Summarize area {ZIP_CODE_HERE}"
-                                },
-                                {"iso_code": "us"},
-                            ]
+                            "review_aggregator.area_review_aggregator.save_json_file"
+                        ) as mock_save:
+                            with patch.object(
+                                aggregator.openai_aggregator.client.chat.completions,
+                                "create",
+                                return_value=mock_response,
+                            ):
+                                aggregator.rag_description_generation_chain()
 
-                            with patch(
-                                "review_aggregator.area_review_aggregator.save_json_file"
-                            ) as mock_save:
-                                with patch.object(
-                                    aggregator.openai_aggregator.client.chat.completions,
-                                    "create",
-                                    return_value=mock_response,
-                                ):
-                                    aggregator.rag_description_generation_chain()
+                                # Verify the end result
+                                assert mock_save.called
+                                saved_data = mock_save.call_args.kwargs.get("data")
+                                if saved_data is None:
+                                    saved_data = mock_save.call_args[0][1]
+                                assert saved_data["zipcode"] == "97067"
+                                assert saved_data["num_properties_analyzed"] == 2
+                                assert (
+                                    saved_data["area_summary"]
+                                    == "Complete area summary"
+                                )
 
-                                    # Verify the end result
-                                    assert mock_save.called
-                                    saved_data = mock_save.call_args.kwargs.get("data")
-                                    if saved_data is None:
-                                        saved_data = mock_save.call_args[0][1]
-                                    assert saved_data["zipcode"] == "97067"
-                                    assert saved_data["num_properties_analyzed"] == 2
-                                    assert (
-                                        saved_data["area_summary"]
-                                        == "Complete area summary"
-                                    )
+
+class TestPipelineCacheIntegration:
+    """Integration tests for PipelineCacheManager with pipeline stages."""
+
+    @pytest.fixture
+    def pipeline_cache(self, tmp_path):
+        """Create a PipelineCacheManager with a temporary metadata path."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            return PipelineCacheManager(metadata_path=metadata_path)
+
+    def test_stage_recorded_then_skipped(self, pipeline_cache, tmp_path):
+        """Test that a completed stage is skipped on second check."""
+        output_file = str(tmp_path / "output.json")
+        with open(output_file, "w") as f:
+            json.dump({"data": "test"}, f)
+
+        pipeline_cache.record_output("build_details", output_file)
+        pipeline_cache.record_stage_complete("build_details")
+
+        assert pipeline_cache.is_stage_fresh("build_details") is True
+
+    def test_force_refresh_causes_rerun(self, tmp_path):
+        """Test that force_refresh flag overrides cached status."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_scrape_details": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            cache = PipelineCacheManager(metadata_path=metadata_path)
+
+        output_file = str(tmp_path / "details.json")
+        with open(output_file, "w") as f:
+            json.dump({}, f)
+
+        cache.record_output("details", output_file)
+        cache.record_stage_complete("details")
+
+        assert cache.is_stage_fresh("details") is False
+
+    def test_per_file_skip_in_scraper(self, pipeline_cache, tmp_path):
+        """Test that scrapers skip individual files that are cached."""
+        output_file = str(tmp_path / "reviews_97067_12345.json")
+        with open(output_file, "w") as f:
+            json.dump({"12345": [{"review": "Great", "rating": 5}]}, f)
+
+        pipeline_cache.record_output("reviews", output_file)
+
+        assert pipeline_cache.is_file_fresh("reviews", output_file) is True
+
+    def test_deleted_file_not_cached(self, pipeline_cache, tmp_path):
+        """Test that a deleted file is not considered fresh even with metadata."""
+        output_file = str(tmp_path / "deleted.json")
+        with open(output_file, "w") as f:
+            json.dump({}, f)
+
+        pipeline_cache.record_output("details", output_file)
+        os.remove(output_file)
+
+        assert pipeline_cache.is_file_fresh("details", output_file) is False
+
+    def test_force_refresh_wipes_output_directory(self, tmp_path):
+        """Test that clear_stage wipes the output directory when force_refresh is set."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+        output_dir = tmp_path / "outputs" / "03_reviews_scraped"
+        output_dir.mkdir(parents=True)
+
+        # Plant a stale file that should be cleaned up
+        stale_file = output_dir / "reviews_97067_old_listing.json"
+        stale_file.write_text("{}")
+
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+                "force_refresh_reviews": True,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            cache = PipelineCacheManager(metadata_path=metadata_path)
+
+        # Simulate what main.py does: check freshness, then clear_stage
+        assert cache.is_stage_fresh("reviews") is False
+
+        cache.STAGE_OUTPUT_DIRS = {"reviews": str(output_dir)}
+        cache.clear_stage("reviews")
+
+        # Stale file should be gone, directory should remain
+        assert output_dir.exists()
+        assert not stale_file.exists()
+        assert list(output_dir.iterdir()) == []
+
+    def test_expired_cache_cascades_downstream(self, tmp_path):
+        """Test that an expired stage causes all downstream stages to be marked stale."""
+        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
+
+        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+            mock_load.return_value = {
+                "pipeline_cache_enabled": True,
+                "pipeline_cache_ttl_days": 7,
+            }
+            from utils.pipeline_cache_manager import PipelineCacheManager
+
+            cache = PipelineCacheManager(metadata_path=metadata_path)
+
+        # Record reviews as completed (fresh)
+        review_file = str(tmp_path / "reviews.json")
+        with open(review_file, "w") as f:
+            json.dump({}, f)
+        cache.record_output("reviews", review_file)
+        cache.record_stage_complete("reviews")
+
+        # Record details as completed (fresh)
+        detail_file = str(tmp_path / "details.json")
+        with open(detail_file, "w") as f:
+            json.dump({}, f)
+        cache.record_output("details", detail_file)
+        cache.record_stage_complete("details")
+
+        # Both should initially be fresh
+        assert cache.is_stage_fresh("reviews") is True
+        assert cache.is_stage_fresh("details") is True
+
+        # Simulate reviews being not-fresh → cascade downstream
+        cache.cascade_force_refresh("reviews")
+
+        # details (downstream) should now be forced to refresh
+        assert cache.is_stage_fresh("details") is False
+        assert cache.force_refresh_flags["details"] is True

@@ -51,14 +51,6 @@ def sample_openai_response(sample_data):
 
 
 @pytest.fixture
-def tmp_cache_dir(tmp_path):
-    """Temporary cache directory for testing."""
-    cache_dir = tmp_path / "cache" / "summaries"
-    cache_dir.mkdir(parents=True)
-    return cache_dir
-
-
-@pytest.fixture
 def tmp_logs_dir(tmp_path):
     """Temporary logs directory for testing."""
     logs_dir = tmp_path / "logs"
@@ -133,7 +125,11 @@ def single_review():
 def isolate_tests(tmp_path, monkeypatch):
     """Isolate tests from production config files."""
     # Create empty config.json in tmp_path to prevent loading production config
-    empty_config = {"openai": {"enable_caching": False, "enable_cost_tracking": False}}
+    empty_config = {
+        "openai": {"enable_caching": False, "enable_cost_tracking": False},
+        "pipeline_cache_enabled": False,
+        "pipeline_cache_ttl_days": 7,
+    }
     config_file = tmp_path / "config.json"
     with open(config_file, "w") as f:
         json.dump(empty_config, f)
@@ -209,8 +205,8 @@ def sample_extraction_response():
 @pytest.fixture
 def mock_summary_files_dir(tmp_path, sample_property_summary):
     """Create a temp directory with sample property summary files."""
-    summary_dir = tmp_path / "property_generated_summaries"
-    summary_dir.mkdir()
+    summary_dir = tmp_path / "outputs" / "06_generated_summaries"
+    summary_dir.mkdir(parents=True)
 
     # Create sample summary files for zipcode 97067
     summaries = [
@@ -239,8 +235,8 @@ def mock_summary_files_dir(tmp_path, sample_property_summary):
 @pytest.fixture
 def mock_review_files_dir(tmp_path, sample_reviews):
     """Create a temp directory with sample property review files."""
-    review_dir = tmp_path / "property_reviews_scraped"
-    review_dir.mkdir()
+    review_dir = tmp_path / "outputs" / "03_reviews_scraped"
+    review_dir.mkdir(parents=True)
 
     # Create sample review files
     for i, listing_id in enumerate(["12345678", "87654321", "11111111"]):
@@ -252,24 +248,21 @@ def mock_review_files_dir(tmp_path, sample_reviews):
 
 
 @pytest.fixture
-def mocked_openai_aggregator(mock_openai_client, tmp_cache_dir, tmp_logs_dir):
+def mocked_openai_aggregator(mock_openai_client, tmp_logs_dir):
     """Create an OpenAIAggregator with mocked OpenAI client for integration tests."""
     with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
         mock_load.return_value = {
             "openai": {
-                "model": "gpt-4o-mini",
+                "model": "gpt-4.1-mini",
                 "temperature": 0.3,
-                "max_tokens": 4000,
+                "max_tokens": 16000,
                 "chunk_size": 20,
-                "enable_caching": True,
                 "enable_cost_tracking": True,
             }
         }
-        with patch("utils.cache_manager.load_json_file", return_value={}):
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
-                from review_aggregator.openai_aggregator import OpenAIAggregator
+        with patch("utils.cost_tracker.load_json_file", return_value={}):
+            from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                agg = OpenAIAggregator(client=mock_openai_client)
-                agg.cache_manager.cache_dir = str(tmp_cache_dir)
-                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
-                return agg
+            agg = OpenAIAggregator(client=mock_openai_client)
+            agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+            return agg

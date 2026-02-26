@@ -48,7 +48,7 @@ class DataExtractor(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     zipcode: str = "00000"
-    summary_dir: str = "property_generated_summaries"
+    summary_dir: str = "outputs/06_generated_summaries"
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
 
     def load_property_summaries(self) -> dict[str, str]:
@@ -233,7 +233,8 @@ Property Summary:
         aggregated = self.aggregate_extractions(extractions)
 
         # Save output
-        output_path = f"area_data_{self.zipcode}.json"
+        os.makedirs("outputs/07_extracted_data", exist_ok=True)
+        output_path = f"outputs/07_extracted_data/area_data_{self.zipcode}.json"
         save_json_file(filename=output_path, data=aggregated)
 
         logger.info(f"Area data saved to {output_path}")
