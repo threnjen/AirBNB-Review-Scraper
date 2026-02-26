@@ -213,3 +213,5 @@ __marimo__/
 *.ipynb
 property_*
 outputs/
+coverage_html/
+*.png

@@ -149,56 +149,6 @@ class AirDNAScraper:
             return True
         return retry_count < max_retries
 
-    def _find_scroll_container(self, page):
-        """Find the scrollable container for the comp set list.
-
-        The AirDNA page has the property list in a scrollable panel,
-        not the document body. This method finds that container.
-
-        Args:
-            page: Playwright page object.
-
-        Returns:
-            Playwright element handle for the scrollable container,
-            or None if not found (falls back to body scroll).
-        """
-        candidates = [
-            "div[class*='comp-set']",
-            "div[class*='compset']",
-            "div[class*='listing']",
-            "div[class*='table-container']",
-            "div[class*='scroll']",
-        ]
-        for selector in candidates:
-            el = page.query_selector(selector)
-            if el:
-                logger.info(f"Found scroll container: {selector}")
-                return el
-
-        # Fallback: find the element containing the table that has overflow scroll
-        container = page.evaluate("""() => {
-            const tables = document.querySelectorAll('table');
-            for (const table of tables) {
-                let el = table.parentElement;
-                while (el && el !== document.body) {
-                    const style = window.getComputedStyle(el);
-                    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                        return true;
-                    }
-                    el = el.parentElement;
-                }
-            }
-            return false;
-        }""")
-
-        if container:
-            # Use JS-based scrolling for the detected container
-            logger.info("Found scrollable parent via computed style.")
-            return None  # Will use JS-based approach in _scroll_to_bottom
-
-        logger.info("No scroll container found, will scroll document body.")
-        return None
-
     def _scroll_to_bottom(self, page) -> None:
         """Scroll the page to load all infinite-scroll content.
 
