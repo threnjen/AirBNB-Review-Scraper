@@ -15,14 +15,11 @@ class TestDataExtractor:
     def extractor(self):
         """Create a DataExtractor with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.data_extractor import DataExtractor
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.data_extractor import DataExtractor
 
-                    return DataExtractor(zipcode="97067")
+                return DataExtractor(zipcode="97067")
 
     @pytest.fixture
     def sample_summary_text(self):

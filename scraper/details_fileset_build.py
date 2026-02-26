@@ -9,10 +9,15 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
+DETAILS_SCRAPED_DIR = "outputs/04_details_scraped"
+
 
 class DetailsFilesetBuilder:
-    def __init__(self, use_categoricals: bool) -> None:
+    def __init__(
+        self, use_categoricals: bool, comp_set_filepath: str = "custom_listing_ids.json"
+    ) -> None:
         self.use_categoricals = use_categoricals
+        self.comp_set_filepath = comp_set_filepath
         self.property_details = {}
         self.house_rules = {}
         self.property_descriptions = {}
@@ -23,9 +28,9 @@ class DetailsFilesetBuilder:
         self.property_details[property_id]["ADR"] = adr
 
         occupancy_rate_based_on_available_days = property_details.get("Occupancy", 0)
-        self.property_details[property_id][
-            "Occ_Rate_Based_on_Avail"
-        ] = occupancy_rate_based_on_available_days
+        self.property_details[property_id]["Occ_Rate_Based_on_Avail"] = (
+            occupancy_rate_based_on_available_days
+        )
 
         days_available = property_details.get("Days_Available", 0)
         self.property_details[property_id]["Days_Avail"] = days_available
@@ -99,6 +104,44 @@ class DetailsFilesetBuilder:
 
         return True
 
+    def clean_amenities_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        drop_cols = [
+            "link",
+            "property_id",
+            "Occ_Rate_Based_on_Avail",
+            "Abs_Occ_Rate",
+            "Avail_Rate",
+            "title",
+            "review_count",
+            "accuracy",
+            "checking",
+            "cleanliness",
+            "communication",
+            "location",
+            "value",
+            "guest_satisfaction",
+        ]
+        df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
+
+        # replace any remaining False values with 0
+        with pd.option_context("future.no_silent_downcasting", True):
+            df = df.replace("False", 0).infer_objects(copy=False)
+            df = df.replace(False, 0).infer_objects(copy=False)
+
+        system_colums = [x for x in df.columns if x.startswith("SYSTEM_")]
+        if system_colums:
+            df[system_colums] = df[system_colums].astype(bool)
+            df[system_colums] = df[system_colums].astype(int)
+
+        if "beds" in df.columns:
+            df["beds"] = df["beds"].astype(int)
+        if "bathrooms" in df.columns:
+            df["bathrooms"] = df["bathrooms"].astype(float)
+        if "bedrooms" in df.columns:
+            df["bedrooms"] = df["bedrooms"].astype(int)
+
+        return df
+
     def parse_amenity_flags(self, property_id: str, property_details: dict):
         amenities_matrix = property_details.get("amenities", {})
 
@@ -130,64 +173,96 @@ class DetailsFilesetBuilder:
 
     def build_fileset(self):
         logger.info("Building details fileset...")
-        # Placeholder for actual implementation
 
-        if os.path.isfile("custom_listing_ids.json"):
-            with open("custom_listing_ids.json", "r", encoding="utf-8") as f:
-                properties = json.load(f)
-
-            logger.info(f"Found {len(properties)} property details files.")
-
-            for property_id, occupancy_details in list(properties.items()):
-                self.property_details[property_id] = {}
-
-                self.property_details[property_id][
-                    "link"
-                ] = f"https://www.airbnb.com/rooms/{property_id}"
-                self.get_financials(
-                    property_id=property_id, property_details=occupancy_details
-                )
-
-                file_name = f"property_details_{property_id}.json"
-                file = open(os.path.join("property_details_scraped", file_name), "r")
-                property_details = json.load(file)
-                file.close()
-
-                if not self.parse_basic_details(property_id, property_details):
-                    continue
-
-                self.parse_amenity_flags(property_id, property_details)
-
-        else:
+        # Discover property IDs from files on disk
+        if not os.path.isdir(DETAILS_SCRAPED_DIR):
             logger.info(
-                "No custom_listing_ids.json file found. Please build a data fileset first."
+                f"No details directory found at {DETAILS_SCRAPED_DIR}. "
+                "Please run details scraping first."
             )
             return
+
+        detail_files = [
+            f
+            for f in os.listdir(DETAILS_SCRAPED_DIR)
+            if f.startswith("property_details_") and f.endswith(".json")
+        ]
+
+        if not detail_files:
+            logger.info("No property detail files found in the directory.")
+            return
+
+        logger.info(f"Found {len(detail_files)} property details files on disk.")
+
+        # Load comp set financials if available
+        comp_set_data = {}
+        if os.path.isfile(self.comp_set_filepath):
+            with open(self.comp_set_filepath, "r", encoding="utf-8") as f:
+                comp_set_data = json.load(f)
+            logger.info(
+                f"Loaded financial data for {len(comp_set_data)} properties from comp set."
+            )
+
+        for file_name in detail_files:
+            property_id = file_name.replace("property_details_", "").replace(
+                ".json", ""
+            )
+
+            self.property_details[property_id] = {}
+            self.property_details[property_id]["link"] = (
+                f"https://www.airbnb.com/rooms/{property_id}"
+            )
+
+            # Merge financials if available in comp set
+            if property_id in comp_set_data:
+                self.get_financials(
+                    property_id=property_id,
+                    property_details=comp_set_data[property_id],
+                )
+
+            file_path = os.path.join(DETAILS_SCRAPED_DIR, file_name)
+            with open(file_path, "r") as file:
+                property_details = json.load(file)
+
+            if not self.parse_basic_details(property_id, property_details):
+                continue
+
+            self.parse_amenity_flags(property_id, property_details)
 
         amenities_df = pd.DataFrame.from_dict(
             self.property_details, orient="index"
         ).fillna(False)
 
-        amenities_df = amenities_df.sort_values(by="ADR", ascending=False)
+        if "ADR" in amenities_df.columns:
+            amenities_df = amenities_df.sort_values(by="ADR", ascending=False)
 
         amenities_df.index.name = "property_id"
 
-        amenities_df.to_csv("property_details_results/property_amenities_matrix.csv")
+        os.makedirs("outputs/05_details_results", exist_ok=True)
+        amenities_df.to_csv("outputs/05_details_results/property_amenities_matrix.csv")
         logger.info(
-            "Details fileset built and saved to property_details_results/property_amenities_matrix.csv"
+            "Details fileset built and saved to outputs/05_details_results/property_amenities_matrix.csv"
+        )
+
+        cleaned_df = self.clean_amenities_df(amenities_df)
+        cleaned_df.to_csv(
+            "outputs/05_details_results/property_amenities_matrix_cleaned.csv"
+        )
+        logger.info(
+            "Cleaned details fileset saved to outputs/05_details_results/property_amenities_matrix_cleaned.csv"
         )
 
         with open(
-            "property_details_results/house_rules_details.json", "w"
+            "outputs/05_details_results/house_rules_details.json", "w"
         ) as house_rules_file:
             json.dump(self.house_rules, house_rules_file, indent=4)
 
         with open(
-            "property_details_results/property_descriptions.json", "w"
+            "outputs/05_details_results/property_descriptions.json", "w"
         ) as descriptions_file:
             json.dump(self.property_descriptions, descriptions_file, indent=4)
 
         with open(
-            "property_details_results/neighborhood_highlights.json", "w"
+            "outputs/05_details_results/neighborhood_highlights.json", "w"
         ) as highlights_file:
             json.dump(self.neighborhood_highlights, highlights_file, indent=4)

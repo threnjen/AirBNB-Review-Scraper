@@ -2,53 +2,105 @@
 
 **Zipcode:** 97067
 
-**High Tier:** %64.15 (top 35%, n=18)
+**High Tier:** %65.25 (top 25%, n=87)
 
-**Low Tier:** %49.00 (bottom 35%, n=20)
+**Low Tier:** %40.00 (bottom 25%, n=92)
 
 ---
 
-# Insights on AirBNB Property Data for Zipcode '97067'
+# Airbnb Property Analysis for Zipcode 97067: Occupancy Rate Drivers
+
+---
 
 ## 1. Key Differentiators
-The following features significantly distinguish high-occupancy properties from low-occupancy ones:
 
-| Amenity          | High Tier (%) | Low Tier (%) | Difference (%) |
-|------------------|---------------|--------------|----------------|
-| Pets             | 72.2%         | 45.0%        | +27.2%         |
-| Fireplace        | 88.9%         | 70.0%        | +18.9%         |
-| Ev Charger       | 27.8%         | 15.0%        | +12.8%         |
-| View Mountain    | 22.2%         | 10.0%        | +12.2%         |
-| Hammock          | 22.2%         | 10.0%        | +12.2%         |
-| Firepit          | 72.2%         | 70.0%        | +2.2%          |
-| Dryer            | 100.0%        | 95.0%        | +5.0%          |
+The following features most strongly distinguish high-occupancy properties (Occupancy ≥ 65.2%) from low-occupancy ones (Occupancy ≤ 40.0%):
 
-These amenities suggest that high-occupancy properties often prioritize features that enhance comfort and outdoor experiences.
+| Feature         | Difference (High - Low) |
+|-----------------|------------------------|
+| Dishwasher      | **-13.1%** (Less prevalent in high occupancy) |
+| Pets            | **+11.8%** (More prevalent in high occupancy) |
+| Grill           | **-10.0%** (Less prevalent in high occupancy) |
+| Workspace       | **+9.4%** (More prevalent in high occupancy) |
+| Mountain View   | **+8.5%** (More prevalent in high occupancy) |
+| Beach Access    | **+8.3%** (More prevalent in high occupancy) |
+| Jacuzzi         | **+6.8%** (More prevalent in high occupancy) |
+
+**Interpretation:**  
+High-occupancy properties tend to offer more pet-friendly policies, dedicated workspaces, scenic views (mountain and beach), and luxury amenities like jacuzzis. Interestingly, some amenities like dishwashers and grills are less common among high-occupancy listings, suggesting these may not be key drivers in this market.
+
+---
 
 ## 2. Accessibility & Convenience Features
-The following amenities contribute to making properties more bookable:
 
-- **Washer/Dryer**: 100% in high tier vs. 95% in low tier (+5.0%)
-- **Workspace**: 61.1% in high tier vs. 65.0% in low tier (-3.9%)
+- **Workspace:** Present in 73.6% of high-occupancy properties vs. 64.1% in low tier (+9.4%). This indicates a strong preference for work-friendly environments, possibly catering to remote workers or business travelers.
+- **Washer/Dryer:** Washer (86.2% vs. 90.2%) and Dryer (85.1% vs. 89.1%) are slightly less common in high-occupancy properties (-4.0% and -4.1%, respectively), suggesting these are baseline amenities but not strong differentiators.
+- **EV Charger:** Less prevalent in high-occupancy properties (8.0% vs. 13.0%, -5.0%), indicating limited impact on bookings in this area.
+- **Superhost Status:** Higher in high-occupancy properties (11.5% vs. 6.5%, +5.0%), which may reflect better guest experience and trust.
 
-While the presence of a washer/dryer is more common in high-occupancy properties, the workspace feature is slightly less prevalent, indicating that it may not be a primary driver for bookings in this market.
+**Summary:**  
+Workspace availability and Superhost status are positive contributors to higher occupancy. Washer/dryer and EV chargers appear less influential in this market.
+
+---
 
 ## 3. Pet-Friendliness Impact
-Allowing pets appears to correlate positively with higher occupancy rates. High-occupancy properties allow pets in 72.2% of cases compared to only 45.0% in low-occupancy properties, resulting in a **+27.2%** difference. This suggests that pet-friendly listings are more appealing to potential guests.
+
+- **Pets Allowed:** 57.5% of high-occupancy properties allow pets vs. 45.7% in low-occupancy (+11.8%).
+
+This sizable difference suggests that pet-friendliness is a significant factor driving higher bookings in zipcode 97067. Properties that welcome pets attract a broader guest segment, likely increasing occupancy rates.
+
+---
 
 ## 4. Capacity Sweet Spot
-The average capacity of high-occupancy properties is **9.17 guests**, while low-occupancy properties average **10.35 guests**. The difference of **-1.18 guests** indicates that smaller properties may be booked more frequently, as they cater to smaller groups seeking a more intimate experience.
+
+| Attribute | High Tier Avg | Low Tier Avg | Difference |
+|-----------|---------------|--------------|------------|
+| Capacity  | 6.02          | 7.57         | -1.55      |
+| Bedrooms  | 2.71          | 3.15         | -0.44      |
+| Beds      | 4.16          | 4.77         | -0.61      |
+| Bathrooms | 2.21          | 2.36         | -0.16      |
+
+- High-occupancy properties tend to be **smaller** in capacity and bedroom count compared to low-occupancy ones.
+- The average capacity for high-occupancy properties is about 6 guests, whereas low-occupancy properties average around 7.5 guests.
+  
+**Insight:**  
+Smaller to mid-sized properties (around 6 guests capacity) appear to maximize bookings, possibly due to better alignment with typical guest group sizes or pricing sweet spots.
+
+---
 
 ## 5. Availability Patterns
-While the data does not explicitly provide availability patterns, it can be inferred that properties with fewer days blocked off for personal use may have higher occupancy rates. Hosts should consider maintaining flexible availability to attract more bookings.
+
+*Note: Direct data on days available was not provided.*
+
+However, based on typical market dynamics and the data context:
+
+- High-occupancy properties likely maintain **consistent availability** and possibly more flexible booking windows to capture frequent bookings.
+- Smaller properties with popular amenities (workspace, pet-friendliness) may have higher turnover and thus more days booked.
+
+**Recommendation:**  
+Hosts should monitor and optimize calendar availability to ensure competitive booking frequency, especially for properties with desirable features.
+
+---
 
 ## 6. Recommendations for Hosts
-To increase booking frequency, hosts should consider the following actionable recommendations:
 
-1. **Emphasize Pet-Friendliness**: Highlight pet-friendly features in listings to attract a broader audience.
-2. **Enhance Comfort Features**: Invest in amenities like fireplaces and outdoor spaces (e.g., fire pits, hammocks) that enhance guest experience.
-3. **Optimize Capacity**: Consider targeting smaller groups by offering properties that accommodate fewer guests, as they may be booked more frequently.
-4. **Maintain Availability**: Ensure that properties have flexible booking options to maximize occupancy potential.
-5. **Promote Unique Views**: If applicable, market properties with mountain or ocean views, as these features can significantly enhance attractiveness.
+1. **Enhance Pet-Friendliness:**  
+   Allow pets to increase appeal, as pet-friendly listings show an 11.8% higher prevalence in high-occupancy properties.
 
-These insights are tailored to the specific market of zipcode '97067' and can help hosts optimize their listings for better performance.
+2. **Create Dedicated Workspaces:**  
+   Invest in a comfortable, well-equipped workspace to attract remote workers and business travelers (+9.4% difference).
+
+3. **Highlight Scenic Views and Luxury Amenities:**  
+   Promote mountain or beach views (+8.5%, +8.3%) and amenities like jacuzzis (+6.8%) to differentiate your listing.
+
+4. **Optimize Property Size:**  
+   Consider targeting a capacity around 6 guests with 2-3 bedrooms to align with the occupancy sweet spot.
+
+5. **Aim for Superhost Status:**  
+   Improve guest experience and responsiveness to increase chances of becoming a Superhost (+5.0%), which correlates with higher occupancy.
+
+---
+
+# Summary
+
+High-occupancy Airbnb properties in zipcode 97067 tend to be moderately sized, pet-friendly, equipped with workspaces, and offer appealing views and luxury amenities. Hosts focusing on these features, maintaining good guest relations, and optimizing availability are more likely to achieve higher booking frequencies.

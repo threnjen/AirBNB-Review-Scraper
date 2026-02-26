@@ -9,7 +9,6 @@ import tiktoken
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from utils.cache_manager import CacheManager
 from utils.cost_tracker import CostTracker
 from utils.tiny_file_handler import load_json_file
 
@@ -19,20 +18,19 @@ logger = logging.getLogger(__name__)
 
 class OpenAIAggregator(BaseModel):
     """
-    OpenAI client for aggregating Airbnb reviews using GPT-4o-mini.
+    OpenAI client for aggregating Airbnb reviews using GPT-4.1-mini.
     Handles token management, chunking, and cost-efficient processing.
     """
 
     client: OpenAI = Field(default_factory=lambda: OpenAI())
-    model: str = "gpt-4o-mini"
+    model: str = "gpt-4.1-mini"
     temperature: float = 0.3
-    max_tokens: int = 4000
-    chunk_size: int = 20  # Reviews per chunk
+    max_tokens: int = 16000
+    chunk_token_limit: int = 120000  # Max input tokens before chunking
     max_retries: int = 3
     retry_delay: float = 1.0
 
     # Integrated utilities
-    cache_manager: CacheManager = Field(default_factory=CacheManager)
     cost_tracker: CostTracker = Field(default_factory=CostTracker)
 
     class Config:
@@ -50,7 +48,9 @@ class OpenAIAggregator(BaseModel):
                 self.model = openai_config.get("model", self.model)
                 self.temperature = openai_config.get("temperature", self.temperature)
                 self.max_tokens = openai_config.get("max_tokens", self.max_tokens)
-                self.chunk_size = openai_config.get("chunk_size", self.chunk_size)
+                self.chunk_token_limit = openai_config.get(
+                    "chunk_token_limit", self.chunk_token_limit
+                )
         except Exception:
             # Continue with defaults if config loading fails
             pass
@@ -94,11 +94,8 @@ class OpenAIAggregator(BaseModel):
         for review in reviews:
             review_tokens = self.estimate_tokens(review)
 
-            # If adding this review would exceed limits or chunk size, start new chunk
-            if (
-                current_tokens + review_tokens > 120000  # Leave buffer for 128k context
-                or len(current_chunk) >= self.chunk_size
-            ):
+            # If adding this review would exceed token limit, start new chunk
+            if current_tokens + review_tokens > self.chunk_token_limit:
                 if current_chunk:
                     chunks.append(current_chunk)
                     current_chunk = [review]
@@ -206,22 +203,6 @@ Unified Analysis:"""
 
         logger.info(f"Processing {len(reviews)} reviews for listing {listing_id}")
 
-        # Check cache first
-        cached_summary = self.cache_manager.get_cached_summary(
-            listing_id, prompt, reviews
-        )
-        if cached_summary:
-            # Track cache hit
-            self.cost_tracker.track_request(
-                listing_id=listing_id,
-                prompt=prompt,
-                reviews=reviews,
-                response=cached_summary,
-                success=True,
-                cached=True,
-            )
-            return cached_summary
-
         # Check if we need to chunk the reviews
         total_tokens = self.estimate_tokens(prompt) + sum(
             self.estimate_tokens(review) for review in reviews
@@ -229,7 +210,7 @@ Unified Analysis:"""
 
         summary = None
 
-        if total_tokens <= 120000 and len(reviews) <= self.chunk_size:
+        if total_tokens <= self.chunk_token_limit:
             # Process all reviews in single request
             full_prompt = self.create_chunk_prompt(prompt, reviews)
             summary = self.call_openai_with_retry(full_prompt, listing_id)
@@ -246,13 +227,15 @@ Unified Analysis:"""
         else:
             # Need to chunk reviews
             logger.info(
-                f"Large review set detected ({total_tokens} tokens), chunking into smaller pieces"
+                f"Review set exceeds token limit ({total_tokens} tokens > {self.chunk_token_limit}), chunking into smaller pieces"
             )
             chunks = self.chunk_reviews(reviews, prompt)
             chunk_summaries = []
 
             for i, chunk in enumerate(chunks):
-                chunk_info = f"Processing chunk {i + 1} of {len(chunks)} (reviews {i * self.chunk_size + 1}-{i * self.chunk_size + len(chunk)})"
+                chunk_info = (
+                    f"Processing chunk {i + 1} of {len(chunks)} ({len(chunk)} reviews)"
+                )
                 chunk_prompt = self.create_chunk_prompt(prompt, chunk, chunk_info)
 
                 chunk_summary = self.call_openai_with_retry(
@@ -302,9 +285,5 @@ Unified Analysis:"""
                 )
             else:
                 summary = chunk_summaries[0]
-
-        # Cache the result if we got a valid summary
-        if summary:
-            self.cache_manager.cache_summary(listing_id, prompt, reviews, summary)
 
         return summary

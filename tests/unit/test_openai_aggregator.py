@@ -11,27 +11,24 @@ class TestOpenAIAggregator:
     """Tests for OpenAIAggregator class."""
 
     @pytest.fixture
-    def aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def aggregator(self, tmp_logs_dir):
         """Create an OpenAIAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "temperature": 0.3,
-                    "max_tokens": 4000,
-                    "chunk_size": 20,
-                    "enable_caching": False,
+                    "max_tokens": 16000,
+                    "chunk_token_limit": 120000,
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.openai_aggregator import OpenAIAggregator
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                    agg = OpenAIAggregator()
-                    agg.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
-                    return agg
+                agg = OpenAIAggregator()
+                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+                return agg
 
     def test_estimate_tokens_valid_text(self, aggregator):
         """Test token estimation for valid text."""
@@ -79,17 +76,21 @@ class TestOpenAIAggregator:
         assert chunks[0] == reviews
 
     def test_chunk_reviews_multiple_chunks(self, aggregator):
-        """Test chunking when reviews exceed chunk_size."""
-        # Create more reviews than chunk_size
-        reviews = [f"Review number {i}" for i in range(25)]
+        """Test chunking when reviews exceed chunk_token_limit."""
+        # Set a very low token limit to force chunking
+        aggregator.chunk_token_limit = 100
+        # Each review is a few tokens; with a 100-token limit they won't all fit
+        reviews = [
+            f"Review number {i} with some extra text to add tokens" for i in range(10)
+        ]
         prompt = "Analyze these reviews"
 
-        # With chunk_size=20, should create 2 chunks
         chunks = aggregator.chunk_reviews(reviews, prompt)
 
-        assert len(chunks) == 2
-        assert len(chunks[0]) == 20
-        assert len(chunks[1]) == 5
+        assert len(chunks) > 1
+        # All reviews should still be present across chunks
+        all_reviews = [r for chunk in chunks for r in chunk]
+        assert set(all_reviews) == set(reviews)
 
     def test_chunk_reviews_empty_list(self, aggregator):
         """Test chunking with empty reviews list."""
@@ -99,6 +100,7 @@ class TestOpenAIAggregator:
 
     def test_chunk_reviews_preserves_all_reviews(self, aggregator):
         """Test that chunking preserves all reviews."""
+        aggregator.chunk_token_limit = 200
         reviews = [f"Review {i}" for i in range(45)]
         prompt = "Analyze"
 
@@ -108,6 +110,17 @@ class TestOpenAIAggregator:
         all_chunked_reviews = [r for chunk in chunks for r in chunk]
         assert len(all_chunked_reviews) == 45
         assert set(all_chunked_reviews) == set(reviews)
+
+    def test_many_short_reviews_single_chunk(self, aggregator):
+        """Test that many short reviews fit in a single chunk when under token limit."""
+        # Default chunk_token_limit=120000, so 100 short reviews should easily fit
+        reviews = [f"Great stay {i}" for i in range(100)]
+        prompt = "Analyze"
+
+        chunks = aggregator.chunk_reviews(reviews, prompt)
+
+        assert len(chunks) == 1
+        assert len(chunks[0]) == 100
 
     def test_create_chunk_prompt_format(self, aggregator):
         """Test chunk prompt formatting."""
@@ -190,7 +203,7 @@ class TestOpenAIAggregator:
         assert result is not None
         mock_openai_client.chat.completions.create.assert_called()
 
-    def test_model_config_from_init(self, tmp_cache_dir, tmp_logs_dir):
+    def test_model_config_from_init(self, tmp_logs_dir):
         """Test that model configuration is loaded from config."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -198,48 +211,43 @@ class TestOpenAIAggregator:
                     "model": "gpt-4",
                     "temperature": 0.5,
                     "max_tokens": 8000,
-                    "chunk_size": 30,
+                    "chunk_token_limit": 80000,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.openai_aggregator import OpenAIAggregator
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                    agg = OpenAIAggregator()
+                agg = OpenAIAggregator()
 
-                    assert agg.model == "gpt-4"
-                    assert agg.temperature == 0.5
-                    assert agg.max_tokens == 8000
-                    assert agg.chunk_size == 30
+                assert agg.model == "gpt-4"
+                assert agg.temperature == 0.5
+                assert agg.max_tokens == 8000
+                assert agg.chunk_token_limit == 80000
 
 
 class TestOpenAIAggregatorGenerateSummary:
     """Tests for OpenAIAggregator.generate_summary method."""
 
     @pytest.fixture
-    def aggregator(self, tmp_cache_dir, tmp_logs_dir):
+    def aggregator(self, tmp_logs_dir):
         """Create an OpenAIAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4.1-mini",
                     "temperature": 0.3,
-                    "max_tokens": 4000,
-                    "chunk_size": 20,
-                    "enable_caching": False,
+                    "max_tokens": 16000,
+                    "chunk_token_limit": 120000,
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.openai_aggregator import OpenAIAggregator
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.openai_aggregator import OpenAIAggregator
 
-                    agg = OpenAIAggregator()
-                    agg.cache_manager.cache_dir = str(tmp_cache_dir)
-                    agg.cache_manager.enable_cache = False
-                    agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
-                    agg.cost_tracker.enable_tracking = False
-                    return agg
+                agg = OpenAIAggregator()
+                agg.cost_tracker.log_file = str(tmp_logs_dir / "cost.json")
+                agg.cost_tracker.enable_tracking = False
+                return agg
 
     def test_generate_summary_empty_reviews(self, aggregator):
         """Test generate_summary with empty reviews returns None."""
@@ -265,26 +273,12 @@ class TestOpenAIAggregatorGenerateSummary:
         assert result is not None
         mock_openai_client.chat.completions.create.assert_called_once()
 
-    def test_generate_summary_caches_result(self, aggregator, mock_openai_client):
-        """Test generate_summary caches the result after API call."""
-        aggregator.client = mock_openai_client
-        aggregator.cache_manager.enable_cache = True
-
-        reviews = ["Review A", "Review B"]
-        prompt = "Test prompt"
-
-        result = aggregator.generate_summary(reviews, prompt, "listing123")
-
-        # Verify API was called and result returned
-        assert result is not None
-        mock_openai_client.chat.completions.create.assert_called_once()
-
     def test_generate_summary_chunked_reviews(self, aggregator, mock_openai_client):
         """Test generate_summary with large review set requiring chunking."""
         aggregator.client = mock_openai_client
-        aggregator.chunk_size = 5  # Force chunking
+        aggregator.chunk_token_limit = 50  # Force chunking with very low token limit
 
-        # Create more reviews than chunk_size
+        # Reviews will exceed the tiny token limit
         reviews = [f"Review number {i} with some text content" for i in range(12)]
 
         result = aggregator.generate_summary(reviews, "Analyze reviews", "listing123")

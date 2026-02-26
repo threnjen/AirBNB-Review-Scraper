@@ -2,72 +2,112 @@
 
 **Zipcode:** 97067
 
-**High Tier:** $441.84 (top 35%, n=18)
+**High Tier:** $378.07 (top 25%, n=87)
 
-**Low Tier:** $311.50 (bottom 35%, n=18)
+**Low Tier:** $205.84 (bottom 25%, n=87)
 
 ---
 
-# Insights on AirBNB Property Data for Zipcode '97067'
+# Airbnb Property Analysis for Zipcode 97067: Drivers of Higher Nightly Rates (ADR)
+
+---
 
 ## 1. Key Differentiators
-The following features significantly distinguish high-ADR properties from low-ADR properties:
 
-| Feature          | High Tier (%) | Low Tier (%) | Difference (%) |
-|------------------|---------------|--------------|-----------------|
-| Grill            | 100.0%        | 94.4%        | +5.6%           |
-| Washer           | 100.0%        | 94.4%        | +5.6%           |
-| Fireplace        | 83.3%         | 77.8%        | +5.6%           |
-| Pool             | 38.9%         | 22.2%        | +16.7%          |
-| Pool Table       | 33.3%         | 0.0%         | +33.3%          |
-| View Ocean       | 33.3%         | 11.1%        | +22.2%          |
-| Workspace        | 77.8%         | 66.7%        | +11.1%          |
+The following features most strongly distinguish high-ADR properties (top 25%) from low-ADR properties (bottom 25%), based on percentage differences in amenity prevalence:
 
-These features indicate that high-ADR properties tend to offer more luxurious and functional amenities, which appeal to guests seeking a premium experience.
+| Feature       | Difference in Prevalence |
+|---------------|--------------------------|
+| Jacuzzi       | +57.5%                   |
+| Grill         | +28.7%                   |
+| Ocean View    | +27.6%                   |
+| Dishwasher    | +24.1%                   |
+| Snowflake (likely heating/AC) | +23.0%       |
+| Firepit       | +20.7%                   |
+| Pool Table    | +16.1%                   |
+
+**Additional notable differences:**
+- Sauna (+13.8%)
+- Fireplace (+12.6%)
+- Dryer (+12.6%)
+- EV Charger (+11.5%)
+- Washer (+10.3%)
+
+Interestingly, **Superhost status is more common in low-ADR properties** (-16.1%), suggesting that in this market, premium pricing is driven more by property features than host ratings.
+
+---
 
 ## 2. Luxury Amenity Patterns
-The following amenities correlate strongly with premium pricing in the high-ADR tier:
 
-- **Pool Table**: Present in 33.3% of high-ADR properties, absent in low-ADR properties (+33.3% difference).
-- **View Ocean**: Available in 33.3% of high-ADR properties compared to 11.1% in low-ADR properties (+22.2% difference).
-- **Pool**: Found in 38.9% of high-ADR properties, compared to 22.2% in low-ADR properties (+16.7% difference).
-- **Fireplace**: Present in 83.3% of high-ADR properties, indicating a preference for cozy, inviting spaces.
+Amenities strongly correlated with premium pricing include:
 
-These amenities enhance the overall guest experience, contributing to higher nightly rates.
+- **Jacuzzi / Hot Tub:** Present in 80.5% of high-ADR vs. 23.0% of low-ADR (+57.5%)
+- **Grill:** 92.0% vs. 63.2% (+28.7%)
+- **Ocean View:** 36.8% vs. 9.2% (+27.6%)
+- **Firepit:** 66.7% vs. 46.0% (+20.7%)
+- **Pool Table:** 17.2% vs. 1.1% (+16.1%)
+- **Sauna:** 14.9% vs. 1.1% (+13.8%)
+- **Fireplace:** 73.6% vs. 60.9% (+12.6%)
+- **Pool:** 23.0% vs. 14.9% (+8.0%)
+
+**Game rooms (pool table), outdoor leisure features (firepit, grill), and scenic views (ocean) are key luxury indicators.** These amenities likely enhance guest experience and justify higher rates.
+
+---
 
 ## 3. Capacity & Size Analysis
-There is a clear relationship between property size and ADR:
 
-- **Capacity**: High-ADR properties have an average capacity of 11.5 guests compared to 8.17 guests in low-ADR properties (+3.33 difference).
-- **Bedrooms**: High-ADR properties average 4.44 bedrooms, while low-ADR properties average 3.0 bedrooms (+1.44 difference).
-- **Beds**: High-ADR properties average 7.39 beds compared to 4.94 beds in low-ADR properties (+2.44 difference).
-- **Bathrooms**: High-ADR properties have an average of 2.72 bathrooms, compared to 2.0 in low-ADR properties (+0.72 difference).
+There is a clear positive relationship between property size and ADR:
 
-The optimal size for maximum rates appears to be properties that can accommodate larger groups, with more bedrooms and bathrooms, enhancing comfort and convenience.
+| Attribute  | High ADR Avg | Low ADR Avg | Difference |
+|------------|--------------|-------------|------------|
+| Capacity   | 10.28 guests | 4.72 guests | +5.55      |
+| Bedrooms   | 3.9          | 2.25        | +1.65      |
+| Beds       | 6.59         | 3.25        | +3.34      |
+| Bathrooms  | 2.8          | 2.02        | +0.78      |
+
+**Insight:** High-ADR properties accommodate more than double the guests on average, with nearly 4 bedrooms and close to 3 bathrooms. This suggests that **larger properties designed for groups or families command premium pricing** in this market.
+
+---
 
 ## 4. Pet Policy Impact
-The pet policy shows a slight negative correlation with ADR:
 
-- **Pets Allowed**: 55.6% of high-ADR properties allow pets, while 61.1% of low-ADR properties do. This results in a -5.6% difference.
+- **Pets Allowed:** 58.6% in high-ADR vs. 50.6% in low-ADR (+8.0%)
 
-This suggests that properties that do not allow pets may attract a higher-paying clientele who prioritize luxury and amenities over pet-friendliness.
+Allowing pets correlates with a modest increase in ADR prevalence. This suggests **pet-friendly policies may contribute positively to pricing**, possibly by appealing to a broader market segment seeking vacation rentals that accommodate pets.
+
+---
 
 ## 5. Description Language Patterns
-Premium listings tend to emphasize the following aspects in their descriptions:
 
-- **Spaciousness and Comfort**: High-ADR properties often highlight their capacity to accommodate large groups and the comfort of their living spaces (e.g., "spacious mountain getaway" and "inviting great room").
-- **Luxury Features**: Descriptions frequently mention luxury amenities such as hot tubs, game rooms, and outdoor spaces (e.g., "private suite for ultimate relaxation" and "fun game room").
-- **Location and Activities**: High-ADR properties emphasize proximity to outdoor activities and scenic views, enhancing their appeal (e.g., "endless adventure just minutes away").
+**High-ADR listings emphasize:**
 
-In contrast, low-ADR properties focus more on solitude and basic amenities, which may not attract premium guests.
+- Spaciousness and capacity for large groups (e.g., "accommodating up to 16 guests," "ideal for large groups")
+- Luxury and comfort (e.g., "cozy gas fireplace," "chef's kitchen," "private suite," "modern luxury")
+- Unique experiences and outdoor amenities (e.g., "hot tub," "firepit," "deck among evergreens," "serene mountain views")
+- Activity and relaxation options (e.g., "game room," "outdoor space," "waterfront lodge")
+
+**Low-ADR listings focus on:**
+
+- Cozy, intimate settings (e.g., "two-bedroom cabin," "romantic getaway")
+- Proximity to nature and activities (e.g., "near hiking trails," "quiet wooded clearing")
+- Practical comforts and convenience (e.g., "modern comforts," "single-level floor plan")
+
+**Summary:** Premium listings market themselves as spacious, luxurious retreats with multiple entertainment options and scenic views, targeting larger groups seeking upscale experiences. Lower-tier listings emphasize charm, coziness, and access to outdoor recreation.
+
+---
 
 ## 6. Recommendations for Hosts
-To increase their nightly rates, hosts should consider the following actionable recommendations:
 
-1. **Enhance Amenities**: Invest in luxury amenities such as a pool table, hot tub, or outdoor grill to attract guests looking for premium experiences.
-2. **Optimize Capacity**: Consider expanding the property to accommodate larger groups by adding more bedrooms and bathrooms, which can justify higher rates.
-3. **Focus on Descriptions**: Use descriptive language that emphasizes spaciousness, luxury features, and nearby attractions to make listings more appealing.
-4. **Evaluate Pet Policy**: Consider the impact of allowing pets on pricing and guest demographics; a no-pets policy may attract a higher-paying clientele.
-5. **Highlight Unique Features**: If the property has unique views or special features (like a fireplace or outdoor space), make sure these are prominently featured in the listing description.
+1. **Invest in High-Value Amenities:** Adding or highlighting features like jacuzzis/hot tubs, grills, firepits, and game rooms can significantly increase nightly rates.
 
-By implementing these strategies, hosts can better position their properties in the competitive market of zipcode '97067' and potentially increase their average daily rates.
+2. **Increase Capacity and Bedrooms:** Expanding the number of bedrooms and overall guest capacity to accommodate larger groups can drive higher ADR.
+
+3. **Enhance Scenic Appeal:** If possible, promote or create ocean or mountain views, as these are strong differentiators for premium pricing.
+
+4. **Adopt a Pet-Friendly Policy:** Allowing pets can broaden your market and is associated with higher ADR in this area.
+
+5. **Craft Descriptions to Highlight Luxury and Space:** Use language that emphasizes spaciousness, luxury amenities, and unique experiences to attract higher-paying guests.
+
+---
+
+*This analysis is specific to Airbnb properties in zipcode 97067 and reflects data-driven insights based on the top and bottom quartiles of ADR.*

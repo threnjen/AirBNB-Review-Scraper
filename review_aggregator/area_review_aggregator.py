@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,6 +27,7 @@ class AreaRagAggregator(BaseModel):
     output_dir: str = "reports"
     model_config = ConfigDict(arbitrary_types_allowed=True)
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
+    pipeline_cache: Any = Field(default=None)
     # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
 
     def save_results(
@@ -58,13 +60,17 @@ class AreaRagAggregator(BaseModel):
 
         logger.info(f"Saved area summary report to {md_path}")
 
+        if self.pipeline_cache:
+            self.pipeline_cache.record_output("aggregate_summaries", json_path)
+            self.pipeline_cache.record_output("aggregate_summaries", md_path)
+
     def rag_description_generation_chain(self):
         """Generate area-level summary from existing property summaries."""
 
         # Load all property summaries from the output directory
         summary_files = [
             x
-            for x in os.listdir("property_generated_summaries/")
+            for x in os.listdir("outputs/06_generated_summaries/")
             if x.startswith(f"generated_summaries_{self.zipcode}_")
         ]
 
@@ -81,7 +87,7 @@ class AreaRagAggregator(BaseModel):
         # Collect all summaries
         all_summaries = []
         for file in summary_files[: self.num_listings]:
-            file_path = f"property_generated_summaries/{file}"
+            file_path = f"outputs/06_generated_summaries/{file}"
             summary_data = load_json_file(filename=file_path)
             # Each file is {listing_id: summary_text}
             for listing_id, summary_text in summary_data.items():
@@ -125,9 +131,3 @@ class AreaRagAggregator(BaseModel):
         # Log cost and cache statistics
         self.openai_aggregator.cost_tracker.print_session_summary()
         self.openai_aggregator.cost_tracker.log_session()
-
-        cache_stats = self.openai_aggregator.cache_manager.get_cache_stats()
-        if cache_stats.get("enabled"):
-            logger.info(
-                f"\nCache Statistics: {cache_stats['valid_cache']} valid, {cache_stats['expired_cache']} expired"
-            )

@@ -19,20 +19,20 @@ class TestDescriptionAnalyzer:
     def analyzer(self):
         """Create a DescriptionAnalyzer with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.description_analyzer import (
-                        DescriptionAnalyzer,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.description_analyzer import (
+                    DescriptionAnalyzer,
+                )
 
-                    return DescriptionAnalyzer(zipcode="97067")
+                return DescriptionAnalyzer(zipcode="97067")
 
     @pytest.fixture
     def sample_property_df(self):
-        """DataFrame mimicking the amenities matrix CSV with known linear ADR pattern."""
+        """DataFrame mimicking the amenities matrix CSV with known linear ADR pattern.
+
+        Includes binary amenity flags (SYSTEM_*) to verify dynamic feature discovery.
+        """
         # ADR = 100 * bedrooms + 50 * capacity + noise
         # This makes it easy to verify residuals
         return pd.DataFrame(
@@ -42,6 +42,9 @@ class TestDescriptionAnalyzer:
                 "bedrooms": [2, 3, 1, 5, 2, 3, 4, 1],
                 "beds": [3, 5, 2, 8, 3, 4, 6, 2],
                 "bathrooms": [1, 2, 1, 3, 1, 2, 2, 1],
+                "SYSTEM_POOL": [1, 1, 0, 1, 0, 0, 1, 0],
+                "SYSTEM_PETS": [0, 1, 0, 1, 1, 0, 1, 0],
+                "Days_Avail": [200, 300, 150, 350, 180, 250, 320, 100],
             },
             index=[
                 "prop_1",
@@ -90,17 +93,19 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
 
     def test_returns_series_with_residuals(self, analyzer, sample_property_df):
         """Residuals should be a Series indexed by property_id."""
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(
             sample_property_df
         )
 
         assert isinstance(residuals, pd.Series)
         assert len(residuals) == len(sample_property_df)
         assert all(idx in residuals.index for idx in sample_property_df.index)
+        assert isinstance(features, list)
+        assert len(features) > 0
 
     def test_residuals_sum_near_zero(self, analyzer, sample_property_df):
         """OLS residuals should sum to approximately zero."""
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(
             sample_property_df
         )
 
@@ -108,7 +113,7 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
 
     def test_r_squared_between_zero_and_one(self, analyzer, sample_property_df):
         """R-squared should be between 0 and 1."""
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(
             sample_property_df
         )
 
@@ -116,7 +121,8 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
 
     def test_perfect_linear_data_has_near_zero_residuals(self, analyzer):
         """When ADR is exactly linear in features, residuals should be ~0."""
-        # Need >= 6 rows (5 coefficients = intercept + 4 features, plus at least 1 df)
+        # ADR = 100*bedrooms + 50*capacity + 25*beds + 10*bathrooms
+        # Need rows > num_features + 1 for OLS
         df = pd.DataFrame(
             {
                 "ADR": [200, 400, 600, 800, 1000, 1200],
@@ -128,7 +134,7 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
             index=["a", "b", "c", "d", "e", "f"],
         )
 
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(df)
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
 
         assert r_squared > 0.99
         assert all(abs(r) < 1e-6 for r in residuals)
@@ -147,11 +153,50 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
             index=["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
         )
 
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(df)
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
 
         assert len(residuals) == 6
         assert "p2" not in residuals.index
         assert "p4" not in residuals.index
+
+    def test_discovers_all_numeric_columns(self, analyzer):
+        """Should use all numeric columns except ADR as regression features."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 400, 500, 200, 350, 450],
+                "capacity": [4, 6, 8, 3, 5, 7],
+                "bedrooms": [2, 3, 3, 1, 2, 3],
+                "SYSTEM_POOL": [1, 0, 1, 0, 1, 0],
+                "SYSTEM_PETS": [0, 1, 1, 0, 0, 1],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
+
+        assert "capacity" in features
+        assert "bedrooms" in features
+        assert "SYSTEM_POOL" in features
+        assert "SYSTEM_PETS" in features
+        assert "ADR" not in features
+
+    def test_includes_zero_values_in_regression(self, analyzer):
+        """Zero values (e.g. 0 bedrooms, 0 for binary amenities) should be included."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 400, 500, 200, 350, 450],
+                "capacity": [4, 6, 8, 3, 5, 7],
+                "bedrooms": [2, 0, 3, 1, 2, 3],
+                "SYSTEM_POOL": [1, 0, 1, 0, 1, 0],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
+
+        # Row "b" with 0 bedrooms should be included
+        assert "b" in residuals.index
+        assert len(residuals) == 6
 
 
 class TestParseScoreResponse(TestDescriptionAnalyzer):
@@ -450,6 +495,7 @@ class TestSaveResults(TestDescriptionAnalyzer):
         analyzer.reports_dir = str(tmp_path)
         residuals = pd.Series([10, -10], index=["p1", "p2"])
         scores_df = pd.DataFrame({"evocativeness": [8, 3]}, index=["p1", "p2"])
+        features = ["capacity", "bedrooms", "SYSTEM_POOL"]
 
         analyzer.save_results(
             r_squared=0.75,
@@ -457,6 +503,7 @@ class TestSaveResults(TestDescriptionAnalyzer):
             residuals=residuals,
             scores_df=scores_df,
             synthesis="Test synthesis content",
+            features=features,
         )
 
         json_path = tmp_path / "description_quality_stats_97067.json"
@@ -471,6 +518,7 @@ class TestSaveResults(TestDescriptionAnalyzer):
         assert stats["zipcode"] == "97067"
         assert stats["regression_r_squared"] == 0.75
         assert stats["num_properties_analyzed"] == 2
+        assert stats["regression_features_used"] == features
 
         md_content = md_path.read_text()
         assert "Test synthesis content" in md_content
@@ -517,28 +565,10 @@ class TestRunAnalysis(TestDescriptionAnalyzer):
 
 
 class TestComputeResidualsWithBadFeatures(TestDescriptionAnalyzer):
-    """Tests for filtering NaN/zero size features in regression."""
-
-    def test_excludes_zero_bedrooms(self, analyzer):
-        """Properties with 0 bedrooms should be excluded from regression."""
-        df = pd.DataFrame(
-            {
-                "ADR": [300, 400, 500, 200, 350, 450],
-                "capacity": [4, 6, 8, 3, 5, 7],
-                "bedrooms": [2, 0, 3, 1, 2, 3],
-                "beds": [3, 5, 6, 2, 4, 5],
-                "bathrooms": [1, 2, 2, 1, 1, 2],
-            },
-            index=["a", "b", "c", "d", "e", "f"],
-        )
-
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(df)
-
-        assert "b" not in residuals.index
-        assert len(residuals) == 5
+    """Tests for filtering NaN features in regression."""
 
     def test_excludes_nan_features(self, analyzer):
-        """Properties with NaN size features should be excluded."""
+        """Properties with NaN feature values should be excluded."""
         df = pd.DataFrame(
             {
                 "ADR": [300, 400, 500, 200, 350, 450],
@@ -550,7 +580,7 @@ class TestComputeResidualsWithBadFeatures(TestDescriptionAnalyzer):
             index=["a", "b", "c", "d", "e", "f"],
         )
 
-        residuals, r_squared = analyzer.compute_size_adjusted_residuals(df)
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
 
         assert "c" not in residuals.index
         assert len(residuals) == 5

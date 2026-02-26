@@ -14,18 +14,15 @@ class TestPropertyRagAggregator:
     def aggregator(self):
         """Create a PropertyRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.property_review_aggregator import (
-                        PropertyRagAggregator,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.property_review_aggregator import (
+                    PropertyRagAggregator,
+                )
 
-                    return PropertyRagAggregator(
-                        zipcode="97067", num_listings_to_summarize=5
-                    )
+                return PropertyRagAggregator(
+                    zipcode="97067", num_listings_to_summarize=5
+                )
 
     def test_get_listing_id_mean_rating_valid_reviews(self, aggregator, sample_reviews):
         """Test mean rating calculation with valid reviews."""
@@ -175,17 +172,16 @@ class TestPropertyRagAggregator:
         with patch(
             "review_aggregator.openai_aggregator.load_json_file", return_value={}
         ):
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.property_review_aggregator import (
-                        PropertyRagAggregator,
-                    )
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.property_review_aggregator import (
+                    PropertyRagAggregator,
+                )
 
-                    agg = PropertyRagAggregator()
+                agg = PropertyRagAggregator()
 
-                    assert agg.review_thresh_to_include_prop == 5
-                    assert agg.zipcode == "00501"
-                    assert agg.overall_mean == 0.0
+                assert agg.review_thresh_to_include_prop == 5
+                assert agg.zipcode == "00501"
+                assert agg.overall_mean == 0.0
 
 
 class TestPropertyRagAggregatorFiltering:
@@ -195,18 +191,15 @@ class TestPropertyRagAggregatorFiltering:
     def aggregator(self):
         """Create a PropertyRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {"enable_caching": False, "enable_cost_tracking": False}
-            }
-            with patch("utils.cache_manager.load_json_file", return_value={}):
-                with patch("utils.cost_tracker.load_json_file", return_value={}):
-                    from review_aggregator.property_review_aggregator import (
-                        PropertyRagAggregator,
-                    )
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.property_review_aggregator import (
+                    PropertyRagAggregator,
+                )
 
-                    return PropertyRagAggregator(
-                        zipcode="97067", num_listings_to_summarize=5
-                    )
+                return PropertyRagAggregator(
+                    zipcode="97067", num_listings_to_summarize=5
+                )
 
     def test_filter_out_processed_reviews(self, aggregator):
         """Test filtering out already processed reviews."""
