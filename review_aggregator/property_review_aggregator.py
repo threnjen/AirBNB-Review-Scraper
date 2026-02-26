@@ -143,9 +143,9 @@ class PropertyRagAggregator(BaseModel):
         for listing_id, review_data in reviews.items():
             if listing_id in already_processed_reviews_ids:
                 if self.pipeline_cache:
-                    summary_path = f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json"
+                    summary_path = f"outputs/06_listing_summaries/listing_summary_{self.zipcode}_{listing_id}.json"
                     if not self.pipeline_cache.is_file_fresh(
-                        "aggregate_reviews", summary_path
+                        "listing_summaries", summary_path
                     ):
                         logger.info(
                             f"Stale summary for listing {listing_id} — will regenerate."
@@ -181,7 +181,7 @@ class PropertyRagAggregator(BaseModel):
         for empty_id in empty_aggregated_reviews:
             del generated_summaries[empty_id]
             os.remove(
-                f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{empty_id}.json"
+                f"outputs/06_listing_summaries/listing_summary_{self.zipcode}_{empty_id}.json"
             )
 
         return generated_summaries
@@ -194,26 +194,26 @@ class PropertyRagAggregator(BaseModel):
 
         review_files = [
             x
-            for x in os.listdir("outputs/03_reviews_scraped/")
+            for x in os.listdir("outputs/04_reviews_scrape/")
             if x.startswith("reviews_")
         ]
 
         for file in review_files:
-            one_property = load_json_file(filename=f"outputs/03_reviews_scraped/{file}")
+            one_property = load_json_file(filename=f"outputs/04_reviews_scrape/{file}")
             reviews.update(one_property)
         logger.info(f"Total property loaded: {len(reviews)}")
 
         generated_summaries_files = [
             x
-            for x in os.listdir("outputs/06_generated_summaries/")
-            if x.startswith("generated_summaries_")
+            for x in os.listdir("outputs/06_listing_summaries/")
+            if x.startswith("listing_summary_")
         ]
         # logger.info(f"Generated summaries files found: {generated_summaries_files}")
 
         for file in generated_summaries_files:
             # logger.info(f"Using generated summaries file: {file}")
             one_property = load_json_file(
-                filename=f"outputs/06_generated_summaries/{file}"
+                filename=f"outputs/06_listing_summaries/{file}"
             )
             generated_summaries.update(one_property)
 
@@ -243,7 +243,7 @@ class PropertyRagAggregator(BaseModel):
         end_index = start_index + self.num_listings_to_summarize
 
         # First pass: process each unprocessed listing up to the configured limit
-        os.makedirs("outputs/06_generated_summaries", exist_ok=True)
+        os.makedirs("outputs/06_listing_summaries", exist_ok=True)
         for listing_id in unprocessed_reviews_ids[start_index:end_index]:
             generated_summaries[listing_id] = self.process_single_listing(
                 one_property_reviews=unprocessed_reviews[listing_id],
@@ -253,7 +253,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
+                filename=f"outputs/06_listing_summaries/listing_summary_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
 
@@ -277,7 +277,7 @@ class PropertyRagAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
+                filename=f"outputs/06_listing_summaries/listing_summary_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
 

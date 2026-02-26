@@ -1,10 +1,13 @@
 """
 Unit tests for scraper/reviews_scraper.py — Airbnb review scraping with retry.
+
+All tests use a temporary working directory (via ``monkeypatch.chdir``) so that
+the scraper's relative output paths never touch real project outputs.
 """
 
 import json
 import os
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import call, patch
 
 import pytest
 
@@ -17,7 +20,7 @@ from scraper.reviews_scraper import (
 ZIPCODE = "97067"
 LISTING_ID = "123456789"
 SEARCH_RESULTS = [{"room_id": LISTING_ID}]
-OUTPUT_DIR = "outputs/03_reviews_scraped"
+OUTPUT_DIR = "outputs/04_reviews_scrape"
 OUTPUT_PATH = f"{OUTPUT_DIR}/reviews_{ZIPCODE}_{LISTING_ID}.json"
 
 
@@ -31,13 +34,13 @@ def _output_path_for(listing_id: str) -> str:
 
 
 @pytest.fixture(autouse=True)
-def _cleanup_output():
-    """Remove any review file created during a test."""
-    yield
-    for f in os.listdir(OUTPUT_DIR) if os.path.isdir(OUTPUT_DIR) else []:
-        path = os.path.join(OUTPUT_DIR, f)
-        if f.startswith("reviews_97067_") and os.path.isfile(path):
-            os.remove(path)
+def _use_tmp_workdir(tmp_path, monkeypatch):
+    """Run every test inside a disposable temp directory.
+
+    This prevents the scraper from reading or writing to the real
+    ``outputs/04_reviews_scrape/`` directory in the project root.
+    """
+    monkeypatch.chdir(tmp_path)
 
 
 class TestSkipEmptyReviews:
@@ -256,9 +259,8 @@ class TestCacheSkip:
 
     @patch("scraper.reviews_scraper.time.sleep")
     @patch("scraper.reviews_scraper.pyairbnb.get_reviews")
-    def test_cached_listing_is_skipped(self, mock_get, mock_sleep):
+    def test_existing_file_is_skipped(self, mock_get, mock_sleep):
         """When review file already exists on disk, pyairbnb is not called."""
-        # Create the review file so the pre-scan detects it
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         with open(OUTPUT_PATH, "w") as f:
             json.dump({LISTING_ID: [{"review": "Old", "rating": 5}]}, f)

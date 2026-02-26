@@ -385,7 +385,7 @@ class AirDNAScraper:
         self,
         listing_id: str,
         data: dict,
-        output_dir: str = "outputs/02_comp_sets",
+        output_dir: str = "outputs/05_comp_sets",
     ) -> None:
         """Save scraped data for a single listing to a JSON file.
 
@@ -421,10 +421,10 @@ class AirDNAScraper:
             True if the listing should be skipped.
         """
         output_path = os.path.join(
-            "outputs", "02_comp_sets", f"listing_{listing_id}.json"
+            "outputs", "05_comp_sets", f"listing_{listing_id}.json"
         )
         if self.pipeline_cache and self.pipeline_cache.is_file_fresh(
-            "airdna", output_path
+            "comp_sets", output_path
         ):
             return True
         if os.path.isfile(output_path):

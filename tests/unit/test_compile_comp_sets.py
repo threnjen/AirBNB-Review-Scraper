@@ -18,14 +18,13 @@ class TestCompileCompSets:
             from main import AirBnbReviewAggregator
 
             agg = AirBnbReviewAggregator.__new__(AirBnbReviewAggregator)
-            agg.config = {}
-            agg.zipcode = "97067"
+            agg.config = {"zipcode": "97067"}
         return agg
 
     @pytest.fixture
     def comp_sets_dir(self, tmp_path):
-        """Create a temp directory simulating outputs/02_comp_sets/."""
-        d = tmp_path / "outputs" / "02_comp_sets"
+        """Create a temp directory simulating outputs/05_comp_sets/."""
+        d = tmp_path / "outputs" / "05_comp_sets"
         d.mkdir(parents=True)
         return d
 

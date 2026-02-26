@@ -27,29 +27,27 @@ class PipelineCacheManager(BaseModel):
     """
 
     STAGE_ORDER: list[str] = [
-        "search",
-        "airdna",
-        "reviews",
-        "details",
-        "aggregate_reviews",
-        "aggregate_summaries",
-        "build_details",
-        "extract_data",
-        "analyze_correlations",
-        "analyze_descriptions",
+        "search_results",
+        "details_scrape",
+        "details_results",
+        "reviews_scrape",
+        "comp_sets",
+        "listing_summaries",
+        "area_summary",
+        "correlation_results",
+        "description_analysis",
     ]
 
     STAGE_OUTPUT_DIRS: dict[str, str] = {
-        "search": "outputs/01_search_results",
-        "airdna": "outputs/02_comp_sets",
-        "reviews": "outputs/03_reviews_scraped",
-        "details": "outputs/04_details_scraped",
-        "build_details": "outputs/05_details_results",
-        "aggregate_reviews": "outputs/06_generated_summaries",
-        "aggregate_summaries": "reports",
-        "extract_data": "outputs/07_extracted_data",
-        "analyze_correlations": "outputs/08_correlation_results",
-        "analyze_descriptions": "outputs/09_description_analysis",
+        "search_results": "outputs/01_search_results",
+        "details_scrape": "outputs/02_details_scrape",
+        "details_results": "outputs/03_details_results",
+        "reviews_scrape": "outputs/04_reviews_scrape",
+        "comp_sets": "outputs/05_comp_sets",
+        "listing_summaries": "outputs/06_listing_summaries",
+        "area_summary": "outputs/07_area_summary",
+        "correlation_results": "outputs/08_correlation_results",
+        "description_analysis": "outputs/09_description_analysis",
     }
 
     ttl_hours: int = 24 * 7
@@ -70,23 +68,20 @@ class PipelineCacheManager(BaseModel):
             )
 
             self.force_refresh_flags = {
-                "airdna": config.get("force_refresh_scrape_airdna", False),
-                "search": config.get("force_refresh_search", False),
-                "reviews": config.get("force_refresh_reviews", False),
-                "details": config.get("force_refresh_scrape_details", False),
-                "build_details": config.get("force_refresh_build_details", False),
-                "aggregate_reviews": config.get(
-                    "force_refresh_aggregate_reviews", False
+                "search_results": config.get("force_refresh_search_results", False),
+                "details_scrape": config.get("force_refresh_details_scrape", False),
+                "details_results": config.get("force_refresh_details_results", False),
+                "reviews_scrape": config.get("force_refresh_reviews_scrape", False),
+                "comp_sets": config.get("force_refresh_comp_sets", False),
+                "listing_summaries": config.get(
+                    "force_refresh_listing_summaries", False
                 ),
-                "aggregate_summaries": config.get(
-                    "force_refresh_aggregate_summaries", False
+                "area_summary": config.get("force_refresh_area_summary", False),
+                "correlation_results": config.get(
+                    "force_refresh_correlation_results", False
                 ),
-                "extract_data": config.get("force_refresh_extract_data", False),
-                "analyze_correlations": config.get(
-                    "force_refresh_analyze_correlations", False
-                ),
-                "analyze_descriptions": config.get(
-                    "force_refresh_analyze_descriptions", False
+                "description_analysis": config.get(
+                    "force_refresh_description_analysis", False
                 ),
             }
             self._apply_init_cascade()
@@ -101,8 +96,9 @@ class PipelineCacheManager(BaseModel):
         """Return the list of file paths a stage should produce for *zipcode*.
 
         Fixed-count stages derive paths from *zipcode* alone.  Listing-dynamic
-        stages (``airdna``, ``reviews``, ``details``, ``aggregate_reviews``)
-        read the search-results file to enumerate listing IDs.
+        stages (``comp_sets``, ``reviews_scrape``, ``details_scrape``,
+        ``listing_summaries``) read the search-results file to enumerate
+        listing IDs.
 
         Args:
             stage_name: Pipeline stage identifier.
@@ -112,103 +108,101 @@ class PipelineCacheManager(BaseModel):
             List of expected output file paths.  Empty if the stage is unknown
             or prerequisite data (e.g. search results) is missing.
         """
-        if stage_name == "search":
+        if stage_name == "search_results":
             search_dir = self.STAGE_OUTPUT_DIRS.get(
-                "search", "outputs/01_search_results"
+                "search_results", "outputs/01_search_results"
             )
             return [os.path.join(search_dir, f"search_results_{zipcode}.json")]
 
-        if stage_name == "airdna":
+        if stage_name == "comp_sets":
             listing_ids = self._get_listing_ids_for_zipcode(zipcode)
             if not listing_ids:
                 return []
-            airdna_dir = self.STAGE_OUTPUT_DIRS.get("airdna", "outputs/02_comp_sets")
+            comp_dir = self.STAGE_OUTPUT_DIRS.get("comp_sets", "outputs/05_comp_sets")
             files = [
-                os.path.join(airdna_dir, f"listing_{lid}.json") for lid in listing_ids
+                os.path.join(comp_dir, f"listing_{lid}.json") for lid in listing_ids
             ]
-            files.append(os.path.join(airdna_dir, f"comp_set_{zipcode}.json"))
+            files.append(os.path.join(comp_dir, f"comp_set_{zipcode}.json"))
             return files
 
-        if stage_name == "reviews":
+        if stage_name == "reviews_scrape":
             listing_ids = self._get_listing_ids_for_zipcode(zipcode)
             if not listing_ids:
                 return []
             reviews_dir = self.STAGE_OUTPUT_DIRS.get(
-                "reviews", "outputs/03_reviews_scraped"
+                "reviews_scrape", "outputs/04_reviews_scrape"
             )
             return [
                 os.path.join(reviews_dir, f"reviews_{zipcode}_{lid}.json")
                 for lid in listing_ids
             ]
 
-        if stage_name == "details":
+        if stage_name == "details_scrape":
             listing_ids = self._get_listing_ids_for_zipcode(zipcode)
             if not listing_ids:
                 return []
             details_dir = self.STAGE_OUTPUT_DIRS.get(
-                "details", "outputs/04_details_scraped"
+                "details_scrape", "outputs/02_details_scrape"
             )
             return [
                 os.path.join(details_dir, f"property_details_{lid}.json")
                 for lid in listing_ids
             ]
 
-        if stage_name == "aggregate_reviews":
+        if stage_name == "listing_summaries":
             listing_ids = self._get_review_listing_ids_for_zipcode(zipcode)
             if not listing_ids:
                 return []
             summaries_dir = self.STAGE_OUTPUT_DIRS.get(
-                "aggregate_reviews", "outputs/06_generated_summaries"
+                "listing_summaries", "outputs/06_listing_summaries"
             )
             return [
-                os.path.join(summaries_dir, f"generated_summaries_{zipcode}_{lid}.json")
+                os.path.join(summaries_dir, f"listing_summary_{zipcode}_{lid}.json")
                 for lid in listing_ids
             ]
 
-        if stage_name == "build_details":
-            bd_dir = self.STAGE_OUTPUT_DIRS.get(
-                "build_details", "outputs/05_details_results"
+        if stage_name == "details_results":
+            dr_dir = self.STAGE_OUTPUT_DIRS.get(
+                "details_results", "outputs/03_details_results"
             )
             return [
-                os.path.join(bd_dir, f"property_amenities_matrix_{zipcode}.csv"),
+                os.path.join(dr_dir, f"property_amenities_matrix_{zipcode}.csv"),
                 os.path.join(
-                    bd_dir, f"property_amenities_matrix_cleaned_{zipcode}.csv"
+                    dr_dir, f"property_amenities_matrix_cleaned_{zipcode}.csv"
                 ),
-                os.path.join(bd_dir, f"house_rules_details_{zipcode}.json"),
-                os.path.join(bd_dir, f"property_descriptions_{zipcode}.json"),
-                os.path.join(bd_dir, f"neighborhood_highlights_{zipcode}.json"),
+                os.path.join(dr_dir, f"house_rules_details_{zipcode}.json"),
+                os.path.join(dr_dir, f"property_descriptions_{zipcode}.json"),
+                os.path.join(dr_dir, f"neighborhood_highlights_{zipcode}.json"),
             ]
 
-        if stage_name == "aggregate_summaries":
+        if stage_name == "area_summary":
+            as_dir = self.STAGE_OUTPUT_DIRS.get(
+                "area_summary", "outputs/07_area_summary"
+            )
             return [
                 f"reports/area_summary_{zipcode}.json",
                 f"reports/area_summary_{zipcode}.md",
+                os.path.join(as_dir, f"area_data_{zipcode}.json"),
             ]
 
-        if stage_name == "extract_data":
-            ed_dir = self.STAGE_OUTPUT_DIRS.get(
-                "extract_data", "outputs/07_extracted_data"
-            )
-            return [os.path.join(ed_dir, f"area_data_{zipcode}.json")]
-
-        if stage_name == "analyze_correlations":
-            ac_dir = self.STAGE_OUTPUT_DIRS.get(
-                "analyze_correlations", "outputs/08_correlation_results"
+        if stage_name == "correlation_results":
+            cr_dir = self.STAGE_OUTPUT_DIRS.get(
+                "correlation_results", "outputs/08_correlation_results"
             )
             files: list[str] = []
             for metric in self.correlation_metrics:
                 files.append(
-                    os.path.join(ac_dir, f"correlation_stats_{metric}_{zipcode}.json")
+                    os.path.join(cr_dir, f"correlation_stats_{metric}_{zipcode}.json")
                 )
                 files.append(f"reports/correlation_insights_{metric}_{zipcode}.md")
             return files
 
-        if stage_name == "analyze_descriptions":
-            ad_dir = self.STAGE_OUTPUT_DIRS.get(
-                "analyze_descriptions", "outputs/09_description_analysis"
+        if stage_name == "description_analysis":
+            da_dir = self.STAGE_OUTPUT_DIRS.get(
+                "description_analysis", "outputs/09_description_analysis"
             )
             return [
-                os.path.join(ad_dir, f"description_quality_stats_{zipcode}.json"),
+                os.path.join(da_dir, f"description_quality_stats_{zipcode}.json"),
                 f"reports/description_quality_{zipcode}.md",
             ]
 
@@ -242,7 +236,7 @@ class PipelineCacheManager(BaseModel):
         3. The file exists on disk with mtime within TTL
 
         Args:
-            stage_name: Pipeline stage identifier (e.g. "reviews").
+            stage_name: Pipeline stage identifier (e.g. "reviews_scrape").
             file_path: Path to the output file.
 
         Returns:
@@ -265,7 +259,7 @@ class PipelineCacheManager(BaseModel):
         3. All expected output files exist on disk with mtime within TTL
 
         Args:
-            stage_name: Pipeline stage identifier (e.g. "airdna").
+            stage_name: Pipeline stage identifier (e.g. "comp_sets").
             zipcode: Zipcode to scope the freshness check.
 
         Returns:
@@ -359,7 +353,9 @@ class PipelineCacheManager(BaseModel):
         Returns:
             List of listing ID strings.  Empty list if the file is missing.
         """
-        search_dir = self.STAGE_OUTPUT_DIRS.get("search", "outputs/01_search_results")
+        search_dir = self.STAGE_OUTPUT_DIRS.get(
+            "search_results", "outputs/01_search_results"
+        )
         search_path = os.path.join(search_dir, f"search_results_{zipcode}.json")
         if not os.path.isfile(search_path):
             logger.warning(
@@ -392,7 +388,7 @@ class PipelineCacheManager(BaseModel):
             List of listing ID strings.  Empty if no review files found.
         """
         reviews_dir = self.STAGE_OUTPUT_DIRS.get(
-            "reviews", "outputs/03_reviews_scraped"
+            "reviews_scrape", "outputs/04_reviews_scrape"
         )
         pattern = os.path.join(reviews_dir, f"reviews_{zipcode}_*.json")
         listing_ids = []

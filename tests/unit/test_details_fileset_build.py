@@ -17,9 +17,9 @@ class TestDetailsFilesetBuilderCompSetPath:
 
         builder = DetailsFilesetBuilder(
             use_categoricals=False,
-            comp_set_filepath="outputs/02_comp_sets/comp_set_97067.json",
+            comp_set_filepath="outputs/05_comp_sets/comp_set_97067.json",
         )
-        assert builder.comp_set_filepath == "outputs/02_comp_sets/comp_set_97067.json"
+        assert builder.comp_set_filepath == "outputs/05_comp_sets/comp_set_97067.json"
 
     def test_build_fileset_reads_comp_set_file(self, tmp_path):
         """build_fileset reads properties from the comp_set_filepath."""
@@ -73,8 +73,8 @@ class TestDetailsFilesetBuilderCompSetPath:
             str(details_dir),
             create=True,
         ):
-            with patch("os.makedirs"):
-                with patch("pandas.DataFrame.to_csv"):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
                     builder.build_fileset()
 
         assert "12345" in builder.property_details
@@ -279,8 +279,8 @@ class TestHasAirdnaDataFlag:
             "scraper.details_fileset_build.DETAILS_SCRAPED_DIR",
             str(details_dir),
         ):
-            with patch("os.makedirs"):
-                with patch("pandas.DataFrame.to_csv"):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
                     builder.build_fileset()
 
         assert builder.property_details["111"]["has_airdna_data"] is True
@@ -319,8 +319,8 @@ class TestHasAirdnaDataFlag:
             "scraper.details_fileset_build.DETAILS_SCRAPED_DIR",
             str(details_dir),
         ):
-            with patch("os.makedirs"):
-                with patch("pandas.DataFrame.to_csv"):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
                     builder.build_fileset()
 
         assert builder.property_details["222"].get("has_airdna_data") is not True

@@ -135,9 +135,9 @@ class TestAreaAggregatorIntegration:
         with patch(
             "os.listdir",
             return_value=[
-                "generated_summaries_97067_12345678.json",
-                "generated_summaries_97067_87654321.json",
-                "generated_summaries_97067_11111111.json",
+                "listing_summary_97067_12345678.json",
+                "listing_summary_97067_87654321.json",
+                "listing_summary_97067_11111111.json",
             ],
         ):
             with patch(
@@ -339,8 +339,8 @@ class TestEndToEndPipeline:
                 with patch(
                     "os.listdir",
                     return_value=[
-                        "generated_summaries_97067_123.json",
-                        "generated_summaries_97067_456.json",
+                        "listing_summary_97067_123.json",
+                        "listing_summary_97067_456.json",
                     ],
                 ):
                     with patch(
@@ -402,10 +402,10 @@ class TestPipelineCacheIntegration:
 
         pipeline_cache.STAGE_OUTPUT_DIRS = {
             **pipeline_cache.STAGE_OUTPUT_DIRS,
-            "search": str(search_dir),
+            "search_results": str(search_dir),
         }
 
-        assert pipeline_cache.is_stage_fresh("search", "97067") is True
+        assert pipeline_cache.is_stage_fresh("search_results", "97067") is True
 
     def test_force_refresh_causes_rerun(self, tmp_path):
         """Test that force_refresh flag overrides cached status."""
@@ -413,14 +413,14 @@ class TestPipelineCacheIntegration:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
-                "force_refresh_scrape_details": True,
+                "force_refresh_details_scrape": True,
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
             cache = PipelineCacheManager()
 
         # Even with files on disk, force_refresh makes it stale
-        assert cache.is_stage_fresh("details", "97067") is False
+        assert cache.is_stage_fresh("details_scrape", "97067") is False
 
     def test_per_file_skip_in_scraper(self, pipeline_cache, tmp_path):
         """Test that scrapers skip individual files that are cached by mtime."""
@@ -428,7 +428,7 @@ class TestPipelineCacheIntegration:
         with open(output_file, "w") as f:
             json.dump({"12345": [{"review": "Great", "rating": 5}]}, f)
 
-        assert pipeline_cache.is_file_fresh("reviews", output_file) is True
+        assert pipeline_cache.is_file_fresh("reviews_scrape", output_file) is True
 
     def test_deleted_file_not_cached(self, pipeline_cache, tmp_path):
         """Test that a deleted file is not considered fresh."""
@@ -437,11 +437,11 @@ class TestPipelineCacheIntegration:
             json.dump({}, f)
         os.remove(output_file)
 
-        assert pipeline_cache.is_file_fresh("details", output_file) is False
+        assert pipeline_cache.is_file_fresh("details_scrape", output_file) is False
 
     def test_force_refresh_wipes_output_directory(self, tmp_path):
         """Test that clear_stage wipes the output directory when force_refresh is set."""
-        output_dir = tmp_path / "outputs" / "03_reviews_scraped"
+        output_dir = tmp_path / "outputs" / "04_reviews_scrape"
         output_dir.mkdir(parents=True)
 
         # Plant a stale file that should be cleaned up
@@ -452,17 +452,17 @@ class TestPipelineCacheIntegration:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
-                "force_refresh_reviews": True,
+                "force_refresh_reviews_scrape": True,
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
             cache = PipelineCacheManager()
 
         # Simulate what main.py does: check freshness, then clear_stage
-        assert cache.is_stage_fresh("reviews") is False
+        assert cache.is_stage_fresh("reviews_scrape") is False
 
-        cache.STAGE_OUTPUT_DIRS = {"reviews": str(output_dir)}
-        cache.clear_stage("reviews")
+        cache.STAGE_OUTPUT_DIRS = {"reviews_scrape": str(output_dir)}
+        cache.clear_stage("reviews_scrape")
 
         # Stale file should be gone, directory should remain
         assert output_dir.exists()
@@ -482,8 +482,8 @@ class TestPipelineCacheIntegration:
             cache = PipelineCacheManager()
 
         # Simulate reviews being not-fresh → cascade downstream
-        cache.cascade_force_refresh("reviews")
+        cache.cascade_force_refresh("reviews_scrape")
 
-        # details (downstream) should now be forced to refresh
-        assert cache.is_stage_fresh("details", "97067") is False
-        assert cache.force_refresh_flags["details"] is True
+        # comp_sets (downstream) should now be forced to refresh
+        assert cache.is_stage_fresh("comp_sets", "97067") is False
+        assert cache.force_refresh_flags["comp_sets"] is True

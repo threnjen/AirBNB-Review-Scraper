@@ -325,7 +325,7 @@ class TestAirDNAScraperIsCached:
 
     def test_cached_listing_via_file_on_disk(self, scraper, tmp_path, monkeypatch):
         """Listing is cached when the output file exists on disk."""
-        output_dir = tmp_path / "outputs" / "02_comp_sets"
+        output_dir = tmp_path / "outputs" / "05_comp_sets"
         output_dir.mkdir(parents=True)
         (output_dir / "listing_17134562.json").write_text("{}")
         monkeypatch.chdir(tmp_path)
