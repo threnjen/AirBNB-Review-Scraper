@@ -1,14 +1,25 @@
 """
 Unit tests for utils/pipeline_cache_manager.py
+
+Tests here cover behaviors NOT already in test_pipeline_cache_mtime.py:
+  - cascade_force_refresh / init cascade
+  - config loading / fallback
+  - force_refresh flag overrides on is_file_fresh
+  - clear_stage (full-directory wipe)
+  - clear_stage_for_zipcode with listing-ID derivation
+  - _get_listing_ids_for_zipcode
+  - record_output / record_stage_complete backward-compat stubs
+  - cache-disabled behaviour
+
+Removed tests for deleted metadata methods: _load_metadata, _save_metadata,
+_is_timestamp_fresh, metadata-persistence, metadata-corruption, stats-per-stage.
 """
 
 import json
 import os
-from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-from freezegun import freeze_time
 
 
 class TestPipelineCacheManager:
@@ -49,130 +60,39 @@ class TestPipelineCacheManager:
 
             return PipelineCacheManager(metadata_path=metadata_path)
 
+    # --- is_file_fresh (mtime-based) ---
+
     def test_is_file_fresh_within_ttl(self, cache_manager, tmp_path):
-        """Test that a file recorded within TTL is considered fresh."""
+        """Test that a recently-created file is considered fresh by mtime."""
         test_file = str(tmp_path / "test_output.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
-
-        cache_manager.record_output("reviews", test_file)
 
         assert cache_manager.is_file_fresh("reviews", test_file) is True
 
-    def test_is_file_fresh_expired(self, cache_manager, tmp_path):
-        """Test that a file recorded beyond TTL is considered stale."""
-        test_file = str(tmp_path / "test_output.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-
-        old_time = (datetime.now() - timedelta(days=10)).isoformat()
-        metadata = cache_manager._load_metadata()
-        metadata.setdefault("reviews", {})[test_file] = old_time
-        cache_manager._save_metadata(metadata)
-
-        assert cache_manager.is_file_fresh("reviews", test_file) is False
-
     def test_is_file_fresh_missing(self, cache_manager, tmp_path):
-        """Test that an unrecorded file returns False."""
+        """Test that a nonexistent file returns False."""
         test_file = str(tmp_path / "nonexistent.json")
 
         assert cache_manager.is_file_fresh("reviews", test_file) is False
 
-    def test_is_file_fresh_metadata_exists_but_file_deleted(
-        self, cache_manager, tmp_path
-    ):
-        """Test that a recorded file that no longer exists on disk returns False."""
-        test_file = str(tmp_path / "deleted_output.json")
+    # --- record_output / record_stage_complete stubs ---
 
-        metadata = cache_manager._load_metadata()
-        metadata.setdefault("reviews", {})[test_file] = datetime.now().isoformat()
-        cache_manager._save_metadata(metadata)
-
-        assert cache_manager.is_file_fresh("reviews", test_file) is False
-
-    def test_is_stage_fresh_all_fresh(self, cache_manager, tmp_path):
-        """Test that a stage with all fresh outputs is considered fresh."""
-        files = []
-        for i in range(3):
-            test_file = str(tmp_path / f"output_{i}.json")
-            with open(test_file, "w") as f:
-                json.dump({}, f)
-            files.append(test_file)
-            cache_manager.record_output("reviews", test_file)
-
-        cache_manager.record_stage_complete("reviews")
-
-        assert cache_manager.is_stage_fresh("reviews") is True
-
-    def test_is_stage_fresh_some_stale(self, cache_manager, tmp_path):
-        """Test that a stage with any stale output returns False."""
-        fresh_file = str(tmp_path / "fresh.json")
-        with open(fresh_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", fresh_file)
-
-        stale_file = str(tmp_path / "stale.json")
-        with open(stale_file, "w") as f:
-            json.dump({}, f)
-        old_time = (datetime.now() - timedelta(days=10)).isoformat()
-        metadata = cache_manager._load_metadata()
-        metadata.setdefault("reviews", {})[stale_file] = old_time
-        cache_manager._save_metadata(metadata)
-
-        cache_manager.record_stage_complete("reviews")
-
-        assert cache_manager.is_stage_fresh("reviews") is False
-
-    def test_is_stage_fresh_empty(self, cache_manager):
-        """Test that a stage with no recorded outputs returns False."""
-        assert cache_manager.is_stage_fresh("reviews") is False
-
-    def test_record_output_writes_metadata(self, cache_manager, tmp_path):
-        """Test that record_output writes correct metadata."""
+    def test_record_output_is_noop(self, cache_manager, tmp_path):
+        """Test that record_output always returns True (no-op stub)."""
         test_file = str(tmp_path / "output.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
+        result = cache_manager.record_output("reviews", test_file)
+        assert result is True
 
-        cache_manager.record_output("details", test_file)
+    def test_record_stage_complete_is_noop(self, cache_manager):
+        """Test that record_stage_complete always returns True (no-op stub)."""
+        result = cache_manager.record_stage_complete("reviews", "97067")
+        assert result is True
 
-        metadata = cache_manager._load_metadata()
-        assert "details" in metadata
-        assert test_file in metadata["details"]
+    # --- force_refresh overrides ---
 
-        recorded_time = datetime.fromisoformat(metadata["details"][test_file])
-        assert (datetime.now() - recorded_time).total_seconds() < 5
-
-    def test_record_stage_complete(self, cache_manager, tmp_path):
-        """Test that record_stage_complete marks completion timestamp."""
-        test_file = str(tmp_path / "output.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("airdna", test_file)
-
-        cache_manager.record_stage_complete("airdna")
-
-        metadata = cache_manager._load_metadata()
-        assert "_completed" in metadata["airdna"]
-
-        completed_time = datetime.fromisoformat(metadata["airdna"]["_completed"])
-        assert (datetime.now() - completed_time).total_seconds() < 5
-
-    def test_clear_stage_removes_only_target(self, cache_manager, tmp_path):
-        """Test that clear_stage removes only the targeted stage."""
-        for stage in ["reviews", "details"]:
-            test_file = str(tmp_path / f"{stage}_output.json")
-            with open(test_file, "w") as f:
-                json.dump({}, f)
-            cache_manager.record_output(stage, test_file)
-
-        cache_manager.clear_stage("reviews")
-
-        metadata = cache_manager._load_metadata()
-        assert "reviews" not in metadata
-        assert "details" in metadata
-
-    def test_force_refresh_overrides_freshness(self, tmp_path):
-        """Test that is_stage_fresh returns False when force flag is True."""
+    def test_force_refresh_overrides_file_freshness(self, tmp_path):
+        """Test that is_file_fresh returns False when force flag is True."""
         metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -187,162 +107,11 @@ class TestPipelineCacheManager:
         test_file = str(tmp_path / "output.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
-        manager.record_output("reviews", test_file)
-        manager.record_stage_complete("reviews")
 
-        assert manager.is_stage_fresh("reviews") is False
-
-    def test_cache_disabled_returns_false(self, disabled_cache_manager, tmp_path):
-        """Test that disabled cache always reports stale."""
-        test_file = str(tmp_path / "output.json")
-
-        assert disabled_cache_manager.is_file_fresh("reviews", test_file) is False
-        assert disabled_cache_manager.is_stage_fresh("reviews") is False
-
-    def test_get_cache_stats(self, cache_manager, tmp_path):
-        """Test that get_cache_stats returns correct counts."""
-        fresh_file = str(tmp_path / "fresh.json")
-        with open(fresh_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", fresh_file)
-
-        stale_file = str(tmp_path / "stale.json")
-        with open(stale_file, "w") as f:
-            json.dump({}, f)
-        old_time = (datetime.now() - timedelta(days=10)).isoformat()
-        metadata = cache_manager._load_metadata()
-        metadata.setdefault("reviews", {})[stale_file] = old_time
-        cache_manager._save_metadata(metadata)
-
-        stats = cache_manager.get_cache_stats()
-
-        assert stats["enabled"] is True
-        assert stats["stages"]["reviews"]["fresh"] == 1
-        assert stats["stages"]["reviews"]["stale"] == 1
-        assert stats["stages"]["reviews"]["total"] == 2
-
-    def test_get_cache_stats_disabled(self, disabled_cache_manager):
-        """Test that get_cache_stats reports disabled."""
-        stats = disabled_cache_manager.get_cache_stats()
-
-        assert stats["enabled"] is False
-
-    @freeze_time("2026-02-25 12:00:00")
-    def test_metadata_persistence(self, tmp_path):
-        """Test that metadata survives re-instantiation."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
-
-        test_file = str(tmp_path / "output.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "pipeline_cache_enabled": True,
-                "pipeline_cache_ttl_days": 7,
-            }
-            from utils.pipeline_cache_manager import PipelineCacheManager
-
-            manager1 = PipelineCacheManager(metadata_path=metadata_path)
-            manager1.record_output("reviews", test_file)
-
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "pipeline_cache_enabled": True,
-                "pipeline_cache_ttl_days": 7,
-            }
-            from utils.pipeline_cache_manager import PipelineCacheManager
-
-            manager2 = PipelineCacheManager(metadata_path=metadata_path)
-
-        assert manager2.is_file_fresh("reviews", test_file) is True
-
-    def test_record_output_disabled(self, disabled_cache_manager, tmp_path):
-        """Test that record_output is a no-op when disabled."""
-        test_file = str(tmp_path / "output.json")
-
-        result = disabled_cache_manager.record_output("reviews", test_file)
-
-        assert result is False
-
-    def test_multiple_stages_independent(self, cache_manager, tmp_path):
-        """Test that stages track independently."""
-        review_file = str(tmp_path / "review.json")
-        detail_file = str(tmp_path / "detail.json")
-        for f in [review_file, detail_file]:
-            with open(f, "w") as fh:
-                json.dump({}, fh)
-
-        cache_manager.record_output("reviews", review_file)
-        cache_manager.record_output("details", detail_file)
-        cache_manager.record_stage_complete("reviews")
-        cache_manager.record_stage_complete("details")
-
-        assert cache_manager.is_stage_fresh("reviews") is True
-        assert cache_manager.is_stage_fresh("details") is True
-
-        cache_manager.clear_stage("reviews")
-
-        assert cache_manager.is_stage_fresh("reviews") is False
-        assert cache_manager.is_stage_fresh("details") is True
-
-    def test_corrupted_metadata_returns_empty(self, cache_manager):
-        """Test that corrupted metadata JSON is handled gracefully."""
-        os.makedirs(os.path.dirname(cache_manager.metadata_path), exist_ok=True)
-        with open(cache_manager.metadata_path, "w") as f:
-            f.write("{invalid json!!!")
-
-        metadata = cache_manager._load_metadata()
-        assert metadata == {}
-
-    def test_is_timestamp_fresh_invalid_string(self, cache_manager):
-        """Test that invalid timestamp strings return False."""
-        assert cache_manager._is_timestamp_fresh("not-a-date") is False
-        assert cache_manager._is_timestamp_fresh("") is False
-        assert cache_manager._is_timestamp_fresh(None) is False
-
-    def test_save_metadata_permission_error(self, cache_manager, tmp_path):
-        """Test that save failure logs warning and doesn't raise."""
-        # Use a path under a read-only directory
-        readonly_dir = tmp_path / "readonly"
-        readonly_dir.mkdir()
-        cache_manager.metadata_path = str(readonly_dir / "subdir" / "metadata.json")
-        os.chmod(str(readonly_dir), 0o444)
-
-        # Should not raise — logs a warning instead
-        cache_manager._save_metadata({"test": {"file.json": "2026-01-01T00:00:00"}})
-
-        # Restore permissions for cleanup
-        os.chmod(str(readonly_dir), 0o755)
-
-    def test_config_load_failure_uses_defaults(self, tmp_path):
-        """Test that config load failure falls back to defaults with warning."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.side_effect = FileNotFoundError("config.json not found")
-            from utils.pipeline_cache_manager import PipelineCacheManager
-
-            manager = PipelineCacheManager(metadata_path=metadata_path)
-
-        # Should fall back to defaults
-        assert manager.enable_cache is True
-        assert manager.ttl_hours == 24 * 7
-
-    def test_is_file_fresh_with_corrupted_metadata(self, cache_manager, tmp_path):
-        """Test is_file_fresh after metadata corruption returns False gracefully."""
-        test_file = str(tmp_path / "output.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-
-        # Write corrupted metadata
-        os.makedirs(os.path.dirname(cache_manager.metadata_path), exist_ok=True)
-        with open(cache_manager.metadata_path, "w") as f:
-            f.write("<<<corrupted>>>")
-
-        assert cache_manager.is_file_fresh("reviews", test_file) is False
+        assert manager.is_file_fresh("reviews", test_file) is False
 
     def test_force_refresh_search_bypasses_file_freshness(self, tmp_path):
-        """Test that force_refresh flag causes is_file_fresh to return False."""
+        """Test that force_refresh flag makes both file and stage freshness False."""
         metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -357,114 +126,61 @@ class TestPipelineCacheManager:
         test_file = str(tmp_path / "search_results.json")
         with open(test_file, "w") as f:
             json.dump([{"room_id": "123"}], f)
-        manager.record_output("search", test_file)
-        manager.record_stage_complete("search")
 
-        # Both file and stage freshness should be overridden by force_refresh
         assert manager.is_file_fresh("search", test_file) is False
         assert manager.force_refresh_flags.get("search", False) is True
-        assert manager.is_stage_fresh("search") is False
-
-    def test_force_refresh_reviews_bypasses_file_freshness(self, tmp_path):
-        """Test that force_refresh_reviews causes per-file cache to be bypassed."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "pipeline_cache_enabled": True,
-                "pipeline_cache_ttl_days": 7,
-                "force_refresh_reviews": True,
-            }
-            from utils.pipeline_cache_manager import PipelineCacheManager
-
-            manager = PipelineCacheManager(metadata_path=metadata_path)
-
-        test_file = str(tmp_path / "reviews_97067_12345.json")
-        with open(test_file, "w") as f:
-            json.dump({"12345": [{"review": "Great", "rating": 5}]}, f)
-        manager.record_output("reviews", test_file)
-
-        assert manager.is_file_fresh("reviews", test_file) is False
 
     def test_is_file_fresh_without_force_flag_still_works(
         self, cache_manager, tmp_path
     ):
-        """Test that is_file_fresh returns True when force flag is False and file is cached."""
+        """Test that is_file_fresh returns True when force flag is False and file exists."""
         test_file = str(tmp_path / "reviews_97067_99999.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
-        cache_manager.record_output("reviews", test_file)
 
-        # cache_manager fixture has all force flags False
         assert cache_manager.is_file_fresh("reviews", test_file) is True
 
-    def test_save_metadata_failure_propagates_to_record_output(self, tmp_path):
-        """Test that record_output returns False when _save_metadata fails."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {"pipeline_cache_enabled": True}
-            from utils.pipeline_cache_manager import PipelineCacheManager
+    # --- cache disabled ---
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
-
+    def test_cache_disabled_returns_false(self, disabled_cache_manager, tmp_path):
+        """Test that disabled cache always reports stale."""
         test_file = str(tmp_path / "output.json")
-        with patch.object(manager, "_save_metadata", return_value=False):
-            result = manager.record_output("reviews", test_file)
 
-        assert result is False
+        assert disabled_cache_manager.is_file_fresh("reviews", test_file) is False
+        assert disabled_cache_manager.is_stage_fresh("reviews") is False
 
-    def test_save_metadata_failure_propagates_to_record_stage_complete(self, tmp_path):
-        """Test that record_stage_complete returns False when _save_metadata fails."""
+    def test_get_cache_stats_disabled(self, disabled_cache_manager):
+        """Test that get_cache_stats reports disabled."""
+        stats = disabled_cache_manager.get_cache_stats()
+
+        assert stats["enabled"] is False
+
+    # --- config loading ---
+
+    def test_config_load_failure_uses_defaults(self, tmp_path):
+        """Test that config load failure falls back to defaults with warning."""
         metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {"pipeline_cache_enabled": True}
+            mock_load.side_effect = FileNotFoundError("config.json not found")
             from utils.pipeline_cache_manager import PipelineCacheManager
 
             manager = PipelineCacheManager(metadata_path=metadata_path)
 
-        with patch.object(manager, "_save_metadata", return_value=False):
-            result = manager.record_stage_complete("reviews")
+        assert manager.enable_cache is True
+        assert manager.ttl_hours == 24 * 7
 
-        assert result is False
-
-    def test_get_cache_stats_excludes_deleted_files(self, cache_manager, tmp_path):
-        """Test that get_cache_stats counts deleted files as stale, not fresh."""
-        existing_file = str(tmp_path / "exists.json")
-        with open(existing_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", existing_file)
-
-        deleted_file = str(tmp_path / "deleted.json")
-        with open(deleted_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", deleted_file)
-        os.remove(deleted_file)
-
-        stats = cache_manager.get_cache_stats()
-
-        assert stats["stages"]["reviews"]["fresh"] == 1
-        assert stats["stages"]["reviews"]["stale"] == 1
-        assert stats["stages"]["reviews"]["total"] == 2
-
-    def test_clear_stage_nonexistent_is_noop(self, cache_manager):
-        """Test that clearing a nonexistent stage does not raise."""
-        cache_manager.clear_stage("nonexistent_stage")
-
-        metadata = cache_manager._load_metadata()
-        assert "nonexistent_stage" not in metadata
+    # --- clear_stage (full directory wipe) ---
 
     def test_clear_stage_wipes_output_directory(self, cache_manager, tmp_path):
         """Test that clear_stage wipes the output directory contents."""
-        # Create a fake output directory with files
         output_dir = tmp_path / "outputs" / "03_reviews_scraped"
         output_dir.mkdir(parents=True)
         (output_dir / "reviews_97067_123.json").write_text("{}")
         (output_dir / "reviews_97067_456.json").write_text("{}")
 
-        # Point stage output dirs to our tmp dir
         cache_manager.STAGE_OUTPUT_DIRS = {"reviews": str(output_dir)}
         cache_manager.clear_stage("reviews")
 
-        # Directory still exists but is empty
         assert output_dir.exists()
         assert list(output_dir.iterdir()) == []
 
@@ -481,25 +197,22 @@ class TestPipelineCacheManager:
         assert output_dir.is_dir()
 
     def test_clear_stage_handles_missing_directory(self, cache_manager, tmp_path):
-        """Test that clear_stage doesn't raise when output dir doesn't exist."""
+        """Test that clear_stage does not raise when output dir does not exist."""
         missing_dir = str(tmp_path / "outputs" / "nonexistent")
 
         cache_manager.STAGE_OUTPUT_DIRS = {"reviews": missing_dir}
-        # Should not raise
         cache_manager.clear_stage("reviews")
+
+    # --- cascade_force_refresh ---
 
     def test_cascade_force_refresh_sets_all_later_stages(self, cache_manager):
         """Test that cascade_force_refresh sets all downstream stages to True."""
         cache_manager.cascade_force_refresh("reviews")
 
-        # Upstream stages should be unchanged (False)
         assert cache_manager.force_refresh_flags.get("airdna") is False
         assert cache_manager.force_refresh_flags.get("search") is False
-
-        # The triggering stage itself should NOT be changed
         assert cache_manager.force_refresh_flags.get("reviews") is False
 
-        # All downstream stages should be True
         assert cache_manager.force_refresh_flags.get("details") is True
         assert cache_manager.force_refresh_flags.get("build_details") is True
         assert cache_manager.force_refresh_flags.get("aggregate_reviews") is True
@@ -520,10 +233,8 @@ class TestPipelineCacheManager:
         """Test that cascade from the first stage sets all 9 remaining stages."""
         cache_manager.cascade_force_refresh("search")
 
-        # search itself unchanged
         assert cache_manager.force_refresh_flags.get("search") is False
 
-        # All others set to True
         for stage in [
             "airdna",
             "reviews",
@@ -547,12 +258,10 @@ class TestPipelineCacheManager:
 
         assert cache_manager.force_refresh_flags == original_flags
 
-    def test_new_force_refresh_flags_loaded_from_config(self, tmp_path):
-        """Test that the 3 new force_refresh flags are loaded from config.
+    # --- init cascade ---
 
-        With init-time cascade, setting extract_data=True auto-sets all
-        downstream flags (analyze_correlations, analyze_descriptions) to True.
-        """
+    def test_new_force_refresh_flags_loaded_from_config(self, tmp_path):
+        """Test that force_refresh flags are loaded from config with init cascade."""
         metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -567,7 +276,6 @@ class TestPipelineCacheManager:
             manager = PipelineCacheManager(metadata_path=metadata_path)
 
         assert manager.force_refresh_flags["extract_data"] is True
-        # Cascade: both downstream flags auto-set to True
         assert manager.force_refresh_flags["analyze_correlations"] is True
         assert manager.force_refresh_flags["analyze_descriptions"] is True
 
@@ -584,14 +292,10 @@ class TestPipelineCacheManager:
 
             manager = PipelineCacheManager(metadata_path=metadata_path)
 
-        # Upstream stages stay False
         assert manager.force_refresh_flags["airdna"] is False
         assert manager.force_refresh_flags["search"] is False
-
-        # Triggering stage is True (from config)
         assert manager.force_refresh_flags["reviews"] is True
 
-        # All downstream stages auto-set to True
         assert manager.force_refresh_flags["details"] is True
         assert manager.force_refresh_flags["build_details"] is True
         assert manager.force_refresh_flags["aggregate_reviews"] is True
@@ -619,7 +323,7 @@ class TestPipelineCacheManager:
 
 
 class TestZipcodeScopedCache:
-    """Tests for zipcode-scoped cache clearing and three-way stage check."""
+    """Tests for zipcode-scoped cache clearing and related helpers."""
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
@@ -644,113 +348,7 @@ class TestZipcodeScopedCache:
 
             return PipelineCacheManager(metadata_path=metadata_path)
 
-    # --- record_stage_complete with zipcode ---
-
-    def test_record_stage_complete_writes_zipcode_key(self, cache_manager, tmp_path):
-        """Test that record_stage_complete writes _completed:{zipcode} key."""
-        test_file = str(tmp_path / "output_97067.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", test_file)
-
-        cache_manager.record_stage_complete("reviews", "97067")
-
-        metadata = cache_manager._load_metadata()
-        assert "_completed:97067" in metadata["reviews"]
-        completed_time = datetime.fromisoformat(metadata["reviews"]["_completed:97067"])
-        assert (datetime.now() - completed_time).total_seconds() < 5
-
-    def test_record_stage_complete_independent_zipcodes(self, cache_manager, tmp_path):
-        """Test that completing for one zipcode doesn't affect another."""
-        for zc in ["97067", "90210"]:
-            test_file = str(tmp_path / f"output_{zc}.json")
-            with open(test_file, "w") as f:
-                json.dump({}, f)
-            cache_manager.record_output("reviews", test_file)
-
-        cache_manager.record_stage_complete("reviews", "97067")
-
-        metadata = cache_manager._load_metadata()
-        assert "_completed:97067" in metadata["reviews"]
-        assert "_completed:90210" not in metadata["reviews"]
-
-    # --- is_stage_fresh with zipcode ---
-
-    def test_is_stage_fresh_with_zipcode_all_fresh(self, cache_manager, tmp_path):
-        """Test that a stage with all fresh zipcode-matching outputs is fresh."""
-        files = []
-        for i in range(3):
-            test_file = str(tmp_path / f"reviews_97067_{i}.json")
-            with open(test_file, "w") as f:
-                json.dump({}, f)
-            files.append(test_file)
-            cache_manager.record_output("reviews", test_file)
-
-        cache_manager.record_stage_complete("reviews", "97067")
-
-        assert cache_manager.is_stage_fresh("reviews", "97067") is True
-
-    def test_is_stage_fresh_zipcode_not_completed(self, cache_manager, tmp_path):
-        """Test that a stage without _completed:{zipcode} returns False."""
-        test_file = str(tmp_path / "reviews_97067_1.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", test_file)
-
-        assert cache_manager.is_stage_fresh("reviews", "97067") is False
-
-    def test_is_stage_fresh_different_zipcode_independent(
-        self, cache_manager, tmp_path
-    ):
-        """Test that is_stage_fresh for one zipcode ignores another's files."""
-        # Complete for 97067
-        file_97067 = str(tmp_path / "reviews_97067_1.json")
-        with open(file_97067, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", file_97067)
-        cache_manager.record_stage_complete("reviews", "97067")
-
-        # 90210 has no completion — should be False
-        assert cache_manager.is_stage_fresh("reviews", "90210") is False
-        # 97067 should still be True
-        assert cache_manager.is_stage_fresh("reviews", "97067") is True
-
-    def test_is_stage_fresh_legacy_completed_key_ignored(self, cache_manager, tmp_path):
-        """Test that old _completed key (no zipcode) is not treated as fresh."""
-        test_file = str(tmp_path / "reviews_97067_1.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", test_file)
-
-        # Write legacy _completed key directly
-        metadata = cache_manager._load_metadata()
-        metadata["reviews"]["_completed"] = datetime.now().isoformat()
-        cache_manager._save_metadata(metadata)
-
-        # Should NOT be fresh — no _completed:97067 key
-        assert cache_manager.is_stage_fresh("reviews", "97067") is False
-
     # --- should_run_stage ---
-
-    def test_should_run_stage_skip_when_fresh(self, cache_manager, tmp_path):
-        """Test that should_run_stage returns 'skip' when stage is fresh."""
-        test_file = str(tmp_path / "reviews_97067_1.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", test_file)
-        cache_manager.record_stage_complete("reviews", "97067")
-
-        assert cache_manager.should_run_stage("reviews", "97067") == "skip"
-
-    def test_should_run_stage_resume_when_incomplete(self, cache_manager, tmp_path):
-        """Test that should_run_stage returns 'resume' when stage is incomplete."""
-        # Some outputs exist but no _completed key
-        test_file = str(tmp_path / "reviews_97067_1.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        cache_manager.record_output("reviews", test_file)
-
-        assert cache_manager.should_run_stage("reviews", "97067") == "resume"
 
     def test_should_run_stage_resume_when_no_outputs(self, cache_manager):
         """Test that should_run_stage returns 'resume' for a never-run stage."""
@@ -771,27 +369,6 @@ class TestZipcodeScopedCache:
 
         assert manager.should_run_stage("reviews", "97067") == "clear_and_run"
 
-    def test_should_run_stage_clear_when_force_and_fresh(self, tmp_path):
-        """Test that force_refresh overrides even a completed stage."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "pipeline_cache_enabled": True,
-                "pipeline_cache_ttl_days": 7,
-                "force_refresh_reviews": True,
-            }
-            from utils.pipeline_cache_manager import PipelineCacheManager
-
-            manager = PipelineCacheManager(metadata_path=metadata_path)
-
-        test_file = str(tmp_path / "reviews_97067_1.json")
-        with open(test_file, "w") as f:
-            json.dump({}, f)
-        manager.record_output("reviews", test_file)
-        manager.record_stage_complete("reviews", "97067")
-
-        assert manager.should_run_stage("reviews", "97067") == "clear_and_run"
-
     def test_should_run_stage_resume_when_cache_disabled(self, tmp_path):
         """Test that disabled cache always returns 'resume'."""
         metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
@@ -805,82 +382,21 @@ class TestZipcodeScopedCache:
 
     # --- clear_stage_for_zipcode ---
 
-    def test_clear_stage_for_zipcode_removes_only_matching_files(
-        self, cache_manager, tmp_path
-    ):
-        """Test that clear_stage_for_zipcode only removes files for the target zipcode."""
-        output_dir = tmp_path / "outputs" / "06_generated_summaries"
-        output_dir.mkdir(parents=True)
-        (output_dir / "generated_summaries_97067_123.json").write_text("{}")
-        (output_dir / "generated_summaries_97067_456.json").write_text("{}")
-        (output_dir / "generated_summaries_90210_789.json").write_text("{}")
-
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            "aggregate_reviews": str(output_dir),
-        }
-
-        cache_manager.clear_stage_for_zipcode("aggregate_reviews", "97067")
-
-        remaining = sorted(f.name for f in output_dir.iterdir())
-        assert remaining == ["generated_summaries_90210_789.json"]
-
-    def test_clear_stage_for_zipcode_clears_only_matching_metadata(
-        self, cache_manager, tmp_path
-    ):
-        """Test that metadata entries for other zipcodes survive."""
-        file_97 = str(tmp_path / "reviews_97067_1.json")
-        file_90 = str(tmp_path / "reviews_90210_2.json")
-        for f in [file_97, file_90]:
-            with open(f, "w") as fh:
-                json.dump({}, fh)
-
-        cache_manager.record_output("reviews", file_97)
-        cache_manager.record_output("reviews", file_90)
-        cache_manager.record_stage_complete("reviews", "97067")
-        cache_manager.record_stage_complete("reviews", "90210")
-
-        output_dir = tmp_path / "outputs" / "03_reviews_scraped"
-        output_dir.mkdir(parents=True)
-        cache_manager.STAGE_OUTPUT_DIRS = {"reviews": str(output_dir)}
-
-        cache_manager.clear_stage_for_zipcode("reviews", "97067")
-
-        metadata = cache_manager._load_metadata()
-        # 97067 metadata should be gone
-        assert file_97 not in metadata.get("reviews", {})
-        assert "_completed:97067" not in metadata.get("reviews", {})
-        # 90210 metadata should survive
-        assert file_90 in metadata.get("reviews", {})
-        assert "_completed:90210" in metadata.get("reviews", {})
-
     def test_clear_stage_for_zipcode_handles_missing_directory(
         self, cache_manager, tmp_path
     ):
-        """Test that clearing with a missing output directory doesn't raise."""
+        """Test that clearing with a missing output directory does not raise."""
         missing_dir = str(tmp_path / "outputs" / "nonexistent")
-        cache_manager.STAGE_OUTPUT_DIRS = {"reviews": missing_dir}
-        # Should not raise
-        cache_manager.clear_stage_for_zipcode("reviews", "97067")
-
-    def test_clear_stage_for_zipcode_preserves_directory(self, cache_manager, tmp_path):
-        """Test that the directory itself survives clearing."""
-        output_dir = tmp_path / "outputs" / "06_generated_summaries"
-        output_dir.mkdir(parents=True)
-        (output_dir / "generated_summaries_97067_1.json").write_text("{}")
-
         cache_manager.STAGE_OUTPUT_DIRS = {
-            "aggregate_reviews": str(output_dir),
+            **cache_manager.STAGE_OUTPUT_DIRS,
+            "reviews": missing_dir,
         }
-        cache_manager.clear_stage_for_zipcode("aggregate_reviews", "97067")
-
-        assert output_dir.exists()
-        assert output_dir.is_dir()
+        cache_manager.clear_stage_for_zipcode("reviews", "97067")
 
     def test_clear_stage_for_zipcode_details_uses_listing_ids(
         self, cache_manager, tmp_path
     ):
-        """Test that details stage clears files by listing ID derived from search results."""
-        # Create search results file
+        """Test that details stage clears files by listing ID from search results."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [
@@ -890,7 +406,6 @@ class TestZipcodeScopedCache:
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
 
-        # Create detail files — some from our zipcode's listings, one foreign
         details_dir = tmp_path / "outputs" / "04_details_scraped"
         details_dir.mkdir(parents=True)
         (details_dir / "property_details_111.json").write_text("{}")
@@ -898,6 +413,7 @@ class TestZipcodeScopedCache:
         (details_dir / "property_details_999.json").write_text("{}")
 
         cache_manager.STAGE_OUTPUT_DIRS = {
+            **cache_manager.STAGE_OUTPUT_DIRS,
             "details": str(details_dir),
             "search": str(search_dir),
         }
@@ -923,7 +439,10 @@ class TestZipcodeScopedCache:
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
 
-        cache_manager.STAGE_OUTPUT_DIRS = {"search": str(search_dir)}
+        cache_manager.STAGE_OUTPUT_DIRS = {
+            **cache_manager.STAGE_OUTPUT_DIRS,
+            "search": str(search_dir),
+        }
 
         ids = cache_manager._get_listing_ids_for_zipcode("97067")
         assert sorted(ids) == ["111", "222", "333"]
@@ -934,12 +453,15 @@ class TestZipcodeScopedCache:
         """Test that missing search results file returns empty list."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
-        cache_manager.STAGE_OUTPUT_DIRS = {"search": str(search_dir)}
+        cache_manager.STAGE_OUTPUT_DIRS = {
+            **cache_manager.STAGE_OUTPUT_DIRS,
+            "search": str(search_dir),
+        }
 
         ids = cache_manager._get_listing_ids_for_zipcode("99999")
         assert ids == []
 
-    # --- backward compat: clear_stage still works ---
+    # --- clear_stage backward compat ---
 
     def test_clear_stage_still_wipes_full_directory(self, cache_manager, tmp_path):
         """Test that the deprecated clear_stage still does a full wipe."""

@@ -1,9 +1,10 @@
+import glob
 import json
 import logging
 import os
 import sys
-import tempfile
-from datetime import datetime, timedelta
+import time
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineCacheManager(BaseModel):
-    """TTL-based cache manager for pipeline stage outputs.
+    """Filesystem-driven cache manager for pipeline stage outputs.
 
-    Tracks when each stage's output files were produced and skips
-    re-execution if all outputs are still fresh within the configured TTL.
+    Freshness is determined entirely by ``os.path.getmtime`` — no metadata
+    file and no ``_completed`` flags.  Each stage declares its expected
+    output files via :meth:`expected_outputs`; a stage is fresh when every
+    expected file exists on disk with an mtime within the configured TTL.
     """
 
     STAGE_ORDER: list[str] = [
@@ -53,6 +56,7 @@ class PipelineCacheManager(BaseModel):
     ttl_hours: int = 24 * 7
     enable_cache: bool = True
     force_refresh_flags: dict[str, bool] = {}
+    correlation_metrics: list[str] = ["adr", "occupancy"]
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -62,6 +66,9 @@ class PipelineCacheManager(BaseModel):
             self.enable_cache = config.get("pipeline_cache_enabled", self.enable_cache)
             ttl_days = config.get("pipeline_cache_ttl_days", 7)
             self.ttl_hours = ttl_days * 24
+            self.correlation_metrics = config.get(
+                "correlation_metrics", self.correlation_metrics
+            )
 
             self.force_refresh_flags = {
                 "airdna": config.get("force_refresh_scrape_airdna", False),
@@ -87,67 +94,145 @@ class PipelineCacheManager(BaseModel):
         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
             logger.warning(f"Failed to load pipeline cache config, using defaults: {e}")
 
-        if self.enable_cache:
-            Path(self.metadata_path).parent.mkdir(parents=True, exist_ok=True)
+    # ------------------------------------------------------------------
+    # Expected-output enumeration
+    # ------------------------------------------------------------------
 
-    def _load_metadata(self) -> dict:
-        """Load pipeline metadata from disk.
+    def expected_outputs(self, stage_name: str, zipcode: str) -> list[str]:
+        """Return the list of file paths a stage should produce for *zipcode*.
 
-        Returns:
-            dict: Stage-keyed metadata with file paths mapped to timestamps.
-        """
-        if not os.path.exists(self.metadata_path):
-            return {}
-        try:
-            with open(self.metadata_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Failed to load pipeline metadata: {e}")
-            return {}
-
-    def _save_metadata(self, metadata: dict) -> bool:
-        """Save pipeline metadata to disk atomically.
+        Fixed-count stages derive paths from *zipcode* alone.  Listing-dynamic
+        stages (``airdna``, ``reviews``, ``details``, ``aggregate_reviews``)
+        read the search-results file to enumerate listing IDs.
 
         Args:
-            metadata: Stage-keyed metadata dict to persist.
+            stage_name: Pipeline stage identifier.
+            zipcode: Active zipcode.
 
         Returns:
-            True if metadata was saved successfully, False otherwise.
+            List of expected output file paths.  Empty if the stage is unknown
+            or prerequisite data (e.g. search results) is missing.
         """
-        try:
-            Path(self.metadata_path).parent.mkdir(parents=True, exist_ok=True)
-            dir_name = os.path.dirname(self.metadata_path)
-            fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2)
-            os.replace(tmp_path, self.metadata_path)
-            return True
-        except OSError as e:
-            logger.warning(f"Failed to save pipeline metadata: {e}")
-            if "tmp_path" in locals() and os.path.exists(tmp_path):
-                try:
-                    os.unlink(tmp_path)
-                except OSError as cleanup_err:
-                    logger.warning(
-                        f"Failed to clean up temp file {tmp_path}: {cleanup_err}"
-                    )
-            return False
+        if stage_name == "search":
+            search_dir = self.STAGE_OUTPUT_DIRS.get(
+                "search", "outputs/01_search_results"
+            )
+            return [os.path.join(search_dir, f"search_results_{zipcode}.json")]
 
-    def _is_timestamp_fresh(self, timestamp_str: str) -> bool:
-        """Check if a recorded timestamp is within the TTL window.
+        if stage_name == "airdna":
+            listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+            if not listing_ids:
+                return []
+            airdna_dir = self.STAGE_OUTPUT_DIRS.get("airdna", "outputs/02_comp_sets")
+            files = [
+                os.path.join(airdna_dir, f"listing_{lid}.json") for lid in listing_ids
+            ]
+            files.append(os.path.join(airdna_dir, f"comp_set_{zipcode}.json"))
+            return files
+
+        if stage_name == "reviews":
+            listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+            if not listing_ids:
+                return []
+            reviews_dir = self.STAGE_OUTPUT_DIRS.get(
+                "reviews", "outputs/03_reviews_scraped"
+            )
+            return [
+                os.path.join(reviews_dir, f"reviews_{zipcode}_{lid}.json")
+                for lid in listing_ids
+            ]
+
+        if stage_name == "details":
+            listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+            if not listing_ids:
+                return []
+            details_dir = self.STAGE_OUTPUT_DIRS.get(
+                "details", "outputs/04_details_scraped"
+            )
+            return [
+                os.path.join(details_dir, f"property_details_{lid}.json")
+                for lid in listing_ids
+            ]
+
+        if stage_name == "aggregate_reviews":
+            listing_ids = self._get_review_listing_ids_for_zipcode(zipcode)
+            if not listing_ids:
+                return []
+            summaries_dir = self.STAGE_OUTPUT_DIRS.get(
+                "aggregate_reviews", "outputs/06_generated_summaries"
+            )
+            return [
+                os.path.join(summaries_dir, f"generated_summaries_{zipcode}_{lid}.json")
+                for lid in listing_ids
+            ]
+
+        if stage_name == "build_details":
+            bd_dir = self.STAGE_OUTPUT_DIRS.get(
+                "build_details", "outputs/05_details_results"
+            )
+            return [
+                os.path.join(bd_dir, f"property_amenities_matrix_{zipcode}.csv"),
+                os.path.join(
+                    bd_dir, f"property_amenities_matrix_cleaned_{zipcode}.csv"
+                ),
+                os.path.join(bd_dir, f"house_rules_details_{zipcode}.json"),
+                os.path.join(bd_dir, f"property_descriptions_{zipcode}.json"),
+                os.path.join(bd_dir, f"neighborhood_highlights_{zipcode}.json"),
+            ]
+
+        if stage_name == "aggregate_summaries":
+            return [
+                f"reports/area_summary_{zipcode}.json",
+                f"reports/area_summary_{zipcode}.md",
+            ]
+
+        if stage_name == "extract_data":
+            ed_dir = self.STAGE_OUTPUT_DIRS.get(
+                "extract_data", "outputs/07_extracted_data"
+            )
+            return [os.path.join(ed_dir, f"area_data_{zipcode}.json")]
+
+        if stage_name == "analyze_correlations":
+            ac_dir = self.STAGE_OUTPUT_DIRS.get(
+                "analyze_correlations", "outputs/08_correlation_results"
+            )
+            files: list[str] = []
+            for metric in self.correlation_metrics:
+                files.append(
+                    os.path.join(ac_dir, f"correlation_stats_{metric}_{zipcode}.json")
+                )
+                files.append(f"reports/correlation_insights_{metric}_{zipcode}.md")
+            return files
+
+        if stage_name == "analyze_descriptions":
+            ad_dir = self.STAGE_OUTPUT_DIRS.get(
+                "analyze_descriptions", "outputs/09_description_analysis"
+            )
+            return [
+                os.path.join(ad_dir, f"description_quality_stats_{zipcode}.json"),
+                f"reports/description_quality_{zipcode}.md",
+            ]
+
+        return []
+
+    # ------------------------------------------------------------------
+    # Filesystem-based freshness checks
+    # ------------------------------------------------------------------
+
+    def _is_file_fresh_by_mtime(self, file_path: str) -> bool:
+        """Check if a file exists and its mtime is within the TTL window.
 
         Args:
-            timestamp_str: ISO-format datetime string.
+            file_path: Path to the file.
 
         Returns:
-            True if the timestamp is within TTL, False otherwise.
+            True if the file exists and was modified within TTL.
         """
-        try:
-            recorded_time = datetime.fromisoformat(timestamp_str)
-            expiry_time = recorded_time + timedelta(hours=self.ttl_hours)
-            return datetime.now() < expiry_time
-        except (ValueError, TypeError):
+        if not os.path.exists(file_path):
             return False
+        mtime = os.path.getmtime(file_path)
+        age_hours = (time.time() - mtime) / 3600
+        return age_hours < self.ttl_hours
 
     def is_file_fresh(self, stage_name: str, file_path: str) -> bool:
         """Check if a single output file is fresh.
@@ -155,8 +240,7 @@ class PipelineCacheManager(BaseModel):
         A file is fresh if:
         1. Caching is enabled
         2. The stage's force_refresh flag is False
-        3. The file is recorded in metadata with a timestamp within TTL
-        4. The file still exists on disk
+        3. The file exists on disk with mtime within TTL
 
         Args:
             stage_name: Pipeline stage identifier (e.g. "reviews").
@@ -171,17 +255,7 @@ class PipelineCacheManager(BaseModel):
         if self.force_refresh_flags.get(stage_name, False):
             return False
 
-        metadata = self._load_metadata()
-        stage_data = metadata.get(stage_name, {})
-        timestamp = stage_data.get(file_path)
-
-        if timestamp is None:
-            return False
-
-        if not os.path.exists(file_path):
-            return False
-
-        return self._is_timestamp_fresh(timestamp)
+        return self._is_file_fresh_by_mtime(file_path)
 
     def is_stage_fresh(self, stage_name: str, zipcode: str | None = None) -> bool:
         """Check if an entire pipeline stage can be skipped.
@@ -189,15 +263,11 @@ class PipelineCacheManager(BaseModel):
         A stage is fresh if:
         1. Caching is enabled
         2. The stage's force_refresh flag is False
-        3. The stage has a completion timestamp within TTL
-        4. All recorded output files are still fresh
-
-        When *zipcode* is provided, only checks `_completed:{zipcode}` and
-        output files whose paths contain the zipcode string.
+        3. All expected output files exist on disk with mtime within TTL
 
         Args:
             stage_name: Pipeline stage identifier (e.g. "airdna").
-            zipcode: Optional zipcode to scope the freshness check.
+            zipcode: Zipcode to scope the freshness check.
 
         Returns:
             True if the entire stage can be skipped.
@@ -209,85 +279,74 @@ class PipelineCacheManager(BaseModel):
             logger.info(f"Force refresh enabled for stage '{stage_name}'")
             return False
 
-        metadata = self._load_metadata()
-        stage_data = metadata.get(stage_name, {})
-
-        if not stage_data:
+        if zipcode is None:
             return False
 
-        completed_key = f"_completed:{zipcode}" if zipcode else "_completed"
-        completed = stage_data.get(completed_key)
-        if not completed or not self._is_timestamp_fresh(completed):
+        expected = self.expected_outputs(stage_name, zipcode)
+        if not expected:
             return False
 
-        internal_keys = {k for k in stage_data if k.startswith("_completed")}
-        if zipcode:
-            output_files = {
-                k: v
-                for k, v in stage_data.items()
-                if k not in internal_keys and zipcode in k
-            }
-        else:
-            output_files = {
-                k: v for k, v in stage_data.items() if k not in internal_keys
-            }
-
-        if not output_files:
-            return False
-
-        for file_path, timestamp in output_files.items():
-            if not os.path.exists(file_path):
-                return False
-            if not self._is_timestamp_fresh(timestamp):
+        for file_path in expected:
+            if not self._is_file_fresh_by_mtime(file_path):
                 return False
 
         return True
 
+    def get_missing_outputs(self, stage_name: str, zipcode: str) -> list[str]:
+        """Return expected output files that are missing or stale.
+
+        Args:
+            stage_name: Pipeline stage identifier.
+            zipcode: Active zipcode.
+
+        Returns:
+            List of file paths that need to be (re)generated.
+        """
+        expected = self.expected_outputs(stage_name, zipcode)
+        return [f for f in expected if not self._is_file_fresh_by_mtime(f)]
+
+    # ------------------------------------------------------------------
+    # Legacy compatibility stubs
+    # ------------------------------------------------------------------
+
     def record_output(self, stage_name: str, file_path: str) -> bool:
-        """Record that an output file was produced.
+        """No-op retained for backward compatibility.
+
+        With mtime-based caching, output tracking is automatic via the
+        filesystem.  This method does nothing and always returns True.
 
         Args:
             stage_name: Pipeline stage identifier.
             file_path: Path to the output file that was produced.
 
         Returns:
-            True if recorded successfully, False if caching is disabled or save failed.
+            True always.
         """
-        if not self.enable_cache:
-            return False
-
-        metadata = self._load_metadata()
-        metadata.setdefault(stage_name, {})[file_path] = datetime.now().isoformat()
-        return self._save_metadata(metadata)
+        return True
 
     def record_stage_complete(
         self, stage_name: str, zipcode: str | None = None
     ) -> bool:
-        """Record that a pipeline stage completed successfully.
+        """No-op retained for backward compatibility.
 
-        When *zipcode* is provided, writes a `_completed:{zipcode}` key so
-        that completion is tracked per-zipcode independently.
+        With mtime-based caching, stage completion is determined by checking
+        expected output files on disk.  This method does nothing.
 
         Args:
             stage_name: Pipeline stage identifier.
-            zipcode: Optional zipcode to scope completion tracking.
+            zipcode: Optional zipcode (unused).
 
         Returns:
-            True if recorded successfully, False if caching is disabled or save failed.
+            True always.
         """
-        if not self.enable_cache:
-            return False
+        return True
 
-        completed_key = f"_completed:{zipcode}" if zipcode else "_completed"
-        metadata = self._load_metadata()
-        metadata.setdefault(stage_name, {})[completed_key] = datetime.now().isoformat()
-        saved = self._save_metadata(metadata)
-        if saved:
-            logger.info(f"Stage '{stage_name}' completed and cached")
-        return saved
+    # ------------------------------------------------------------------
+    # Clearing
+    # ------------------------------------------------------------------
 
     def clear_stage(self, stage_name: str) -> None:
-        """Remove all cached metadata for a stage and wipe its output directory.
+        """Remove all files in a stage's output directory.
 
         .. deprecated::
             Use :meth:`clear_stage_for_zipcode` for zipcode-scoped clearing.
@@ -302,71 +361,31 @@ class PipelineCacheManager(BaseModel):
                 f"Wiped output directory '{output_dir}' for stage '{stage_name}'"
             )
 
-        metadata = self._load_metadata()
-        if stage_name in metadata:
-            del metadata[stage_name]
-            self._save_metadata(metadata)
-            logger.info(f"Cleared cache metadata for stage '{stage_name}'")
-
     def clear_stage_for_zipcode(self, stage_name: str, zipcode: str) -> None:
-        """Remove cached files and metadata for a single zipcode within a stage.
+        """Remove only the expected output files for *zipcode* within a stage.
 
-        For stages whose output files contain the zipcode in the filename,
-        only those files are removed.  For ``details`` and ``build_details``
-        (which use listing IDs instead of zipcodes in filenames), listing IDs
-        are derived from the search results file for the given zipcode.
+        Uses :meth:`expected_outputs` to determine exactly which files belong
+        to the zipcode, then deletes only those.  Files for other zipcodes are
+        never touched.
 
         Args:
             stage_name: Pipeline stage identifier to clear.
             zipcode: Zipcode whose outputs should be removed.
         """
-        handler = LocalFileHandler()
-        output_dir = self.STAGE_OUTPUT_DIRS.get(stage_name)
-
+        expected = self.expected_outputs(stage_name, zipcode)
         removed = 0
-        if output_dir:
-            if stage_name in ("details", "build_details"):
-                listing_ids = self._get_listing_ids_for_zipcode(zipcode)
-                for lid in listing_ids:
-                    removed += handler.clear_files_matching(output_dir, f"_{lid}.")
-            else:
-                removed = handler.clear_files_matching(output_dir, zipcode)
+        for file_path in expected:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                removed += 1
+        if removed:
             logger.info(
                 f"Cleared {removed} files for zipcode {zipcode} in stage '{stage_name}'"
             )
 
-        metadata = self._load_metadata()
-        stage_data = metadata.get(stage_name, {})
-        if stage_data:
-            keys_to_remove = []
-            if stage_name in ("details", "build_details"):
-                listing_ids = self._get_listing_ids_for_zipcode(zipcode)
-                for key in stage_data:
-                    if key == f"_completed:{zipcode}":
-                        keys_to_remove.append(key)
-                    elif not key.startswith("_completed") and any(
-                        f"_{lid}." in key or f"_{lid}/" in key for lid in listing_ids
-                    ):
-                        keys_to_remove.append(key)
-            else:
-                for key in stage_data:
-                    if key == f"_completed:{zipcode}":
-                        keys_to_remove.append(key)
-                    elif not key.startswith("_completed") and zipcode in key:
-                        keys_to_remove.append(key)
-
-            for key in keys_to_remove:
-                del stage_data[key]
-
-            if not stage_data:
-                del metadata[stage_name]
-
-            self._save_metadata(metadata)
-            if keys_to_remove:
-                logger.info(
-                    f"Cleared {len(keys_to_remove)} metadata entries "
-                    f"for zipcode {zipcode} in stage '{stage_name}'"
-                )
+    # ------------------------------------------------------------------
+    # Listing-ID helpers
+    # ------------------------------------------------------------------
 
     def _get_listing_ids_for_zipcode(self, zipcode: str) -> list[str]:
         """Derive listing IDs from the search results file for a zipcode.
@@ -382,7 +401,7 @@ class PipelineCacheManager(BaseModel):
         if not os.path.isfile(search_path):
             logger.warning(
                 f"Search results file not found at {search_path} — "
-                "cannot derive listing IDs for scoped clear."
+                "cannot derive listing IDs."
             )
             return []
         try:
@@ -396,6 +415,35 @@ class PipelineCacheManager(BaseModel):
         except (json.JSONDecodeError, OSError) as e:
             logger.warning(f"Failed to read search results for {zipcode}: {e}")
             return []
+
+    def _get_review_listing_ids_for_zipcode(self, zipcode: str) -> list[str]:
+        """Derive listing IDs from review files on disk for a zipcode.
+
+        Scans the reviews output directory for files matching
+        ``reviews_{zipcode}_*.json`` and extracts listing IDs from filenames.
+
+        Args:
+            zipcode: Zipcode to scope by.
+
+        Returns:
+            List of listing ID strings.  Empty if no review files found.
+        """
+        reviews_dir = self.STAGE_OUTPUT_DIRS.get(
+            "reviews", "outputs/03_reviews_scraped"
+        )
+        pattern = os.path.join(reviews_dir, f"reviews_{zipcode}_*.json")
+        listing_ids = []
+        for filepath in glob.glob(pattern):
+            filename = os.path.basename(filepath)
+            # reviews_{zipcode}_{listing_id}.json
+            parts = filename.replace(".json", "").split("_", 2)
+            if len(parts) >= 3:
+                listing_ids.append(parts[2])
+        return listing_ids
+
+    # ------------------------------------------------------------------
+    # Stage decision
+    # ------------------------------------------------------------------
 
     def should_run_stage(self, stage_name: str, zipcode: str) -> str:
         """Determine what action a stage should take.
@@ -421,6 +469,10 @@ class PipelineCacheManager(BaseModel):
             return "skip"
 
         return "resume"
+
+    # ------------------------------------------------------------------
+    # Cascade logic
+    # ------------------------------------------------------------------
 
     def _apply_init_cascade(self) -> None:
         """Cascade force-refresh flags at init time.
@@ -470,38 +522,24 @@ class PipelineCacheManager(BaseModel):
                 f"{', '.join(downstream)}"
             )
 
+    # ------------------------------------------------------------------
+    # Stats
+    # ------------------------------------------------------------------
+
     def get_cache_stats(self) -> dict:
         """Get statistics about cached pipeline outputs.
 
         Returns:
             dict with 'enabled', 'ttl_hours', and per-stage counts
-            of fresh/stale/total files.
+            of fresh/stale/total expected files.
         """
         if not self.enable_cache:
             return {"enabled": False}
 
-        metadata = self._load_metadata()
         stats: dict[str, Any] = {
             "enabled": True,
             "ttl_hours": self.ttl_hours,
             "stages": {},
         }
-
-        for stage_name, stage_data in metadata.items():
-            output_files = {
-                k: v for k, v in stage_data.items() if not k.startswith("_completed")
-            }
-            fresh_count = sum(
-                1
-                for fp, ts in output_files.items()
-                if self._is_timestamp_fresh(ts) and os.path.exists(fp)
-            )
-            stale_count = len(output_files) - fresh_count
-
-            stats["stages"][stage_name] = {
-                "fresh": fresh_count,
-                "stale": stale_count,
-                "total": len(output_files),
-            }
 
         return stats

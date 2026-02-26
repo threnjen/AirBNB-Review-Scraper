@@ -118,28 +118,20 @@ class AirBnbReviewAggregator:
         search_output = f"outputs/01_search_results/search_results_{self.zipcode}.json"
         action = self.pipeline_cache.should_run_stage("search", self.zipcode)
 
-        if action == "skip" and self.pipeline_cache.is_file_fresh(
-            "search", search_output
-        ):
+        if action == "skip":
             with open(search_output, "r", encoding="utf-8") as f:
                 search_results = json.load(f)
             logger.info(
                 f"Loaded {len(search_results)} cached search results (still fresh)."
             )
-        elif action != "clear_and_run" and os.path.isfile(search_output):
-            with open(search_output, "r", encoding="utf-8") as f:
-                search_results = json.load(f)
-            logger.info(
-                f"Loaded {len(search_results)} listings from existing search results file."
-            )
-        else:
-            if action == "clear_and_run":
-                logger.info("Force refresh enabled for search — re-running.")
-                self.pipeline_cache.clear_stage_for_zipcode("search", self.zipcode)
-                self.pipeline_cache.cascade_force_refresh("search")
+        elif action == "clear_and_run":
+            logger.info("Force refresh enabled for search — re-running.")
+            self.pipeline_cache.clear_stage_for_zipcode("search", self.zipcode)
+            self.pipeline_cache.cascade_force_refresh("search")
             search_results = airbnb_searcher(self.zipcode, self.iso_code)
-            self.pipeline_cache.record_output("search", search_output)
-            self.pipeline_cache.record_stage_complete("search", self.zipcode)
+        else:
+            # resume: run searcher (outputs land on disk for mtime tracking)
+            search_results = airbnb_searcher(self.zipcode, self.iso_code)
         logger.info(f"Search results data looks like: {search_results[:1]}")
         return search_results
 
@@ -166,9 +158,6 @@ class AirBnbReviewAggregator:
                 )
                 airdna_scraper.run()
                 self.compile_comp_sets()
-                comp_set_path = f"outputs/02_comp_sets/comp_set_{self.zipcode}.json"
-                self.pipeline_cache.record_output("airdna", comp_set_path)
-                self.pipeline_cache.record_stage_complete("airdna", self.zipcode)
                 logger.info("AirDNA per-listing scraping completed.")
 
         if self.scrape_reviews:
@@ -186,7 +175,6 @@ class AirBnbReviewAggregator:
                     num_listings=self.num_listings_to_search,
                     pipeline_cache=self.pipeline_cache,
                 )
-                self.pipeline_cache.record_stage_complete("reviews", self.zipcode)
                 logger.info(
                     f"Scraping reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
                 )
@@ -205,7 +193,6 @@ class AirBnbReviewAggregator:
                     num_listings=self.num_listings_to_search,
                     pipeline_cache=self.pipeline_cache,
                 )
-                self.pipeline_cache.record_stage_complete("details", self.zipcode)
                 logger.info(
                     f"Scraping details for zipcode {self.zipcode} in country {self.iso_code} completed."
                 )
@@ -229,9 +216,6 @@ class AirBnbReviewAggregator:
                     pipeline_cache=self.pipeline_cache,
                 )
                 rag_property.rag_description_generation_chain()
-                self.pipeline_cache.record_stage_complete(
-                    "aggregate_reviews", self.zipcode
-                )
                 logger.info(
                     f"Aggregating reviews for zipcode {self.zipcode} in country {self.iso_code} completed."
                 )
@@ -257,9 +241,6 @@ class AirBnbReviewAggregator:
                     pipeline_cache=self.pipeline_cache,
                 )
                 rag_area.rag_description_generation_chain()
-                self.pipeline_cache.record_stage_complete(
-                    "aggregate_summaries", self.zipcode
-                )
                 logger.info(
                     f"Aggregating area summary for zipcode {self.zipcode} completed."
                 )
@@ -280,16 +261,9 @@ class AirBnbReviewAggregator:
                 fileset_builder = DetailsFilesetBuilder(
                     use_categoricals=self.use_categoricals,
                     comp_set_filepath=comp_set_filepath,
+                    zipcode=self.zipcode,
                 )
                 fileset_builder.build_fileset()
-                for output_file in [
-                    "outputs/05_details_results/property_amenities_matrix.csv",
-                    "outputs/05_details_results/house_rules_details.json",
-                    "outputs/05_details_results/property_descriptions.json",
-                    "outputs/05_details_results/neighborhood_highlights.json",
-                ]:
-                    self.pipeline_cache.record_output("build_details", output_file)
-                self.pipeline_cache.record_stage_complete("build_details", self.zipcode)
                 logger.info("Building details fileset completed.")
 
         if self.extract_data:
@@ -304,9 +278,6 @@ class AirBnbReviewAggregator:
                     self.pipeline_cache.cascade_force_refresh("extract_data")
                 extractor = DataExtractor(zipcode=self.zipcode)
                 extractor.run_extraction()
-                output_file = f"outputs/07_extracted_data/area_data_{self.zipcode}.json"
-                self.pipeline_cache.record_output("extract_data", output_file)
-                self.pipeline_cache.record_stage_complete("extract_data", self.zipcode)
                 logger.info(f"Data extraction for zipcode {self.zipcode} completed.")
 
         if self.analyze_correlations:
@@ -328,14 +299,6 @@ class AirBnbReviewAggregator:
                     bottom_percentile=self.correlation_bottom_percentile,
                 )
                 analyzer.run_analysis()
-                for metric in self.correlation_metrics:
-                    output_file = f"outputs/08_correlation_results/correlation_stats_{metric}_{self.zipcode}.json"
-                    self.pipeline_cache.record_output(
-                        "analyze_correlations", output_file
-                    )
-                self.pipeline_cache.record_stage_complete(
-                    "analyze_correlations", self.zipcode
-                )
                 logger.info(
                     f"Correlation analysis for zipcode {self.zipcode} completed."
                 )
@@ -354,11 +317,6 @@ class AirBnbReviewAggregator:
                     self.pipeline_cache.cascade_force_refresh("analyze_descriptions")
                 desc_analyzer = DescriptionAnalyzer(zipcode=self.zipcode)
                 desc_analyzer.run_analysis()
-                output_file = f"outputs/09_description_analysis/description_quality_stats_{self.zipcode}.json"
-                self.pipeline_cache.record_output("analyze_descriptions", output_file)
-                self.pipeline_cache.record_stage_complete(
-                    "analyze_descriptions", self.zipcode
-                )
                 logger.info(
                     f"Description quality analysis for zipcode {self.zipcode} completed."
                 )

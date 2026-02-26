@@ -23,21 +23,19 @@ class TestGetAreaSearchResults:
             agg.num_listings_to_search = 30000
             agg.pipeline_cache = MagicMock()
             agg.pipeline_cache.is_file_fresh.return_value = False
-            agg.pipeline_cache.record_output.return_value = True
-            agg.pipeline_cache.record_stage_complete.return_value = True
+            agg.pipeline_cache.should_run_stage.return_value = "skip"
             agg.pipeline_cache.force_refresh_flags = {}
         return agg
 
     def test_loads_cached_search_results(self, aggregator):
-        """When search results file exists, load from it."""
+        """When search results file exists and stage is fresh, load from it."""
         search_data = [{"room_id": "abc"}, {"room_id": "def"}]
 
-        with patch("os.path.isfile", return_value=True):
-            with patch(
-                "builtins.open",
-                mock_open(read_data=json.dumps(search_data)),
-            ):
-                result = aggregator.get_area_search_results()
+        with patch(
+            "builtins.open",
+            mock_open(read_data=json.dumps(search_data)),
+        ):
+            result = aggregator.get_area_search_results()
 
         assert len(result) == 2
         assert result[0]["room_id"] == "abc"

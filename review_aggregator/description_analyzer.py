@@ -48,7 +48,7 @@ class DescriptionAnalyzer(BaseModel):
 
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
-        csv_path = "outputs/05_details_results/property_amenities_matrix_cleaned.csv"
+        csv_path = f"outputs/05_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
 
         if not os.path.exists(csv_path):
             logger.error(f"Property amenities matrix not found at {csv_path}")
@@ -61,7 +61,9 @@ class DescriptionAnalyzer(BaseModel):
 
     def load_descriptions(self) -> dict[str, str]:
         """Load property descriptions for analysis."""
-        desc_path = "outputs/05_details_results/property_descriptions.json"
+        desc_path = (
+            f"outputs/05_details_results/property_descriptions_{self.zipcode}.json"
+        )
 
         if not os.path.exists(desc_path):
             logger.warning(f"Property descriptions not found at {desc_path}")
