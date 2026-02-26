@@ -326,16 +326,32 @@ class AirDNAScraper:
         page.goto(url, wait_until="domcontentloaded")
 
         # Wait for KPI content to appear
+        kpi_loaded = False
         try:
             page.wait_for_selector(
-                "text=Annual Revenue", state="visible", timeout=30_000
+                "text=Annual Revenue", state="visible", timeout=10_000
             )
             logger.info(f"Rentalizer page loaded for listing {listing_id}.")
+            kpi_loaded = True
         except Exception:
             logger.warning(
-                f"KPI content not found within 30s for listing {listing_id}. "
+                f"KPI content not found within 10s for listing {listing_id}. "
                 "Page may not have loaded correctly."
             )
+
+        if not kpi_loaded:
+            return {
+                "ADR": 0.0,
+                "Occupancy": 0,
+                "Revenue": 0.0,
+                "Bedrooms": 0,
+                "Bathrooms": 0.0,
+                "Max_Guests": 0,
+                "Days_Available": 0,
+                "LY_Revenue": 0.0,
+                "Rating": 0.0,
+                "Review_Count": 0,
+            }
 
         if self.inspect_mode:
             logger.info(

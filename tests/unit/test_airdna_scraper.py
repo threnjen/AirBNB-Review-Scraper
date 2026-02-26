@@ -3,6 +3,7 @@ Unit tests for scraper/airdna_scraper.py — per-listing rentalizer scraper.
 """
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -329,3 +330,85 @@ class TestAirDNAScraperIsCached:
         (output_dir / "listing_17134562.json").write_text("{}")
         monkeypatch.chdir(tmp_path)
         assert scraper._is_listing_cached("17134562") is True
+
+
+class TestAirDNAScraperScrapeListingTimeout:
+    """Tests for scrape_listing KPI timeout and early-return behavior."""
+
+    @pytest.fixture
+    def scraper(self):
+        """Create an AirDNAScraper instance for testing."""
+        return AirDNAScraper(
+            cdp_url="http://localhost:9222",
+            listing_ids=["17134562"],
+            inspect_mode=False,
+        )
+
+    def test_kpi_timeout_skips_extraction(self, scraper):
+        """When KPI selector times out, skip extra wait and extraction."""
+        page = MagicMock()
+        page.wait_for_selector.side_effect = Exception("Timeout")
+
+        with (
+            patch.object(scraper, "_extract_header_metrics") as mock_header,
+            patch.object(scraper, "_extract_kpi_metrics") as mock_kpi,
+        ):
+            result = scraper.scrape_listing(page, "17134562")
+
+        page.wait_for_timeout.assert_not_called()
+        mock_header.assert_not_called()
+        mock_kpi.assert_not_called()
+
+    def test_kpi_timeout_returns_all_zeros(self, scraper):
+        """When KPI selector times out, return all-zero metrics dict."""
+        page = MagicMock()
+        page.wait_for_selector.side_effect = Exception("Timeout")
+
+        result = scraper.scrape_listing(page, "17134562")
+
+        assert scraper._is_empty_result(result) is True
+        expected_keys = {
+            "ADR",
+            "Occupancy",
+            "Revenue",
+            "Bedrooms",
+            "Bathrooms",
+            "Max_Guests",
+            "Days_Available",
+            "LY_Revenue",
+            "Rating",
+            "Review_Count",
+        }
+        assert set(result.keys()) == expected_keys
+
+    def test_kpi_success_runs_extraction(self, scraper):
+        """When KPI selector succeeds, perform extra wait and extraction."""
+        page = MagicMock()
+        page.wait_for_selector.return_value = True
+
+        with (
+            patch.object(
+                scraper, "_extract_header_metrics", return_value={}
+            ) as mock_header,
+            patch.object(scraper, "_extract_kpi_metrics", return_value={}) as mock_kpi,
+        ):
+            scraper.scrape_listing(page, "17134562")
+
+        page.wait_for_timeout.assert_called_once()
+        mock_header.assert_called_once_with(page)
+        mock_kpi.assert_called_once_with(page)
+
+    def test_kpi_timeout_uses_10_seconds(self, scraper):
+        """KPI selector wait uses a 10-second timeout."""
+        page = MagicMock()
+        page.wait_for_selector.return_value = True
+
+        with (
+            patch.object(scraper, "_extract_header_metrics", return_value={}),
+            patch.object(scraper, "_extract_kpi_metrics", return_value={}),
+        ):
+            scraper.scrape_listing(page, "17134562")
+
+        page.wait_for_selector.assert_called_once_with(
+            "text=Annual Revenue", state="visible", timeout=10_000
+        )
