@@ -8,11 +8,7 @@ Tests here cover behaviors NOT already in test_pipeline_cache_mtime.py:
   - clear_stage (full-directory wipe)
   - clear_stage_for_zipcode with listing-ID derivation
   - _get_listing_ids_for_zipcode
-  - record_output / record_stage_complete backward-compat stubs
   - cache-disabled behaviour
-
-Removed tests for deleted metadata methods: _load_metadata, _save_metadata,
-_is_timestamp_fresh, metadata-persistence, metadata-corruption, stats-per-stage.
 """
 
 import json
@@ -28,7 +24,6 @@ class TestPipelineCacheManager:
     @pytest.fixture
     def cache_manager(self, tmp_path):
         """Create a PipelineCacheManager with a temporary directory."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -46,19 +41,18 @@ class TestPipelineCacheManager:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            return PipelineCacheManager(metadata_path=metadata_path)
+            return PipelineCacheManager()
 
     @pytest.fixture
     def disabled_cache_manager(self, tmp_path):
         """Create a PipelineCacheManager with caching disabled."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": False,
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            return PipelineCacheManager(metadata_path=metadata_path)
+            return PipelineCacheManager()
 
     # --- is_file_fresh (mtime-based) ---
 
@@ -76,24 +70,10 @@ class TestPipelineCacheManager:
 
         assert cache_manager.is_file_fresh("reviews", test_file) is False
 
-    # --- record_output / record_stage_complete stubs ---
-
-    def test_record_output_is_noop(self, cache_manager, tmp_path):
-        """Test that record_output always returns True (no-op stub)."""
-        test_file = str(tmp_path / "output.json")
-        result = cache_manager.record_output("reviews", test_file)
-        assert result is True
-
-    def test_record_stage_complete_is_noop(self, cache_manager):
-        """Test that record_stage_complete always returns True (no-op stub)."""
-        result = cache_manager.record_stage_complete("reviews", "97067")
-        assert result is True
-
     # --- force_refresh overrides ---
 
     def test_force_refresh_overrides_file_freshness(self, tmp_path):
         """Test that is_file_fresh returns False when force flag is True."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -102,7 +82,7 @@ class TestPipelineCacheManager:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         test_file = str(tmp_path / "output.json")
         with open(test_file, "w") as f:
@@ -112,7 +92,6 @@ class TestPipelineCacheManager:
 
     def test_force_refresh_search_bypasses_file_freshness(self, tmp_path):
         """Test that force_refresh flag makes both file and stage freshness False."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -121,7 +100,7 @@ class TestPipelineCacheManager:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         test_file = str(tmp_path / "search_results.json")
         with open(test_file, "w") as f:
@@ -159,12 +138,11 @@ class TestPipelineCacheManager:
 
     def test_config_load_failure_uses_defaults(self, tmp_path):
         """Test that config load failure falls back to defaults with warning."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.side_effect = FileNotFoundError("config.json not found")
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         assert manager.enable_cache is True
         assert manager.ttl_hours == 24 * 7
@@ -262,7 +240,6 @@ class TestPipelineCacheManager:
 
     def test_new_force_refresh_flags_loaded_from_config(self, tmp_path):
         """Test that force_refresh flags are loaded from config with init cascade."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -273,7 +250,7 @@ class TestPipelineCacheManager:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         assert manager.force_refresh_flags["extract_data"] is True
         assert manager.force_refresh_flags["analyze_correlations"] is True
@@ -281,7 +258,6 @@ class TestPipelineCacheManager:
 
     def test_init_cascade_sets_downstream_flags(self, tmp_path):
         """Test that on init, a True flag cascades to all later stages."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -290,7 +266,7 @@ class TestPipelineCacheManager:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         assert manager.force_refresh_flags["airdna"] is False
         assert manager.force_refresh_flags["search"] is False
@@ -306,7 +282,6 @@ class TestPipelineCacheManager:
 
     def test_init_no_cascade_when_no_flags_set(self, tmp_path):
         """Test that no cascade occurs when all force_refresh flags are False."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -314,7 +289,7 @@ class TestPipelineCacheManager:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         for stage in manager.STAGE_ORDER:
             assert manager.force_refresh_flags[stage] is False, (
@@ -328,7 +303,6 @@ class TestZipcodeScopedCache:
     @pytest.fixture
     def cache_manager(self, tmp_path):
         """Create a PipelineCacheManager with a temporary directory."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -346,7 +320,7 @@ class TestZipcodeScopedCache:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            return PipelineCacheManager(metadata_path=metadata_path)
+            return PipelineCacheManager()
 
     # --- should_run_stage ---
 
@@ -356,7 +330,6 @@ class TestZipcodeScopedCache:
 
     def test_should_run_stage_clear_when_force_refresh(self, tmp_path):
         """Test that should_run_stage returns 'clear_and_run' when force flag is set."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -365,18 +338,17 @@ class TestZipcodeScopedCache:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         assert manager.should_run_stage("reviews", "97067") == "clear_and_run"
 
     def test_should_run_stage_resume_when_cache_disabled(self, tmp_path):
         """Test that disabled cache always returns 'resume'."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {"pipeline_cache_enabled": False}
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            manager = PipelineCacheManager(metadata_path=metadata_path)
+            manager = PipelineCacheManager()
 
         assert manager.should_run_stage("reviews", "97067") == "resume"
 

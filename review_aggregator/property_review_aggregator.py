@@ -257,10 +257,6 @@ class PropertyRagAggregator(BaseModel):
                 data={listing_id: generated_summaries[listing_id]},
             )
 
-            if self.pipeline_cache:
-                summary_path = f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json"
-                self.pipeline_cache.record_output("aggregate_reviews", summary_path)
-
         logger.info("First pass of RAG description generation chain completed.")
 
         # Second pass: Remove any listings that resulted in empty summaries
@@ -284,10 +280,6 @@ class PropertyRagAggregator(BaseModel):
                 filename=f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
-
-            if self.pipeline_cache:
-                summary_path = f"outputs/06_generated_summaries/generated_summaries_{self.zipcode}_{listing_id}.json"
-                self.pipeline_cache.record_output("aggregate_reviews", summary_path)
 
         logger.info("RAG description generation chain completed.")
 

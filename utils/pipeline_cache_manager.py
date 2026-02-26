@@ -52,7 +52,6 @@ class PipelineCacheManager(BaseModel):
         "analyze_descriptions": "outputs/09_description_analysis",
     }
 
-    metadata_path: str = "cache/pipeline_metadata.json"
     ttl_hours: int = 24 * 7
     enable_cache: bool = True
     force_refresh_flags: dict[str, bool] = {}
@@ -304,42 +303,6 @@ class PipelineCacheManager(BaseModel):
         """
         expected = self.expected_outputs(stage_name, zipcode)
         return [f for f in expected if not self._is_file_fresh_by_mtime(f)]
-
-    # ------------------------------------------------------------------
-    # Legacy compatibility stubs
-    # ------------------------------------------------------------------
-
-    def record_output(self, stage_name: str, file_path: str) -> bool:
-        """No-op retained for backward compatibility.
-
-        With mtime-based caching, output tracking is automatic via the
-        filesystem.  This method does nothing and always returns True.
-
-        Args:
-            stage_name: Pipeline stage identifier.
-            file_path: Path to the output file that was produced.
-
-        Returns:
-            True always.
-        """
-        return True
-
-    def record_stage_complete(
-        self, stage_name: str, zipcode: str | None = None
-    ) -> bool:
-        """No-op retained for backward compatibility.
-
-        With mtime-based caching, stage completion is determined by checking
-        expected output files on disk.  This method does nothing.
-
-        Args:
-            stage_name: Pipeline stage identifier.
-            zipcode: Optional zipcode (unused).
-
-        Returns:
-            True always.
-        """
-        return True
 
     # ------------------------------------------------------------------
     # Clearing

@@ -83,7 +83,7 @@ The pipeline combines two data sources and four LLM use cases to produce market 
 - Description prompts use a two-phase approach: first scoring each description on 7 dimensions (1–10), then synthesizing findings with top/bottom examples
 
 **Caching:**
-- TTL-based cache (`utils/pipeline_cache_manager.py`) tracks timestamps for all output files in `cache/pipeline_metadata.json`
+- TTL-based cache (`utils/pipeline_cache_manager.py`) checks file existence and `os.path.getmtime()` against the configured TTL — no metadata file needed
 - Refreshing an early stage automatically cascades invalidation to all downstream stages
 - Per-file caching for reviews and details allows incremental scraping of new listings
 
@@ -187,7 +187,7 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 | `force_refresh_analyze_descriptions` | bool | `false` | Force re-run description quality analysis |
 
 **How it works:**
-- Metadata is stored in `cache/pipeline_metadata.json`, recording when each output file was produced
+- Freshness is determined by file existence and `os.path.getmtime()` — each stage declares its expected output files, and a stage is fresh when all files exist with mtime within the TTL
 - On each run, the pipeline checks whether outputs exist and are within the TTL before executing a stage
 - Refreshing an early stage cascades invalidation to all downstream stages
 - The `force_refresh_*` flags let you bypass the cache for specific stages

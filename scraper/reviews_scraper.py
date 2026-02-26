@@ -69,9 +69,6 @@ def scrape_reviews(zipcode, search_results, num_listings, pipeline_cache=None):
                     json.dumps(review_results, ensure_ascii=False)
                 )  # Extract reviews and save them to a file
 
-            if pipeline_cache:
-                pipeline_cache.record_output("reviews", output_path)
-
             time.sleep(random.uniform(1, 3))
 
         except Exception as e:

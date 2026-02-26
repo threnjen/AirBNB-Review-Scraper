@@ -384,7 +384,6 @@ class TestPipelineCacheIntegration:
     @pytest.fixture
     def pipeline_cache(self, tmp_path):
         """Create a PipelineCacheManager with a temporary metadata path."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -392,7 +391,7 @@ class TestPipelineCacheIntegration:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            return PipelineCacheManager(metadata_path=metadata_path)
+            return PipelineCacheManager()
 
     def test_stage_fresh_when_all_outputs_exist(self, pipeline_cache, tmp_path):
         """Test that a stage with all expected outputs on disk is fresh."""
@@ -410,7 +409,6 @@ class TestPipelineCacheIntegration:
 
     def test_force_refresh_causes_rerun(self, tmp_path):
         """Test that force_refresh flag overrides cached status."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -419,7 +417,7 @@ class TestPipelineCacheIntegration:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            cache = PipelineCacheManager(metadata_path=metadata_path)
+            cache = PipelineCacheManager()
 
         # Even with files on disk, force_refresh makes it stale
         assert cache.is_stage_fresh("details", "97067") is False
@@ -443,7 +441,6 @@ class TestPipelineCacheIntegration:
 
     def test_force_refresh_wipes_output_directory(self, tmp_path):
         """Test that clear_stage wipes the output directory when force_refresh is set."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
         output_dir = tmp_path / "outputs" / "03_reviews_scraped"
         output_dir.mkdir(parents=True)
 
@@ -459,7 +456,7 @@ class TestPipelineCacheIntegration:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            cache = PipelineCacheManager(metadata_path=metadata_path)
+            cache = PipelineCacheManager()
 
         # Simulate what main.py does: check freshness, then clear_stage
         assert cache.is_stage_fresh("reviews") is False
@@ -474,7 +471,6 @@ class TestPipelineCacheIntegration:
 
     def test_cascade_force_refresh_marks_downstream_stale(self, tmp_path):
         """Test that cascading force-refresh makes downstream stages stale."""
-        metadata_path = str(tmp_path / "cache" / "pipeline_metadata.json")
 
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -483,7 +479,7 @@ class TestPipelineCacheIntegration:
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
-            cache = PipelineCacheManager(metadata_path=metadata_path)
+            cache = PipelineCacheManager()
 
         # Simulate reviews being not-fresh → cascade downstream
         cache.cascade_force_refresh("reviews")

@@ -51,9 +51,6 @@ def scrape_details(search_results, num_listings, pipeline_cache=None):
                     json.dumps(single_property_details, ensure_ascii=False)
                 )  # Extract details and save them to a file
 
-            if pipeline_cache:
-                pipeline_cache.record_output("details", output_path)
-
             time.sleep(random.uniform(1, 3))
 
         except Exception as e:

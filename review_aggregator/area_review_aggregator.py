@@ -55,10 +55,6 @@ class AreaRagAggregator(BaseModel):
 
         logger.info(f"Saved area summary report to {md_path}")
 
-        if self.pipeline_cache:
-            self.pipeline_cache.record_output("aggregate_summaries", json_path)
-            self.pipeline_cache.record_output("aggregate_summaries", md_path)
-
     def rag_description_generation_chain(self):
         """Generate area-level summary from existing property summaries."""
 

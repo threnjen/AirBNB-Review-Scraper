@@ -511,14 +511,7 @@ class AirDNAScraper:
                         failed += 1
                         # NOT added to resolved — will be retried next pass
                     elif self.should_include_listing(metrics):
-                        output_path = os.path.join(
-                            "outputs",
-                            "02_comp_sets",
-                            f"listing_{listing_id}.json",
-                        )
                         self.save_listing_result(listing_id, metrics)
-                        if self.pipeline_cache:
-                            self.pipeline_cache.record_output("airdna", output_path)
                         scraped += 1
                         pass_scraped += 1
                         resolved.add(listing_id)
