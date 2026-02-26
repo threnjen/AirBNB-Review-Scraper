@@ -93,10 +93,10 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 |-----|------|---------|-------------|
 | `pipeline_cache_enabled` | bool | `true` | Enable/disable pipeline-level TTL caching |
 | `pipeline_cache_ttl_days` | int | `7` | Number of days before cached outputs expire |
-| `force_refresh_airdna` | bool | `false` | Force re-run AirDNA scraping even if cached |
+| `force_refresh_scrape_airdna` | bool | `false` | Force re-run AirDNA scraping even if cached |
 | `force_refresh_search` | bool | `false` | Force re-run area search |
 | `force_refresh_reviews` | bool | `false` | Force re-scrape all reviews |
-| `force_refresh_details` | bool | `false` | Force re-scrape all property details |
+| `force_refresh_scrape_details` | bool | `false` | Force re-scrape all property details |
 | `force_refresh_build_details` | bool | `false` | Force rebuild details fileset |
 | `force_refresh_aggregate_reviews` | bool | `false` | Force regenerate property summaries |
 | `force_refresh_aggregate_summaries` | bool | `false` | Force regenerate area summary |

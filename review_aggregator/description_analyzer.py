@@ -1,9 +1,9 @@
 """
 DescriptionAnalyzer: Evaluates listing description quality and its impact on ADR.
 
-Normalizes for hard features (capacity, bedrooms, beds, bathrooms) via OLS
-regression, then scores each description on quality dimensions using an LLM,
-and correlates those scores with the size-adjusted ADR premium (residual).
+Normalizes for all available numeric features via OLS regression, then scores
+each description on quality dimensions using an LLM, and correlates those
+scores with the feature-adjusted ADR premium (residual).
 """
 
 import json
@@ -23,9 +23,6 @@ from utils.tiny_file_handler import load_json_file, save_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
-
-# Hard features used to normalize ADR
-SIZE_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms"]
 
 # Quality dimensions the LLM scores each description on (1-10)
 SCORE_DIMENSIONS = [
@@ -51,7 +48,7 @@ class DescriptionAnalyzer(BaseModel):
 
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
-        csv_path = "outputs/05_details_results/property_amenities_matrix.csv"
+        csv_path = "outputs/05_details_results/property_amenities_matrix_cleaned.csv"
 
         if not os.path.exists(csv_path):
             logger.error(f"Property amenities matrix not found at {csv_path}")
@@ -104,38 +101,50 @@ class DescriptionAnalyzer(BaseModel):
 
     def compute_size_adjusted_residuals(
         self, df: pd.DataFrame
-    ) -> tuple[pd.Series, float]:
+    ) -> tuple[pd.Series, float, list[str]]:
         """
-        Fit OLS regression: ADR ~ capacity + bedrooms + beds + bathrooms.
-        Return residuals (actual - predicted) and R-squared.
+        Fit OLS regression: ADR ~ all numeric features in df.
+        Return residuals (actual - predicted), R-squared, and the feature list.
 
-        Residual > 0 means the property earns MORE than its size predicts.
+        All numeric columns except ADR are used as regressors.  Rows with NaN
+        in any feature column are excluded; zero values are kept (valid for
+        binary amenity flags and studios with 0 bedrooms).
+
+        Residual > 0 means the property earns MORE than its features predict.
         Residual < 0 means it earns LESS.
         """
         # Filter to valid ADR rows
         valid = df[df["ADR"].notna() & (df["ADR"] > 0)].copy()
 
-        # Also exclude rows with missing or zero size features
-        for col in SIZE_FEATURES:
-            if col in valid.columns:
-                numeric_col = pd.to_numeric(valid[col], errors="coerce")
-                valid = valid[numeric_col.notna() & (numeric_col > 0)]
+        # Discover all numeric feature columns (everything except ADR)
+        features = [
+            col
+            for col in valid.select_dtypes(include=[np.number]).columns
+            if col != "ADR"
+        ]
 
-        if len(valid) < len(SIZE_FEATURES) + 1:
+        if not features:
+            logger.warning("No numeric feature columns found for regression.")
+            return pd.Series(dtype=float), 0.0, []
+
+        # Coerce feature columns to numeric
+        for col in features:
+            valid[col] = pd.to_numeric(valid[col], errors="coerce")
+
+        # Exclude rows with NaN in any feature column
+        valid = valid.dropna(subset=features)
+
+        if len(valid) < len(features) + 1:
             logger.warning(
                 f"Not enough properties ({len(valid)}) for regression. "
-                f"Need at least {len(SIZE_FEATURES) + 1}."
+                f"Need at least {len(features) + 1}."
             )
-            return pd.Series(dtype=float), 0.0
+            return pd.Series(dtype=float), 0.0, features
 
         y = valid["ADR"].values
         # Build design matrix with intercept column
         X = np.column_stack(
-            [np.ones(len(valid))]
-            + [
-                pd.to_numeric(valid[col], errors="coerce").values
-                for col in SIZE_FEATURES
-            ]
+            [np.ones(len(valid))] + [valid[col].values for col in features]
         )
 
         # OLS via numpy least squares
@@ -152,14 +161,14 @@ class DescriptionAnalyzer(BaseModel):
         residual_series = pd.Series(residuals, index=valid.index, name="adr_residual")
 
         logger.info(
-            f"OLS R² = {r_squared:.3f} | "
+            f"OLS R² = {r_squared:.3f} | {len(features)} features | "
             f"Coefficients: intercept={coeffs[0]:.1f}, "
             + ", ".join(
-                f"{feat}={coeffs[i + 1]:.1f}" for i, feat in enumerate(SIZE_FEATURES)
+                f"{feat}={coeffs[i + 1]:.1f}" for i, feat in enumerate(features)
             )
         )
 
-        return residual_series, r_squared
+        return residual_series, r_squared, features
 
     def parse_score_response(self, response: Optional[str]) -> dict[str, int]:
         """Parse the LLM scoring response into a dimension → score dict."""
@@ -364,16 +373,19 @@ class DescriptionAnalyzer(BaseModel):
         residuals: pd.Series,
         scores_df: pd.DataFrame,
         synthesis: str,
+        features: list[str] | None = None,
     ):
         """Save JSON stats and Markdown insights."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+
+        features = features or []
 
         # Build stats JSON
         stats = {
             "zipcode": self.zipcode,
             "analysis_type": "description_quality",
             "regression_r_squared": round(r_squared, 4),
-            "size_features_used": SIZE_FEATURES,
+            "regression_features_used": features,
             "num_properties_analyzed": len(residuals),
             "num_descriptions_scored": len(scores_df),
             "score_dimensions": SCORE_DIMENSIONS,
@@ -396,10 +408,11 @@ class DescriptionAnalyzer(BaseModel):
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("# Listing Description Quality Analysis\n\n")
             f.write(f"**Zipcode:** {self.zipcode}\n\n")
+            features_str = ", ".join(features) if features else "(none)"
             f.write(
-                f"**Size-Adjustment R²:** {r_squared:.3f} "
+                f"**Feature-Adjustment R²:** {r_squared:.3f} "
                 f"(proportion of ADR variance explained by "
-                f"capacity, bedrooms, beds, bathrooms)\n\n"
+                f"{len(features)} features: {features_str})\n\n"
             )
             f.write(
                 f"**Properties Analyzed:** {len(residuals)} "
@@ -428,7 +441,7 @@ class DescriptionAnalyzer(BaseModel):
         logger.info("Step 1: Computing size-adjusted ADR residuals")
         logger.info("=" * 50)
 
-        residuals, r_squared = self.compute_size_adjusted_residuals(df)
+        residuals, r_squared, features = self.compute_size_adjusted_residuals(df)
         if residuals.empty:
             logger.error("Failed to compute residuals. Exiting.")
             return
@@ -483,6 +496,7 @@ class DescriptionAnalyzer(BaseModel):
             residuals=residuals,
             scores_df=scores_df,
             synthesis=synthesis,
+            features=features,
         )
 
         # Log cost summary

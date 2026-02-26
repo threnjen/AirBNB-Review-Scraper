@@ -104,6 +104,42 @@ class DetailsFilesetBuilder:
 
         return True
 
+    def clean_amenities_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        drop_cols = [
+            "link",
+            "Occ_Rate_Based_on_Avail",
+            "Abs_Occ_Rate",
+            "Avail_Rate",
+            "title",
+            "review_count",
+            "accuracy",
+            "checking",
+            "cleanliness",
+            "communication",
+            "location",
+            "value",
+            "guest_satisfaction",
+        ]
+        df = df.drop(columns=drop_cols)
+
+        # replace any remaining False values with 0
+        # find False values in dataframe and replace with 0
+        df = df.replace("False", 0)
+        df = df.replace(False, 0)
+
+        df = df.reset_index(drop=True)
+        df = df.drop(columns=["property_id"])
+
+        system_colums = [x for x in df.columns if x.startswith("SYSTEM_")]
+        df[system_colums] = df[system_colums].astype(bool)
+        df[system_colums] = df[system_colums].astype(int)
+
+        df["beds"] = df["beds"].astype(int)
+        df["bathrooms"] = df["bathrooms"].astype(float)
+        df["bedrooms"] = df["bedrooms"].astype(int)
+
+        return df
+
     def parse_amenity_flags(self, property_id: str, property_details: dict):
         amenities_matrix = property_details.get("amenities", {})
 
@@ -203,6 +239,14 @@ class DetailsFilesetBuilder:
         amenities_df.to_csv("outputs/05_details_results/property_amenities_matrix.csv")
         logger.info(
             "Details fileset built and saved to outputs/05_details_results/property_amenities_matrix.csv"
+        )
+
+        cleaned_df = self.clean_amenities_df(amenities_df)
+        cleaned_df.to_csv(
+            "outputs/05_details_results/property_amenities_matrix_cleaned.csv"
+        )
+        logger.info(
+            "Cleaned details fileset saved to outputs/05_details_results/property_amenities_matrix_cleaned.csv"
         )
 
         with open(

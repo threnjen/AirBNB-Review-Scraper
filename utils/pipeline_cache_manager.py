@@ -64,10 +64,10 @@ class PipelineCacheManager(BaseModel):
             self.ttl_hours = ttl_days * 24
 
             self.force_refresh_flags = {
-                "airdna": config.get("force_refresh_airdna", False),
+                "airdna": config.get("force_refresh_scrape_airdna", False),
                 "search": config.get("force_refresh_search", False),
                 "reviews": config.get("force_refresh_reviews", False),
-                "details": config.get("force_refresh_details", False),
+                "details": config.get("force_refresh_scrape_details", False),
                 "build_details": config.get("force_refresh_build_details", False),
                 "aggregate_reviews": config.get(
                     "force_refresh_aggregate_reviews", False

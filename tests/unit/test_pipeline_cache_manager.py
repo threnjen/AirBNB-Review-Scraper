@@ -22,10 +22,10 @@ class TestPipelineCacheManager:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
-                "force_refresh_airdna": False,
+                "force_refresh_scrape_airdna": False,
                 "force_refresh_search": False,
                 "force_refresh_reviews": False,
-                "force_refresh_details": False,
+                "force_refresh_scrape_details": False,
                 "force_refresh_build_details": False,
                 "force_refresh_aggregate_reviews": False,
                 "force_refresh_aggregate_summaries": False,

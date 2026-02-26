@@ -412,7 +412,7 @@ class TestPipelineCacheIntegration:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
-                "force_refresh_details": True,
+                "force_refresh_scrape_details": True,
             }
             from utils.pipeline_cache_manager import PipelineCacheManager
 
