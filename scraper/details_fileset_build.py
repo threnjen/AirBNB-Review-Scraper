@@ -99,9 +99,6 @@ class DetailsFilesetBuilder:
         description = property_details.get("description", [])
         self.property_descriptions[property_id] = description
 
-        # host_details = property_details.get("host_details", {})
-        # logger.info(host_details)
-
         return True
 
     def clean_amenities_df(self, df: pd.DataFrame) -> pd.DataFrame:

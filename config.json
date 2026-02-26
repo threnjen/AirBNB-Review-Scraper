@@ -26,24 +26,22 @@
     "force_refresh_aggregate_reviews": false,
     "aggregate_summaries": false,
     "force_refresh_aggregate_summaries": false,
-    "build_details": true,
-    "force_refresh_build_details": true,
+    "build_details": false,
+    "force_refresh_build_details": false,
     "extract_data": false,
     "force_refresh_extract_data": false,
-    "analyze_correlations": true,
-    "force_refresh_analyze_correlations": true,
+    "analyze_correlations": false,
+    "force_refresh_analyze_correlations": false,
     "correlation_metrics": [
         "adr",
         "occupancy"
     ],
     "correlation_top_percentile": 25,
     "correlation_bottom_percentile": 25,
-    "analyze_descriptions": true,
-    "force_refresh_analyze_descriptions": true,
+    "analyze_descriptions": false,
+    "force_refresh_analyze_descriptions": false,
     "zipcode": "97067",
     "iso_code": "us",
-    "use_custom_listings_file": false,
-    "custom_filepath": "custom_listings.json",
     "num_listings_to_summarize": 100000,
     "num_listings_to_search": 30000,
     "num_summary_to_process": 10000,
@@ -54,19 +52,6 @@
         "temperature": 0.3,
         "max_tokens": 16000,
         "chunk_token_limit": 120000,
-        "max_retries": 3,
-        "retry_delay": 1.0,
         "enable_cost_tracking": true
-    },
-    "unused_comps": [
-        "365541",
-        "365540",
-        "365539",
-        "365520",
-        "365522",
-        "365523",
-        "365525",
-        "365535",
-        "365538"
-    ]
+    }
 }

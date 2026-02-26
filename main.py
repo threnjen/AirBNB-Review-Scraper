@@ -318,13 +318,6 @@ class AirBnbReviewAggregator:
                     f"Description quality analysis for zipcode {self.zipcode} completed."
                 )
 
-        # Things to do
-        # Aggregrate the aggreated reviews into a single review per zip code
-        # Simple frontend gui for config selection (use streamlit)
-        # Turn the scraped data into a table for users to look at manually
-        # Store output in aws in s3
-        # Create a readme with copilot once done
-
 
 if __name__ == "__main__":
     aggregator = AirBnbReviewAggregator()
