@@ -4,35 +4,23 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-bs4 = "*"
 numpy = "*"
 pydantic = "*"
 pandas = "*"
-requests = "*"
-regex = "*"
-boto3 = "*"
 openai = "*"
-awswrangler = "*"
 pgeocode = "*"
 pyairbnb = "*"
 playwright = "*"
-ruff = "*"
 tiktoken = "*"
-black = "*"
-ipykernel = "*"
 
 [dev-packages]
-scikit-learn = "*"
-statsmodels = "*"
-matplotlib = "*"
-seaborn = "*"
-xgboost = "*"
-weaviate-client = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
-responses = "*"
 freezegun = "*"
+ruff = "*"
+black = "*"
+ipykernel = "*"
 
 [requires]
 python_version = "3.13"

@@ -13,9 +13,7 @@ DETAILS_SCRAPED_DIR = "outputs/04_details_scraped"
 
 
 class DetailsFilesetBuilder:
-    def __init__(
-        self, use_categoricals: bool, comp_set_filepath: str = "custom_listing_ids.json"
-    ) -> None:
+    def __init__(self, use_categoricals: bool, comp_set_filepath: str) -> None:
         self.use_categoricals = use_categoricals
         self.comp_set_filepath = comp_set_filepath
         self.property_details = {}
@@ -98,9 +96,6 @@ class DetailsFilesetBuilder:
 
         description = property_details.get("description", [])
         self.property_descriptions[property_id] = description
-
-        # host_details = property_details.get("host_details", {})
-        # logger.info(host_details)
 
         return True
 

@@ -1,4 +1,3 @@
-# from utils.nlp_functions import filter_stopwords
 import logging
 import os
 import sys
@@ -7,10 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# from review_aggregator.weaviate_client import WeaviateClient
 from review_aggregator.openai_aggregator import OpenAIAggregator
-
-# import weaviate.classes as wvc
 from utils.tiny_file_handler import load_json_file, save_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -28,7 +24,6 @@ class AreaRagAggregator(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
     pipeline_cache: Any = Field(default=None)
-    # weaviate_client: WeaviateClient = Field(default_factory=WeaviateClient)  # <-- here
 
     def save_results(
         self,

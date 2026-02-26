@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import random
 import sys
 import time
@@ -62,7 +63,9 @@ def airbnb_searcher(zipcode: str, iso_code: str = "us"):
     # Save the search results as a JSON file
     os.makedirs("outputs/02_search_results", exist_ok=True)
     with open(
-        f"outputs/02_search_results/search_results_{zipcode}.json", "w", encoding="utf-8"
+        f"outputs/02_search_results/search_results_{zipcode}.json",
+        "w",
+        encoding="utf-8",
     ) as f:
         f.write(
             json.dumps(search_results, ensure_ascii=False)

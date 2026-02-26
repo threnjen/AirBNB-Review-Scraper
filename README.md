@@ -68,13 +68,6 @@ Edit `config.json` to configure the pipeline:
 | `airdna_cdp_url` | string | Chrome DevTools Protocol URL (default: `http://localhost:9222`) |
 | `airdna_inspect_mode` | bool | Pause after navigation for DOM selector discovery |
 
-### Custom Listings
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `use_custom_listings_file` | bool | Use custom listing IDs instead of search |
-| `custom_filepath` | string | Path to custom listings JSON file |
-
 ### OpenAI Settings
 
 | Key | Type | Description |
@@ -82,7 +75,7 @@ Edit `config.json` to configure the pipeline:
 | `openai.model` | string | Model to use (default: "gpt-4.1-mini") |
 | `openai.temperature` | float | Response randomness (0.0-1.0) |
 | `openai.max_tokens` | int | Max tokens per response |
-| `openai.chunk_size` | int | Reviews per API call |
+| `openai.chunk_token_limit` | int | Token limit per chunk sent to the API |
 | `openai.enable_cost_tracking` | bool | Log API costs |
 
 ### Pipeline Caching (TTL)
@@ -145,17 +138,12 @@ pipenv run python main.py
 make scrape-airdna
 ```
 
-**Output:** `compset_{id}.json` — one file per comp set, matching the `custom_listing_ids.json` format:
+**Output:** `compset_{id}.json` — one file per comp set:
 ```json
 {
     "1050769200886027711": {"ADR": 945.57, "Occupancy": 39, "Days_Available": 335},
     "549180550450067551": {"ADR": 377.19, "Occupancy": 88, "Days_Available": 357}
 }
-```
-
-To use scraped data in downstream pipeline stages, set `custom_filepath` to the output file:
-```json
-{"use_custom_listings_file": true, "custom_filepath": "compset_365519.json"}
 ```
 
 **Inspect mode:** If selectors break (AirDNA UI changes), enable `"airdna_inspect_mode": true` to pause the browser and use Playwright Inspector to discover new selectors.
@@ -197,46 +185,60 @@ Zip Code Input
       ↓
 ┌─────────────────────────────────────┐
 │  1. Search AirBNB listings          │
-│     → property_search_results/      │
+│     → outputs/02_search_results/    │
 └─────────────────────────────────────┘
       ↓
 ┌─────────────────────────────────────┐
 │  2. Scrape reviews & details        │
-│     → property_reviews_scraped/     │
-│     → property_details_scraped/     │
+│     → outputs/03_reviews_scraped/   │
+│     → outputs/04_details_scraped/   │
 └─────────────────────────────────────┘
       ↓
 ┌─────────────────────────────────────┐
-│  3. Generate property summaries     │
+│  3. Build structured detail data    │
+│     → outputs/05_details_results/   │
+└─────────────────────────────────────┘
+      ↓
+┌─────────────────────────────────────┐
+│  4. Generate property summaries     │
 │     (PropertyRagAggregator + GPT)   │
-│     → property_generated_summaries/ │
+│     → outputs/06_generated_summaries│
 └─────────────────────────────────────┘
       ↓
 ┌─────────────────────────────────────┐
-│  4. Extract & aggregate data        │
+│  5. Extract & aggregate data        │
 │     (DataExtractor)                 │
-│     → area_data_{zipcode}.json      │
+│     → outputs/07_extracted_data/    │
 └─────────────────────────────────────┘
       ↓
 ┌─────────────────────────────────────┐
-│  5. Generate area summary           │
+│  6. Correlation & description       │
+│     analysis                        │
+│     → outputs/08_correlation_results│
+│     → outputs/09_description_analysis│
+└─────────────────────────────────────┘
+      ↓
+┌─────────────────────────────────────┐
+│  7. Generate area summary           │
 │     (AreaRagAggregator)             │
-│     → generated_summaries_{zip}.json│
+│     → reports/                      │
 └─────────────────────────────────────┘
 ```
 
 ## Output Files
 
-| Directory/File | Content |
-|----------------|---------|
-| `compset_{id}.json` | Scraped AirDNA comp set metrics per listing |
-| `property_search_results/` | Search results by zipcode |
-| `property_reviews_scraped/` | Raw review JSON per listing |
-| `property_details_scraped/` | Property details (amenities, rules) |
-| `property_details_results/` | Structured CSVs and JSON from details |
-| `property_generated_summaries/` | AI-generated summary per property |
-| `generated_summaries_{zip}.json` | Area-level AI summary |
-| `area_data_{zip}.json` | Aggregated numeric data with categories |
+| Directory | Content |
+|-----------|---------|
+| `outputs/01_comp_sets/` | AirDNA comp set metrics per listing |
+| `outputs/02_search_results/` | Search results by zipcode |
+| `outputs/03_reviews_scraped/` | Raw review JSON per listing |
+| `outputs/04_details_scraped/` | Property details (amenities, rules) |
+| `outputs/05_details_results/` | Structured CSVs and JSON from details |
+| `outputs/06_generated_summaries/` | AI-generated summary per property |
+| `outputs/07_extracted_data/` | Aggregated numeric data with categories |
+| `outputs/08_correlation_results/` | Correlation analysis results |
+| `outputs/09_description_analysis/` | Description quality analysis |
+| `reports/` | Area-level AI summaries and insights |
 | `logs/cost_tracking.json` | API cost logs |
 
 ## Architecture
@@ -253,13 +255,19 @@ main.py                          # Entry point
 │   ├── property_review_aggregator.py  # Per-property AI summaries
 │   ├── area_review_aggregator.py      # Area-level AI summaries
 │   ├── data_extractor.py              # Numeric extraction & clustering
-│   └── openai_aggregator.py           # OpenAI client with caching
+│   ├── correlation_analyzer.py        # Metric correlation analysis
+│   ├── description_analyzer.py        # Description quality analysis
+│   └── openai_aggregator.py           # OpenAI client with chunking
 ├── utils/
 │   ├── cost_tracker.py          # API cost tracking
+│   ├── pipeline_cache_manager.py # TTL-based pipeline caching
+│   ├── local_file_handler.py    # File system utilities
 │   └── tiny_file_handler.py     # JSON I/O helpers
 └── prompts/
     ├── prompt.json              # Property-level prompt template
-    └── zipcode_prompt.json      # Area-level prompt template
+    ├── zipcode_prompt.json      # Area-level prompt template
+    ├── correlation_prompt.json  # Correlation analysis prompt
+    └── description_analysis_prompt.json # Description analysis prompt
 ```
 
 ## Running Tests

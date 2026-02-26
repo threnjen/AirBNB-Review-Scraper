@@ -300,10 +300,10 @@ class DescriptionAnalyzer(BaseModel):
         synthesis_prompt_template: str,
     ) -> str:
         """Generate the final synthesis report comparing best vs worst descriptions."""
-        # Get top 5 and bottom 5 by residual
+        # Get top 15 and bottom 15 by residual
         sorted_residuals = residuals.sort_values(ascending=False)
-        top_ids = [str(x) for x in sorted_residuals.head(5).index]
-        bottom_ids = [str(x) for x in sorted_residuals.tail(5).index]
+        top_ids = [str(x) for x in sorted_residuals.head(15).index]
+        bottom_ids = [str(x) for x in sorted_residuals.tail(15).index]
 
         def format_descriptions(prop_ids: list[str]) -> str:
             lines = []
@@ -320,6 +320,8 @@ class DescriptionAnalyzer(BaseModel):
                     if isinstance(desc, list):
                         desc = " ".join(str(d) for d in desc)
 
+                    airbnb_link = f"https://www.airbnb.com/rooms/{pid}"
+
                     # Include scores if available
                     score_info = ""
                     if pid in scores_df.index:
@@ -332,7 +334,8 @@ class DescriptionAnalyzer(BaseModel):
                         score_info = f"\n  Scores: {', '.join(score_parts)}"
 
                     lines.append(
-                        f"**Property {pid}** (ADR premium: ${residual_val:+.0f}/night)"
+                        f"**Property {pid}** ([Airbnb listing]({airbnb_link})) "
+                        f"(ADR premium: ${residual_val:+.0f}/night)"
                         f"{score_info}\n{desc}\n"
                     )
             return "\n".join(lines)
@@ -406,6 +409,28 @@ class DescriptionAnalyzer(BaseModel):
         # Save Markdown insights
         Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
         md_path = f"{self.reports_dir}/description_quality_{self.zipcode}.md"
+
+        # Build top/bottom 15 property links section
+        sorted_residuals = residuals.sort_values(ascending=False)
+        top_ids = [str(x) for x in sorted_residuals.head(15).index]
+        bottom_ids = [str(x) for x in sorted_residuals.tail(15).index]
+
+        def _format_links_section(prop_ids: list[str], label: str) -> str:
+            lines = [f"### {label}\n"]
+            for rank, pid in enumerate(prop_ids, 1):
+                mask = residuals.index.astype(str) == pid
+                if not mask.any():
+                    continue
+                residual_val = float(residuals.loc[mask].iloc[0])
+                link = f"https://www.airbnb.com/rooms/{pid}"
+                lines.append(
+                    f"{rank}. **{pid}** — "
+                    f"ADR premium ${residual_val:+.0f}/night — "
+                    f"[View on Airbnb]({link})"
+                )
+            lines.append("")
+            return "\n".join(lines)
+
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("# Listing Description Quality Analysis\n\n")
             f.write(f"**Zipcode:** {self.zipcode}\n\n")
@@ -419,6 +444,11 @@ class DescriptionAnalyzer(BaseModel):
                 f"**Properties Analyzed:** {len(residuals)} "
                 f"({len(scores_df)} descriptions scored)\n\n"
             )
+
+            f.write("## Property Links\n\n")
+            f.write(_format_links_section(top_ids, "Top 15 — Highest ADR Premium"))
+            f.write(_format_links_section(bottom_ids, "Bottom 15 — Lowest ADR Premium"))
+
             f.write("---\n\n")
             f.write(synthesis)
 
