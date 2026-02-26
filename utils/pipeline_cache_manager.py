@@ -24,8 +24,8 @@ class PipelineCacheManager(BaseModel):
     """
 
     STAGE_ORDER: list[str] = [
-        "airdna",
         "search",
+        "airdna",
         "reviews",
         "details",
         "aggregate_reviews",
@@ -37,8 +37,8 @@ class PipelineCacheManager(BaseModel):
     ]
 
     STAGE_OUTPUT_DIRS: dict[str, str] = {
-        "airdna": "outputs/01_comp_sets",
-        "search": "outputs/02_search_results",
+        "search": "outputs/01_search_results",
+        "airdna": "outputs/02_comp_sets",
         "reviews": "outputs/03_reviews_scraped",
         "details": "outputs/04_details_scraped",
         "build_details": "outputs/05_details_results",

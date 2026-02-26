@@ -1,15 +1,16 @@
 """
-AirDNA comp set scraper using Playwright.
+AirDNA per-listing rentalizer scraper using Playwright.
 
 Connects to an already-open Chrome browser via CDP (Chrome DevTools Protocol),
-navigates to AirDNA comp set pages, handles infinite scroll, and extracts
-property metrics (Airbnb listing ID, Revenue, ADR, Occupancy, Bedrooms,
-Bathrooms).
+navigates to AirDNA rentalizer pages for individual Airbnb listings, and
+extracts property metrics (Revenue, ADR, Occupancy, Bedrooms, Bathrooms,
+Max Guests, Days Available, Rating, Review Count).
 """
 
 import json
 import logging
 import os
+import random
 import re
 import sys
 import time
@@ -19,45 +20,56 @@ from playwright.sync_api import sync_playwright
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
-AIRDNA_BASE_URL = "https://app.airdna.co/data/comp-sets"
-SCROLL_PAUSE_SECONDS = 2.0
-SCROLL_MAX_RETRIES = 5
+AIRDNA_RENTALIZER_URL = "https://app.airdna.co/data/rentalizer"
 PAGE_LOAD_WAIT_SECONDS = 5
+
+# Label-to-field mapping for KPI cards on the rentalizer page
+KPI_LABEL_MAP = {
+    "annual revenue": "Revenue",
+    "average daily rate": "ADR",
+    "occupancy": "Occupancy",
+    "days available": "Days_Available",
+    "revenue potential": None,  # Not mapped to comp set schema
+}
 
 
 class AirDNAScraper:
-    """Scrapes AirDNA comp set pages for property metrics.
+    """Scrapes AirDNA rentalizer pages for per-listing property metrics.
 
     Connects to a running Chrome instance via CDP remote debugging,
-    navigates to comp set URLs, scrolls through infinite-scroll listings,
-    and extracts Revenue, ADR, Occupancy, Bedrooms, and Bathrooms per property.
+    navigates to rentalizer URLs for each listing ID, and extracts
+    Revenue, ADR, Occupancy, Bedrooms, Bathrooms, Max Guests,
+    Days Available, Rating, and Review Count.
 
     Args:
         cdp_url: Chrome DevTools Protocol URL (e.g. http://localhost:9222).
-        comp_set_ids: List of AirDNA comp set IDs to scrape.
+        listing_ids: List of Airbnb listing IDs to look up.
         inspect_mode: When True, pauses after navigation for selector discovery.
+        min_days_available: Minimum Days Available to include a listing (default 100).
     """
 
     def __init__(
         self,
         cdp_url: str,
-        comp_set_ids: list[str],
+        listing_ids: list[str],
         inspect_mode: bool = False,
+        min_days_available: int = 100,
     ) -> None:
         self.cdp_url = cdp_url
-        self.comp_set_ids = comp_set_ids
+        self.listing_ids = listing_ids
         self.inspect_mode = inspect_mode
+        self.min_days_available = min_days_available
 
-    def _build_comp_set_url(self, comp_set_id: str) -> str:
-        """Build the full AirDNA comp set URL.
+    def _build_rentalizer_url(self, listing_id: str) -> str:
+        """Build the AirDNA rentalizer URL for a single listing.
 
         Args:
-            comp_set_id: The AirDNA comp set identifier.
+            listing_id: The Airbnb listing ID.
 
         Returns:
-            Full URL string for the comp set page.
+            Full URL string for the rentalizer page.
         """
-        return f"{AIRDNA_BASE_URL}/{comp_set_id}"
+        return f"{AIRDNA_RENTALIZER_URL}?&listing_id=abnb_{listing_id}"
 
     def _parse_currency(self, value: str) -> float:
         """Parse a currency string to a float.
@@ -127,255 +139,194 @@ class AirDNAScraper:
         """
         return float(value.strip())
 
-    def _should_continue_scrolling(
-        self,
-        previous_count: int,
-        current_count: int,
-        max_retries: int,
-        retry_count: int,
-    ) -> bool:
-        """Determine whether to continue the infinite scroll loop.
+    def should_include_listing(self, metrics: dict) -> bool:
+        """Check if a listing meets the minimum Days Available threshold.
 
         Args:
-            previous_count: Number of property elements before last scroll.
-            current_count: Number of property elements after last scroll.
-            max_retries: Maximum consecutive scrolls with no new elements.
-            retry_count: Current number of retries with no change.
+            metrics: Dict with at least a 'Days_Available' key.
 
         Returns:
-            True if scrolling should continue, False if done.
+            True if the listing should be included, False otherwise.
         """
-        if current_count > previous_count:
-            return True
-        return retry_count < max_retries
+        return metrics.get("Days_Available", 0) >= self.min_days_available
 
-    def _scroll_to_bottom(self, page) -> None:
-        """Scroll the page to load all infinite-scroll content.
+    def _extract_header_metrics(self, page) -> dict:
+        """Extract Bedrooms, Bathrooms, Max Guests, Rating, Review Count from header.
 
-        Tries to scroll the specific comp set container first. If no
-        scrollable container is found, falls back to scrolling the
-        document body and the first scrollable ancestor of the table.
+        The rentalizer page header shows icon+text pairs like:
+          bed icon 4  |  bath icon 3  |  person icon 15  |  star 4.7 (287)
 
         Args:
             page: Playwright page object.
-        """
-        previous_count = 0
-        retry_count = 0
-
-        while True:
-            # Scroll both the body and any scrollable table ancestor
-            page.evaluate("""() => {
-                window.scrollTo(0, document.body.scrollHeight);
-                const tables = document.querySelectorAll('table');
-                for (const table of tables) {
-                    let el = table.parentElement;
-                    while (el && el !== document.body) {
-                        const style = window.getComputedStyle(el);
-                        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-                            el.scrollTop = el.scrollHeight;
-                            break;
-                        }
-                        el = el.parentElement;
-                    }
-                }
-            }""")
-            time.sleep(SCROLL_PAUSE_SECONDS)
-
-            current_count = len(page.query_selector_all("tr[data-testid]"))
-            if current_count == 0:
-                current_count = len(page.query_selector_all("table tbody tr"))
-
-            if not self._should_continue_scrolling(
-                previous_count, current_count, SCROLL_MAX_RETRIES, retry_count
-            ):
-                logger.info(
-                    f"Scroll complete. Found {current_count} property elements."
-                )
-                break
-
-            if current_count > previous_count:
-                retry_count = 0
-                logger.info(f"Scrolling... {current_count} properties loaded so far.")
-            else:
-                retry_count += 1
-                logger.info(
-                    f"No new elements. Retry {retry_count}/{SCROLL_MAX_RETRIES}."
-                )
-
-            previous_count = current_count
-
-    def _extract_listing_id(self, row) -> str | None:
-        """Extract the Airbnb listing ID from a table row element.
-
-        AirDNA embeds listing images from muscache.com (Airbnb's CDN)
-        with URLs like:
-          https://a0.muscache.com/.../Hosting-1050769200886027711/original/...
-
-        VRBO listings use a different CDN, so only muscache.com images
-        indicate Airbnb listings. Returns None for non-Airbnb rows.
-
-        Args:
-            row: Playwright element handle for a table row.
 
         Returns:
-            Listing ID string for Airbnb listings, or None if not found
-            or not an Airbnb listing.
+            Dict with Bedrooms, Bathrooms, Max_Guests, Rating, Review_Count.
         """
-        # Primary: extract from Airbnb image URL (muscache.com CDN)
-        images = row.query_selector_all("img")
-        for img in images:
-            src = img.get_attribute("src") or ""
-            if "muscache.com" in src:
-                match = re.search(r"Hosting-(\d+)", src)
-                if match:
-                    return match.group(1)
-
-        # Fallback: links containing airbnb.com/rooms/
-        links = row.query_selector_all("a[href]")
-        for link in links:
-            href = link.get_attribute("href") or ""
-            match = re.search(r"airbnb\.com/rooms/(\d+)", href)
-            if match:
-                return match.group(1)
-            # AirDNA internal links with listing_id=abnb_{id}
-            match = re.search(r"listing_id=abnb_(\d+)", href)
-            if match:
-                return match.group(1)
-
-        return None
-
-    def _extract_property_data(self, row) -> tuple[str | None, dict]:
-        """Extract metrics from a single property row element.
-
-        Known AirDNA comp set column order (indices):
-          [0] Listing name
-          [1] Revenue     ($132.8K)
-          [2] ADR         ($969.19)
-          [3] Occupancy   (42%)
-          [4] Bedrooms    (6)
-          [5] Bathrooms   (3.5)
-          [6] Max Guests  (15)
-          [7] Days Avail  (330)
-          [8] LY Revenue  ($141.4K)
-          [9] Rating      (4.8 (35))
-          [10] (action)
-
-        Args:
-            row: Playwright element handle for a property row.
-
-        Returns:
-            Tuple of (listing_id, metrics_dict). listing_id may be None
-            if extraction fails or the listing is not from Airbnb.
-        """
-        listing_id = self._extract_listing_id(row)
-
-        cells = row.query_selector_all("td")
         metrics = {
-            "ADR": 0.0,
-            "Occupancy": 0,
-            "Revenue": 0.0,
             "Bedrooms": 0,
             "Bathrooms": 0.0,
             "Max_Guests": 0,
-            "Days_Available": 0,
-            "LY_Revenue": 0.0,
             "Rating": 0.0,
             "Review_Count": 0,
         }
 
-        cell_texts = [cell.inner_text().strip() for cell in cells]
-        logger.debug(f"Row cells: {cell_texts}")
-
-        if len(cell_texts) < 8:
-            logger.warning(
-                f"Row has only {len(cell_texts)} cells, expected 10+. Skipping."
+        # Look for the header stats area — icons followed by numbers
+        # The page shows bed/bath/guest counts and star rating near the title
+        try:
+            # Try to find the stats container with bed/bath/guest/rating info
+            header_text = page.locator("h1").first.evaluate(
+                """el => {
+                    // Get the parent container's text for the stats row
+                    let parent = el.parentElement;
+                    return parent ? parent.innerText : '';
+                }"""
             )
-            return listing_id, metrics
 
-        # Positional extraction based on known column order
-        # [1] Revenue
-        try:
-            metrics["Revenue"] = self._parse_revenue(cell_texts[1])
-        except (ValueError, IndexError):
-            pass
+            # Parse bedrooms (bed icon followed by number)
+            bed_match = re.search(
+                r"(\d+)\s*$", header_text.split("\n")[0] if header_text else ""
+            )
 
-        # [2] ADR
-        try:
-            metrics["ADR"] = self._parse_currency(cell_texts[2])
-        except (ValueError, IndexError):
-            pass
-
-        # [3] Occupancy
-        try:
-            metrics["Occupancy"] = self._parse_percentage(cell_texts[3])
-        except (ValueError, IndexError):
-            pass
-
-        # [4] Bedrooms
-        try:
-            metrics["Bedrooms"] = int(float(cell_texts[4]))
-        except (ValueError, IndexError):
-            pass
-
-        # [5] Bathrooms
-        try:
-            metrics["Bathrooms"] = self._parse_bedrooms(cell_texts[5])
-        except (ValueError, IndexError):
-            pass
-
-        # [6] Max Guests
-        try:
-            metrics["Max_Guests"] = int(cell_texts[6])
-        except (ValueError, IndexError):
-            pass
-
-        # [7] Days Available
-        try:
-            metrics["Days_Available"] = self._parse_days(cell_texts[7])
-        except (ValueError, IndexError):
-            pass
-
-        # [8] LY Revenue
-        try:
-            metrics["LY_Revenue"] = self._parse_revenue(cell_texts[8])
-        except (ValueError, IndexError):
-            pass
-
-        # [9] Rating (format: "4.8 (35)" or "-- (0)")
-        if len(cell_texts) > 9:
-            rating_text = cell_texts[9]
-            rating_match = re.match(r"([\d.]+)\s*\((\d+)\)", rating_text)
-            if rating_match:
+            # Alternative: look for specific stat elements
+            stat_elements = page.locator(
+                "[class*='stat'], [class*='detail'], [class*='overview'] span, [class*='overview'] div"
+            ).all()
+            stat_texts = []
+            for el in stat_elements:
                 try:
-                    metrics["Rating"] = float(rating_match.group(1))
-                    metrics["Review_Count"] = int(rating_match.group(2))
-                except ValueError:
+                    text = el.inner_text().strip()
+                    if text:
+                        stat_texts.append(text)
+                except Exception:
                     pass
 
-        return listing_id, metrics
+            logger.debug(f"Header stat texts: {stat_texts}")
+        except Exception as e:
+            logger.debug(f"Could not extract header stats via class selectors: {e}")
 
-    def scrape_comp_set(self, page, comp_set_id: str) -> dict:
-        """Scrape all property data from a single comp set page.
+        # Fallback: extract from the whole page text near the title
+        try:
+            # Look for rating pattern like "4.7 (287)" or "★ 4.7 (287)"
+            page_text = page.locator("body").inner_text()
+            rating_match = re.search(r"★?\s*([\d.]+)\s*\((\d+)\)", page_text)
+            if rating_match:
+                metrics["Rating"] = float(rating_match.group(1))
+                metrics["Review_Count"] = int(rating_match.group(2))
+
+            # Look for bed/bath/guest counts near "Short-term Rental"
+            # Format from screenshot: bed_icon 4  bath_icon 3  person_icon 15
+            header_section = page_text[:500]  # Header is near the top
+
+            # Find sequences of small numbers that represent bed/bath/guests
+            bed_match = re.search(
+                r"(?:bed|bedroom)s?\s*[:.]?\s*(\d+)", header_section, re.IGNORECASE
+            )
+            if bed_match:
+                metrics["Bedrooms"] = int(bed_match.group(1))
+
+            bath_match = re.search(
+                r"(?:bath|bathroom)s?\s*[:.]?\s*(\d+\.?\d*)",
+                header_section,
+                re.IGNORECASE,
+            )
+            if bath_match:
+                metrics["Bathrooms"] = float(bath_match.group(1))
+
+            guest_match = re.search(
+                r"(?:guest|max.?guest)s?\s*[:.]?\s*(\d+)", header_section, re.IGNORECASE
+            )
+            if guest_match:
+                metrics["Max_Guests"] = int(guest_match.group(1))
+
+        except Exception as e:
+            logger.warning(f"Error extracting header metrics: {e}")
+
+        return metrics
+
+    def _extract_kpi_metrics(self, page) -> dict:
+        """Extract KPI card values from the rentalizer page.
+
+        The page shows cards with:
+          Revenue Potential | Days Available | Annual Revenue | Occupancy | Average Daily Rate
 
         Args:
             page: Playwright page object.
-            comp_set_id: The AirDNA comp set identifier.
 
         Returns:
-            Dict mapping listing ID strings to metric dicts.
+            Dict with Revenue, ADR, Occupancy, Days_Available.
         """
-        url = self._build_comp_set_url(comp_set_id)
-        logger.info(f"Navigating to comp set: {url}")
+        metrics = {
+            "Revenue": 0.0,
+            "ADR": 0.0,
+            "Occupancy": 0,
+            "Days_Available": 0,
+        }
+
+        try:
+            # Get all text content and look for KPI patterns
+            page_text = page.locator("body").inner_text()
+
+            # Look for "Annual Revenue" followed by a dollar value
+            revenue_match = re.search(
+                r"([\$\d,.]+[KkMm]?)\s*\n?\s*Annual Revenue",
+                page_text,
+            )
+            if revenue_match:
+                metrics["Revenue"] = self._parse_revenue(revenue_match.group(1))
+
+            # Look for "Average Daily Rate" with dollar value
+            adr_match = re.search(
+                r"([\$\d,.]+)\s*\n?\s*Average Daily Rate",
+                page_text,
+            )
+            if adr_match:
+                metrics["ADR"] = self._parse_currency(adr_match.group(1))
+
+            # Look for "Occupancy" with percentage
+            occ_match = re.search(
+                r"(\d+%?)\s*\n?\s*Occupancy",
+                page_text,
+            )
+            if occ_match:
+                metrics["Occupancy"] = self._parse_percentage(occ_match.group(1))
+
+            # Look for "Days Available" with number
+            days_match = re.search(
+                r"(\d+)\s*\n?\s*Days Available",
+                page_text,
+            )
+            if days_match:
+                metrics["Days_Available"] = self._parse_days(days_match.group(1))
+
+        except Exception as e:
+            logger.warning(f"Error extracting KPI metrics: {e}")
+
+        return metrics
+
+    def scrape_listing(self, page, listing_id: str) -> dict:
+        """Scrape property metrics from a single rentalizer page.
+
+        Args:
+            page: Playwright page object.
+            listing_id: The Airbnb listing ID.
+
+        Returns:
+            Dict with all property metrics.
+        """
+        url = self._build_rentalizer_url(listing_id)
+        logger.info(f"Navigating to listing: {url}")
         page.goto(url, wait_until="domcontentloaded")
 
-        # Wait for the table to appear rather than networkidle,
-        # since the map tiles keep firing network requests forever.
+        # Wait for KPI content to appear
         try:
-            page.wait_for_selector("table", state="attached", timeout=30_000)
-            logger.info("Table element detected on page.")
+            page.wait_for_selector(
+                "text=Annual Revenue", state="visible", timeout=30_000
+            )
+            logger.info(f"Rentalizer page loaded for listing {listing_id}.")
         except Exception:
             logger.warning(
-                "Table not found within 30s. Page may not have loaded correctly."
+                f"KPI content not found within 30s for listing {listing_id}. "
+                "Page may not have loaded correctly."
             )
 
         if self.inspect_mode:
@@ -387,60 +338,53 @@ class AirDNAScraper:
 
         page.wait_for_timeout(int(PAGE_LOAD_WAIT_SECONDS * 1000))
 
-        self._scroll_to_bottom(page)
+        # Extract all metrics from the page
+        header_metrics = self._extract_header_metrics(page)
+        kpi_metrics = self._extract_kpi_metrics(page)
 
-        rows = page.query_selector_all("table tbody tr")
-        if not rows:
-            logger.warning(
-                f"No property rows found for comp set {comp_set_id}. "
-                "Run with inspect_mode=True to discover selectors."
-            )
-            return {}
+        metrics = {
+            "ADR": kpi_metrics.get("ADR", 0.0),
+            "Occupancy": kpi_metrics.get("Occupancy", 0),
+            "Revenue": kpi_metrics.get("Revenue", 0.0),
+            "Bedrooms": header_metrics.get("Bedrooms", 0),
+            "Bathrooms": header_metrics.get("Bathrooms", 0.0),
+            "Max_Guests": header_metrics.get("Max_Guests", 0),
+            "Days_Available": kpi_metrics.get("Days_Available", 0),
+            "LY_Revenue": 0.0,
+            "Rating": header_metrics.get("Rating", 0.0),
+            "Review_Count": header_metrics.get("Review_Count", 0),
+        }
 
-        logger.info(f"Found {len(rows)} table rows. Extracting Airbnb listings...")
-        results = {}
-        skipped = 0
+        return metrics
 
-        for row in rows:
-            listing_id, metrics = self._extract_property_data(row)
-            if listing_id:
-                results[listing_id] = metrics
-            else:
-                skipped += 1
-
-        logger.info(
-            f"Extracted {len(results)} Airbnb listings. "
-            f"Skipped {skipped} rows (non-Airbnb or no listing ID)."
-        )
-        return results
-
-    def save_results(
+    def save_listing_result(
         self,
-        comp_set_id: str,
+        listing_id: str,
         data: dict,
-        output_dir: str = "outputs/01_comp_sets",
+        output_dir: str = "outputs/02_comp_sets",
     ) -> None:
-        """Save scraped data to a JSON file.
+        """Save scraped data for a single listing to a JSON file.
 
         Args:
-            comp_set_id: The AirDNA comp set identifier (used in filename).
-            data: Dict mapping listing ID strings to metric dicts.
+            listing_id: The Airbnb listing ID (used in filename).
+            data: Dict of metric values for this listing.
             output_dir: Directory to write the output file to.
         """
         os.makedirs(output_dir, exist_ok=True)
-        filename = f"compset_{comp_set_id}.json"
+        filename = f"listing_{listing_id}.json"
         filepath = os.path.join(output_dir, filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+            json.dump({listing_id: data}, f, indent=4)
 
-        logger.info(f"Saved {len(data)} listings to {filepath}")
+        logger.info(f"Saved listing {listing_id} to {filepath}")
 
     def run(self) -> None:
         """Execute the full scraping workflow.
 
-        Connects to Chrome via CDP, iterates over comp set IDs,
-        scrapes each one, and saves results to JSON files.
+        Connects to Chrome via CDP, iterates over listing IDs,
+        scrapes each one from the rentalizer page, filters by
+        min_days_available, and saves results to per-listing JSON files.
         """
         logger.info(f"Connecting to Chrome at {self.cdp_url}")
 
@@ -470,14 +414,32 @@ class AirDNAScraper:
             context = contexts[0]
             page = context.new_page()
 
-            for comp_set_id in self.comp_set_ids:
-                logger.info(f"Scraping comp set: {comp_set_id}")
-                data = self.scrape_comp_set(page, comp_set_id)
-                self.save_results(comp_set_id, data)
+            scraped = 0
+            filtered = 0
+
+            for listing_id in self.listing_ids:
+                logger.info(f"Scraping listing: {listing_id}")
+                metrics = self.scrape_listing(page, listing_id)
+
+                if self.should_include_listing(metrics):
+                    self.save_listing_result(listing_id, metrics)
+                    scraped += 1
+                else:
+                    logger.info(
+                        f"Skipping listing {listing_id}: "
+                        f"Days_Available={metrics.get('Days_Available', 0)} "
+                        f"< {self.min_days_available}"
+                    )
+                    filtered += 1
+
+                # Rate limiting between requests
+                time.sleep(random.uniform(2, 5))
 
             page.close()
 
-        logger.info("AirDNA scraping complete.")
+        logger.info(
+            f"AirDNA scraping complete. Saved {scraped} listings, filtered {filtered}."
+        )
 
 
 if __name__ == "__main__":
@@ -486,9 +448,25 @@ if __name__ == "__main__":
     with open("config.json", "r") as f:
         config = json_mod.load(f)
 
+    # Load listing IDs from search results
+    zipcode = config.get("zipcode", "97067")
+    search_results_path = f"outputs/01_search_results/search_results_{zipcode}.json"
+
+    if os.path.isfile(search_results_path):
+        with open(search_results_path, "r", encoding="utf-8") as f:
+            search_results = json_mod.load(f)
+        ids = [str(r.get("room_id", r.get("id", ""))) for r in search_results]
+        ids = [i for i in ids if i]
+    else:
+        logger.error(
+            f"No search results found at {search_results_path}. Run search first."
+        )
+        sys.exit(1)
+
     scraper = AirDNAScraper(
         cdp_url=config.get("airdna_cdp_url", "http://localhost:9222"),
-        comp_set_ids=config.get("airdna_comp_set_ids", []),
+        listing_ids=ids,
         inspect_mode=config.get("airdna_inspect_mode", False),
+        min_days_available=config.get("min_days_available", 100),
     )
     scraper.run()

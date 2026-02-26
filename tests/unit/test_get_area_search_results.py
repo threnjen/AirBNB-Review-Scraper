@@ -1,4 +1,4 @@
-"""Tests for get_area_search_results() reading from comp_set_{zipcode}.json."""
+"""Tests for get_area_search_results() in main.py."""
 
 import json
 import os
@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch, mock_open
 import pytest
 
 
-class TestGetAreaSearchResultsFromCompSet:
-    """get_area_search_results should read comp_set file when it exists."""
+class TestGetAreaSearchResults:
+    """get_area_search_results should load or run AirBnB search."""
 
     @pytest.fixture
     def aggregator(self):
@@ -28,35 +28,11 @@ class TestGetAreaSearchResultsFromCompSet:
             agg.pipeline_cache.force_refresh_flags = {}
         return agg
 
-    def test_reads_comp_set_file(self, aggregator):
-        """When comp_set_{zipcode}.json exists, listing IDs are extracted."""
-        comp_set_data = {
-            "listing_1": {"ADR": 100.0},
-            "listing_2": {"ADR": 200.0},
-        }
-
-        with patch("os.path.isfile", return_value=True):
-            with patch(
-                "builtins.open",
-                mock_open(read_data=json.dumps(comp_set_data)),
-            ):
-                result = aggregator.get_area_search_results()
-
-        room_ids = {r["room_id"] for r in result}
-        assert room_ids == {"listing_1", "listing_2"}
-
-    def test_falls_back_to_search_results(self, aggregator):
-        """When no comp_set file exists, falls back to search_results file."""
+    def test_loads_cached_search_results(self, aggregator):
+        """When search results file exists, load from it."""
         search_data = [{"room_id": "abc"}, {"room_id": "def"}]
 
-        def fake_isfile(p):
-            if "comp_set_97067" in str(p):
-                return False
-            if "search_results_97067" in str(p):
-                return True
-            return False
-
-        with patch("os.path.isfile", side_effect=fake_isfile):
+        with patch("os.path.isfile", return_value=True):
             with patch(
                 "builtins.open",
                 mock_open(read_data=json.dumps(search_data)),

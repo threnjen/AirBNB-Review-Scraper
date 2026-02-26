@@ -18,6 +18,7 @@
 - Describe changes for someone else to execute later
 - If you catch yourself writing implementation, **STOP**
 - Link to files and reference `symbols`, don't show code
+- Ask to move to Agent mode when planning is complete, before attempting to write files
 
 ## Process
 

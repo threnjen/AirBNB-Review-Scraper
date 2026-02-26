@@ -38,9 +38,9 @@ class AirBnbReviewAggregator:
         self.analyze_correlations = False
         self.analyze_descriptions = False
         self.scrape_airdna = False
-        self.airdna_comp_set_ids = []
         self.airdna_cdp_url = "http://localhost:9222"
         self.airdna_inspect_mode = False
+        self.min_days_available = 100
         self.correlation_metrics = ["adr", "occupancy"]
         self.correlation_top_percentile = 25
         self.correlation_bottom_percentile = 25
@@ -69,9 +69,9 @@ class AirBnbReviewAggregator:
         self.analyze_correlations = self.config.get("analyze_correlations", False)
         self.analyze_descriptions = self.config.get("analyze_descriptions", False)
         self.scrape_airdna = self.config.get("scrape_airdna", False)
-        self.airdna_comp_set_ids = self.config.get("airdna_comp_set_ids", [])
         self.airdna_cdp_url = self.config.get("airdna_cdp_url", "http://localhost:9222")
         self.airdna_inspect_mode = self.config.get("airdna_inspect_mode", False)
+        self.min_days_available = self.config.get("min_days_available", 100)
         self.correlation_metrics = self.config.get(
             "correlation_metrics", ["adr", "occupancy"]
         )
@@ -86,15 +86,15 @@ class AirBnbReviewAggregator:
         # Pipeline cache settings
         self.pipeline_cache = PipelineCacheManager()
 
-    def compile_comp_sets(self, output_dir="outputs/01_comp_sets"):
-        """Merge all per-comp-set JSON files into a single master file.
+    def compile_comp_sets(self, output_dir="outputs/02_comp_sets"):
+        """Merge all per-listing JSON files into a single master file.
 
-        Reads compset_*.json from output_dir, merges with first-write-wins
+        Reads listing_*.json from output_dir, merges with first-write-wins
         for duplicate listing IDs, and writes comp_set_{zipcode}.json.
         """
         merged = {}
         duplicates_skipped = 0
-        pattern = os.path.join(output_dir, "compset_*.json")
+        pattern = os.path.join(output_dir, "listing_*.json")
 
         for filepath in sorted(glob.glob(pattern)):
             with open(filepath, "r", encoding="utf-8") as f:
@@ -115,18 +115,10 @@ class AirBnbReviewAggregator:
         )
 
     def get_area_search_results(self):
-        comp_set_path = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
-        search_output = f"outputs/02_search_results/search_results_{self.zipcode}.json"
+        search_output = f"outputs/01_search_results/search_results_{self.zipcode}.json"
         force_refresh = self.pipeline_cache.force_refresh_flags.get("search", False)
 
-        if os.path.isfile(comp_set_path):
-            with open(comp_set_path, "r", encoding="utf-8") as f:
-                property_ids = json.load(f).keys()
-            logger.info(f"Using {len(property_ids)} listing IDs from {comp_set_path}")
-            search_results = []
-            for room_id in property_ids:
-                search_results.append({"room_id": room_id})
-        elif not force_refresh and self.pipeline_cache.is_file_fresh(
+        if not force_refresh and self.pipeline_cache.is_file_fresh(
             "search", search_output
         ):
             with open(search_output, "r", encoding="utf-8") as f:
@@ -156,19 +148,25 @@ class AirBnbReviewAggregator:
             if self.pipeline_cache.is_stage_fresh("airdna"):
                 logger.info("Skipping AirDNA scraping — cached outputs are fresh.")
             else:
+                search_results = self.get_area_search_results()
+                listing_ids = [
+                    str(r.get("room_id", r.get("id", ""))) for r in search_results
+                ]
+                listing_ids = [i for i in listing_ids if i]
                 self.pipeline_cache.clear_stage("airdna")
                 self.pipeline_cache.cascade_force_refresh("airdna")
                 airdna_scraper = AirDNAScraper(
                     cdp_url=self.airdna_cdp_url,
-                    comp_set_ids=self.airdna_comp_set_ids,
+                    listing_ids=listing_ids,
                     inspect_mode=self.airdna_inspect_mode,
+                    min_days_available=self.min_days_available,
                 )
                 airdna_scraper.run()
                 self.compile_comp_sets()
-                comp_set_path = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+                comp_set_path = f"outputs/02_comp_sets/comp_set_{self.zipcode}.json"
                 self.pipeline_cache.record_output("airdna", comp_set_path)
                 self.pipeline_cache.record_stage_complete("airdna")
-                logger.info("AirDNA comp set scraping completed.")
+                logger.info("AirDNA per-listing scraping completed.")
 
         if self.scrape_reviews:
             if self.pipeline_cache.is_stage_fresh("reviews"):
@@ -251,7 +249,7 @@ class AirBnbReviewAggregator:
             else:
                 self.pipeline_cache.clear_stage("build_details")
                 self.pipeline_cache.cascade_force_refresh("build_details")
-                comp_set_filepath = f"outputs/01_comp_sets/comp_set_{self.zipcode}.json"
+                comp_set_filepath = f"outputs/02_comp_sets/comp_set_{self.zipcode}.json"
                 fileset_builder = DetailsFilesetBuilder(
                     use_categoricals=self.use_categoricals,
                     comp_set_filepath=comp_set_filepath,

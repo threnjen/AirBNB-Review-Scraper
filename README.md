@@ -240,7 +240,7 @@ pipenv run python main.py
 make scrape-airdna
 ```
 
-**Output:** `compset_{id}.json` — one file per comp set in `outputs/01_comp_sets/`:
+**Output:** `listing_{id}.json` — one file per listing in `outputs/02_comp_sets/`:
 ```json
 {
     "1050769200886027711": {"ADR": 945.57, "Occupancy": 39, "Days_Available": 335},
@@ -296,15 +296,15 @@ pipenv run python main.py
 Zip Code + config.json
         ↓
 ┌───────────────────────────────────────┐
-│  0. AirDNA Comp Set Scraping          │
-│     Playwright/CDP → Chrome → AirDNA  │
-│     → outputs/01_comp_sets/           │
+│  0. Listing Discovery                 │
+│     pyairbnb.search_all() by zipcode  │
+│     → outputs/01_search_results/      │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  1. Listing Discovery                 │
-│     pyairbnb.search_all() or comp set │
-│     IDs → outputs/02_search_results/  │
+│  1. AirDNA Per-Listing Lookup         │
+│     Playwright/CDP → Chrome → AirDNA  │
+│     → outputs/02_comp_sets/           │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
@@ -363,8 +363,8 @@ Zip Code + config.json
 
 | Directory | Content |
 |-----------|---------|
-| `outputs/01_comp_sets/` | AirDNA comp set metrics per listing (ADR, Occupancy, Days Available) |
-| `outputs/02_search_results/` | Search results by zipcode |
+| `outputs/01_search_results/` | Search results by zipcode |
+| `outputs/02_comp_sets/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) |
 | `outputs/03_reviews_scraped/` | Raw review JSON per listing |
 | `outputs/04_details_scraped/` | Property details (amenities, rules, descriptions) |
 | `outputs/05_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |

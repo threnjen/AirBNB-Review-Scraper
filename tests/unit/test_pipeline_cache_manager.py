@@ -518,14 +518,14 @@ class TestPipelineCacheManager:
 
     def test_cascade_from_first_stage_sets_all_others(self, cache_manager):
         """Test that cascade from the first stage sets all 9 remaining stages."""
-        cache_manager.cascade_force_refresh("airdna")
+        cache_manager.cascade_force_refresh("search")
 
-        # airdna itself unchanged
-        assert cache_manager.force_refresh_flags.get("airdna") is False
+        # search itself unchanged
+        assert cache_manager.force_refresh_flags.get("search") is False
 
         # All others set to True
         for stage in [
-            "search",
+            "airdna",
             "reviews",
             "details",
             "build_details",
@@ -536,7 +536,7 @@ class TestPipelineCacheManager:
             "analyze_descriptions",
         ]:
             assert cache_manager.force_refresh_flags.get(stage) is True, (
-                f"Expected {stage} to be True after cascade from airdna"
+                f"Expected {stage} to be True after cascade from search"
             )
 
     def test_cascade_unknown_stage_is_noop(self, cache_manager):
