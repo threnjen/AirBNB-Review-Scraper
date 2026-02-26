@@ -127,5 +127,6 @@ This project uses **pipenv**. All Python and pytest commands must be prefixed wi
 ## Extended Guides
 
 Load when applicable:
+- *Architecture Overview* -> `docs/ARCHITECTURE.md` - When onboarding to the project, locating modules/symbols, or understanding data flow and key patterns
 - *Phase Planning* -> `docs/PLANNING_WORKFLOW.md` - for migrations or multi-stage projects spanning multiple commits
 - *Style Guide* -> `docs/STYLE_GUIDE.md` - When writing new modules or unfamiliar with project conventions

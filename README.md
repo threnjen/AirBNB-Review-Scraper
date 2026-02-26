@@ -87,6 +87,19 @@ The pipeline combines two data sources and four LLM use cases to produce market 
 - Refreshing an early stage automatically cascades invalidation to all downstream stages
 - Per-file caching for reviews and details allows incremental scraping of new listings
 
+## Respectful Scraping
+
+This pipeline automates data collection, but it is designed to browse no faster than a human would. Every scraping stage inserts randomized delays between requests, so the pace of data retrieval is consistent with a person manually clicking through listings. The AirDNA scraper goes further — it connects to a real Chrome browser session via Chrome DevTools Protocol, meaning it appears on the network as a normal logged-in user navigating page by page.
+
+Key principles:
+
+- **Human-speed pacing** — Randomized pauses between every request ensure automated browsing is no faster than manual browsing. There is no parallel request fan-out; listings are visited one at a time.
+- **Caching prevents redundant requests** — TTL-based caching means previously scraped listings are never re-fetched unless their cache expires. A second run against the same zip code hits zero external endpoints if all data is still fresh.
+- **Backoff on rate-limit signals** — If the pipeline detects signs of rate limiting (e.g., AirDNA returning empty results), it pauses for an extended cooldown period before retrying, rather than retrying immediately.
+- **No API abuse** — OpenAI calls use exponential backoff with retry limits. Token usage and costs are tracked per-session so users can monitor spend.
+
+This project is intended for personal market research. The scraping approach is deliberately conservative — the automation saves time by running unattended, not by going faster.
+
 ## Example Output
 
 The `reports/` directory contains example analytical output from a full pipeline run on zipcode 97067 (Mount Hood, Oregon — 341 properties analyzed):
@@ -140,6 +153,8 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 | `num_listings_to_search` | int | Max listings to find in search |
 | `num_listings_to_summarize` | int | Max listings to process with AI |
 | `review_thresh_to_include_prop` | int | Minimum reviews required to process a listing |
+| `num_summary_to_process` | int | Max property summaries to process in downstream stages |
+| `dataset_use_categoricals` | bool | Use categorical encoding for amenity features in analysis |
 
 ### AirDNA Settings
 
@@ -364,6 +379,8 @@ Zip Code + config.json
 
 ## Architecture
 
+For a detailed module map, data flow reference, and key patterns guide, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 ```
 main.py                          # Entry point — config-driven pipeline orchestrator
 ├── scraper/
@@ -419,6 +436,13 @@ make coverage
 | `make coverage` | Generate HTML coverage report |
 | `make chrome-debug` | Launch Chrome with remote debugging port for AirDNA scraping |
 | `make scrape-airdna` | Run AirDNA scraper standalone |
+
+## Notebooks
+
+| Notebook | Purpose |
+|----------|---------|
+| `eda_property_details.ipynb` | Exploratory data analysis of scraped property details and AirDNA metrics |
+| `model_notebook.ipynb` | Modeling experiments on listing features and pricing relationships |
 
 ## Disclaimer
 
