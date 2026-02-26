@@ -45,7 +45,6 @@ class AirDNAScraper:
         cdp_url: Chrome DevTools Protocol URL (e.g. http://localhost:9222).
         listing_ids: List of Airbnb listing IDs to look up.
         inspect_mode: When True, pauses after navigation for selector discovery.
-        min_days_available: Minimum Days Available to include a listing (default 100).
         pipeline_cache: Optional PipelineCacheManager for per-listing TTL caching.
     """
 
@@ -54,13 +53,11 @@ class AirDNAScraper:
         cdp_url: str,
         listing_ids: list[str],
         inspect_mode: bool = False,
-        min_days_available: int = 100,
         pipeline_cache=None,
     ) -> None:
         self.cdp_url = cdp_url
         self.listing_ids = listing_ids
         self.inspect_mode = inspect_mode
-        self.min_days_available = min_days_available
         self.pipeline_cache = pipeline_cache
 
     def _build_rentalizer_url(self, listing_id: str) -> str:
@@ -141,17 +138,6 @@ class AirDNAScraper:
             Numeric value as float.
         """
         return float(value.strip())
-
-    def should_include_listing(self, metrics: dict) -> bool:
-        """Check if a listing meets the minimum Days Available threshold.
-
-        Args:
-            metrics: Dict with at least a 'Days_Available' key.
-
-        Returns:
-            True if the listing should be included, False otherwise.
-        """
-        return metrics.get("Days_Available", 0) >= self.min_days_available
 
     def _is_empty_result(self, metrics: dict) -> bool:
         """Check if scraped metrics are empty (AirDNA rejected the request).
@@ -433,8 +419,8 @@ class AirDNAScraper:
         """Execute the full scraping workflow.
 
         Connects to Chrome via CDP, iterates over listing IDs,
-        scrapes each one from the rentalizer page, filters by
-        min_days_available, and saves results to per-listing JSON files.
+        scrapes each one from the rentalizer page, and saves
+        results to per-listing JSON files.
 
         If more than 25% of listings are missing after a pass (due to
         AirDNA rejecting requests), waits 3 minutes and retries,
@@ -470,12 +456,18 @@ class AirDNAScraper:
 
             total = len(self.listing_ids)
             scraped = 0
-            filtered = 0
             cached = 0
             failed = 0
             pass_number = 0
             # Track all resolved listings so we never re-visit them
             resolved = set()
+
+            # Pre-scan: identify already-cached listings before scraping
+            for listing_id in self.listing_ids:
+                if self._is_listing_cached(listing_id):
+                    cached += 1
+                    resolved.add(listing_id)
+            logger.info(f"Pre-scan: {cached}/{total} listings already cached")
 
             while True:
                 pass_number += 1
@@ -488,12 +480,13 @@ class AirDNAScraper:
                 )
 
                 for listing_id in self.listing_ids:
-                    # Skip anything already resolved (cached, scraped, or filtered)
+                    # Skip anything already resolved (cached or scraped)
                     if listing_id in resolved:
                         continue
 
                     # Per-listing cache check — skip before loading the page
                     if self._is_listing_cached(listing_id):
+                        logger.info(f"Cached (skipping): {listing_id}")
                         cached += 1
                         resolved.add(listing_id)
                         continue
@@ -510,18 +503,10 @@ class AirDNAScraper:
                         pass_failed += 1
                         failed += 1
                         # NOT added to resolved — will be retried next pass
-                    elif self.should_include_listing(metrics):
+                    else:
                         self.save_listing_result(listing_id, metrics)
                         scraped += 1
                         pass_scraped += 1
-                        resolved.add(listing_id)
-                    else:
-                        logger.info(
-                            f"Filtered listing {listing_id}: "
-                            f"Days_Available={metrics.get('Days_Available', 0)} "
-                            f"< {self.min_days_available}"
-                        )
-                        filtered += 1
                         resolved.add(listing_id)
 
                     # Rate limiting between requests
@@ -534,7 +519,7 @@ class AirDNAScraper:
                 logger.info(
                     f"Pass {pass_number} complete: "
                     f"scraped={scraped}, cached={cached}, "
-                    f"filtered={filtered}, failed(this pass)={pass_failed}, "
+                    f"failed(this pass)={pass_failed}, "
                     f"missing={missing}/{total}"
                 )
 
@@ -555,7 +540,7 @@ class AirDNAScraper:
 
         logger.info(
             f"AirDNA scraping complete. "
-            f"Saved {scraped}, filtered {filtered}, cached {cached}. "
+            f"Saved {scraped}, cached {cached}. "
             f"({len(resolved)}/{total} resolved)"
         )
 
@@ -585,6 +570,5 @@ if __name__ == "__main__":
         cdp_url=config.get("airdna_cdp_url", "http://localhost:9222"),
         listing_ids=ids,
         inspect_mode=config.get("airdna_inspect_mode", False),
-        min_days_available=config.get("min_days_available", 100),
     )
     scraper.run()

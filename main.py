@@ -153,7 +153,6 @@ class AirBnbReviewAggregator:
                     cdp_url=self.airdna_cdp_url,
                     listing_ids=listing_ids,
                     inspect_mode=self.airdna_inspect_mode,
-                    min_days_available=self.min_days_available,
                     pipeline_cache=self.pipeline_cache,
                 )
                 airdna_scraper.run()
@@ -262,6 +261,7 @@ class AirBnbReviewAggregator:
                     use_categoricals=self.use_categoricals,
                     comp_set_filepath=comp_set_filepath,
                     zipcode=self.zipcode,
+                    min_days_available=self.min_days_available,
                 )
                 fileset_builder.build_fileset()
                 logger.info("Building details fileset completed.")

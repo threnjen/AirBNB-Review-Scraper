@@ -226,7 +226,7 @@ pipenv run python main.py
 make scrape-airdna
 ```
 
-The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}` for each listing and extracts header metrics (Bedrooms, Bathrooms, Max Guests, Rating, Review Count) and KPI cards (Revenue, Days Available, Annual Revenue, Occupancy, ADR). Listings with fewer than `min_days_available` days (default: 100) are filtered out.
+The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}` for each listing and extracts header metrics (Bedrooms, Bathrooms, Max Guests, Rating, Review Count) and KPI cards (Revenue, Days Available, Annual Revenue, Occupancy, ADR). All listings are saved regardless of Days Available; filtering by `min_days_available` (default: 100) is applied later when the cleaned amenities matrix is built in the `build_details` stage.
 
 **Output:** `listing_{id}.json` — one file per listing in `outputs/02_comp_sets/`:
 ```json

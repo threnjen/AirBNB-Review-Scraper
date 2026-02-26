@@ -47,23 +47,6 @@ class TestAirDNAScraperInit:
         )
         assert scraper.inspect_mode is False
 
-    def test_init_stores_min_days_available(self):
-        """Test that __init__ stores min_days_available."""
-        scraper = AirDNAScraper(
-            cdp_url="http://localhost:9222",
-            listing_ids=["17134562"],
-            min_days_available=100,
-        )
-        assert scraper.min_days_available == 100
-
-    def test_init_default_min_days_available(self):
-        """Test that min_days_available defaults to 100."""
-        scraper = AirDNAScraper(
-            cdp_url="http://localhost:9222",
-            listing_ids=["17134562"],
-        )
-        assert scraper.min_days_available == 100
-
     def test_init_stores_pipeline_cache(self):
         """Test that __init__ stores pipeline_cache."""
         mock_cache = "fake_cache"
@@ -265,46 +248,6 @@ class TestAirDNAScraperSaveResults:
         )
 
         assert (tmp_path / "listing_942203543119276616.json").exists()
-
-
-class TestAirDNAScraperDaysFilter:
-    """Tests for min_days_available filtering logic."""
-
-    def test_listing_below_threshold_is_filtered(self):
-        """Test that a listing with fewer than min_days is excluded."""
-        scraper = AirDNAScraper(
-            cdp_url="http://localhost:9222",
-            listing_ids=["17134562"],
-            min_days_available=100,
-        )
-        assert scraper.should_include_listing({"Days_Available": 50}) is False
-
-    def test_listing_at_threshold_is_included(self):
-        """Test that a listing with exactly min_days is included."""
-        scraper = AirDNAScraper(
-            cdp_url="http://localhost:9222",
-            listing_ids=["17134562"],
-            min_days_available=100,
-        )
-        assert scraper.should_include_listing({"Days_Available": 100}) is True
-
-    def test_listing_above_threshold_is_included(self):
-        """Test that a listing above min_days is included."""
-        scraper = AirDNAScraper(
-            cdp_url="http://localhost:9222",
-            listing_ids=["17134562"],
-            min_days_available=100,
-        )
-        assert scraper.should_include_listing({"Days_Available": 333}) is True
-
-    def test_filter_zero_threshold_includes_all(self):
-        """Test that threshold of 0 includes everything."""
-        scraper = AirDNAScraper(
-            cdp_url="http://localhost:9222",
-            listing_ids=["17134562"],
-            min_days_available=0,
-        )
-        assert scraper.should_include_listing({"Days_Available": 0}) is True
 
 
 class TestAirDNAScraperIsEmptyResult:

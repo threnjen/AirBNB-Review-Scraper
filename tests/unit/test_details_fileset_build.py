@@ -4,6 +4,7 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 
 
@@ -102,3 +103,132 @@ class TestDetailsFilesetBuilderCompSetPath:
         mock_logger.info.assert_any_call(
             "No property detail files found in the directory."
         )
+
+
+class TestCleanAmenitiesDfFiltering:
+    """Tests for min_days_available row filtering in clean_amenities_df."""
+
+    def test_filters_rows_below_min_days_available(self):
+        """Rows with Days_Avail < min_days_available are dropped."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=100,
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0, 200.0, 180.0],
+                "Days_Avail": [50, 100, 300],
+                "capacity": [4, 6, 8],
+            },
+            index=["p1", "p2", "p3"],
+        )
+        result = builder.clean_amenities_df(df)
+        assert "p1" not in result.index
+        assert "p2" in result.index
+        assert "p3" in result.index
+
+    def test_keeps_rows_at_or_above_threshold(self):
+        """Rows with Days_Avail >= min_days_available are kept."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=100,
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0, 200.0],
+                "Days_Avail": [100, 365],
+                "capacity": [4, 6],
+            },
+            index=["p1", "p2"],
+        )
+        result = builder.clean_amenities_df(df)
+        assert len(result) == 2
+
+    def test_zero_threshold_keeps_all_rows(self):
+        """A threshold of 0 retains everything."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=0,
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0, 200.0],
+                "Days_Avail": [0, 50],
+                "capacity": [4, 6],
+            },
+            index=["p1", "p2"],
+        )
+        result = builder.clean_amenities_df(df)
+        assert len(result) == 2
+
+    def test_logs_filtered_count(self):
+        """Filtering logs how many rows were removed."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=100,
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0, 200.0, 180.0],
+                "Days_Avail": [50, 30, 300],
+                "capacity": [4, 6, 8],
+            },
+            index=["p1", "p2", "p3"],
+        )
+        with patch("scraper.details_fileset_build.logger") as mock_logger:
+            builder.clean_amenities_df(df)
+        mock_logger.info.assert_any_call(
+            "Filtered 2 listings with Days_Avail < 100 (1 remaining)"
+        )
+
+    def test_handles_missing_days_avail_column(self):
+        """If Days_Avail column is absent, no filtering occurs."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=100,
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0, 200.0],
+                "capacity": [4, 6],
+            },
+            index=["p1", "p2"],
+        )
+        result = builder.clean_amenities_df(df)
+        assert len(result) == 2
+
+    def test_init_stores_min_days_available(self):
+        """Constructor stores the min_days_available parameter."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=150,
+        )
+        assert builder.min_days_available == 150
+
+    def test_init_default_min_days_available(self):
+        """min_days_available defaults to 100."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+        )
+        assert builder.min_days_available == 100

@@ -18,10 +18,12 @@ class DetailsFilesetBuilder:
         use_categoricals: bool,
         comp_set_filepath: str,
         zipcode: str = "00000",
+        min_days_available: int = 100,
     ) -> None:
         self.use_categoricals = use_categoricals
         self.comp_set_filepath = comp_set_filepath
         self.zipcode = zipcode
+        self.min_days_available = min_days_available
         self.property_details = {}
         self.house_rules = {}
         self.property_descriptions = {}
@@ -140,6 +142,19 @@ class DetailsFilesetBuilder:
             df["bathrooms"] = df["bathrooms"].astype(float)
         if "bedrooms" in df.columns:
             df["bedrooms"] = df["bedrooms"].astype(int)
+
+        # Filter rows by min_days_available (ELT: raw matrix keeps all,
+        # cleaned matrix applies business rules)
+        if "Days_Avail" in df.columns:
+            before = len(df)
+            df = df[df["Days_Avail"] >= self.min_days_available]
+            after = len(df)
+            if before > after:
+                logger.info(
+                    f"Filtered {before - after} listings with "
+                    f"Days_Avail < {self.min_days_available} "
+                    f"({after} remaining)"
+                )
 
         return df
 
