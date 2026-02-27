@@ -89,6 +89,87 @@ class TestCorrelationAnalyzer:
         )
 
 
+class TestSegmentByMetricStringColumns:
+    """Tests for segment_by_metric handling of string-typed metric columns."""
+
+    @pytest.fixture
+    def analyzer(self):
+        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_json_file", return_value={}):
+                from review_aggregator.correlation_analyzer import CorrelationAnalyzer
+
+                return CorrelationAnalyzer(
+                    zipcode="97067", top_percentile=25, bottom_percentile=25
+                )
+
+    def test_string_typed_adr_column_does_not_raise(self, analyzer):
+        """segment_by_metric must handle ADR column with string dtype.
+
+        When the raw CSV is loaded, ADR may contain string values like
+        '245.57' and 'False' (from fillna). The method must coerce to
+        numeric without raising TypeError.
+        """
+        df = pd.DataFrame(
+            {
+                "ADR": ["300", "250", "200", "180", "150", "120", "100", "False"],
+                "capacity": [4, 6, 3, 5, 2, 4, 3, 2],
+            },
+            index=[f"p{i}" for i in range(8)],
+        )
+
+        high_tier, low_tier, high_thresh, low_thresh = analyzer.segment_by_metric(
+            df, "adr"
+        )
+
+        assert len(high_tier) > 0
+        assert len(low_tier) > 0
+        assert high_thresh > low_thresh
+
+    def test_false_string_values_excluded(self, analyzer):
+        """Rows with 'False' in the metric column are excluded from tiers."""
+        df = pd.DataFrame(
+            {
+                "ADR": ["300", "250", "200", "180", "150", "120", "100", "False"],
+                "capacity": [4, 6, 3, 5, 2, 4, 3, 2],
+            },
+            index=[f"p{i}" for i in range(8)],
+        )
+
+        high_tier, low_tier, _, _ = analyzer.segment_by_metric(df, "adr")
+
+        # 'False' row (p7) should not appear in either tier
+        assert "p7" not in high_tier.index
+        assert "p7" not in low_tier.index
+
+    def test_string_typed_occupancy_column(self, analyzer):
+        """segment_by_metric handles string-typed Occ_Rate_Based_on_Avail."""
+        df = pd.DataFrame(
+            {
+                "Occ_Rate_Based_on_Avail": [
+                    "90",
+                    "80",
+                    "70",
+                    "60",
+                    "50",
+                    "40",
+                    "30",
+                    "False",
+                ],
+                "capacity": [4, 6, 3, 5, 2, 4, 3, 2],
+            },
+            index=[f"p{i}" for i in range(8)],
+        )
+
+        high_tier, low_tier, high_thresh, low_thresh = analyzer.segment_by_metric(
+            df, "occupancy"
+        )
+
+        assert len(high_tier) > 0
+        assert len(low_tier) > 0
+        assert "p7" not in high_tier.index
+
+
 class TestLoadPropertyDataAirdnaFilter:
     """Tests for AirDNA-data filtering in load_property_data."""
 

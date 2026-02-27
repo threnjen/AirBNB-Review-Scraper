@@ -143,6 +143,9 @@ class CorrelationAnalyzer(BaseModel):
             )
             return pd.DataFrame(), pd.DataFrame(), 0.0, 0.0
 
+        # Coerce metric column to numeric (CSV may contain string 'False')
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+
         # Filter to properties with valid metric values
         valid_df = df[df[column].notna() & (df[column] > 0)].copy()
 
