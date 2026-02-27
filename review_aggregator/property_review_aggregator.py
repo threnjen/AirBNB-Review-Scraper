@@ -203,6 +203,7 @@ class PropertyRagAggregator(BaseModel):
             reviews.update(one_property)
         logger.info(f"Total property loaded: {len(reviews)}")
 
+        os.makedirs("outputs/06_listing_summaries", exist_ok=True)
         generated_summaries_files = [
             x
             for x in os.listdir("outputs/06_listing_summaries/")
@@ -243,7 +244,7 @@ class PropertyRagAggregator(BaseModel):
         end_index = start_index + self.num_listings_to_summarize
 
         # First pass: process each unprocessed listing up to the configured limit
-        os.makedirs("outputs/06_listing_summaries", exist_ok=True)
+
         for listing_id in unprocessed_reviews_ids[start_index:end_index]:
             generated_summaries[listing_id] = self.process_single_listing(
                 one_property_reviews=unprocessed_reviews[listing_id],
