@@ -12,15 +12,17 @@ default: help
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  setup          - Set up the environment (Windows/Unix)"
+	@echo "  setup          - Install dependencies and Playwright browsers"
 	@echo "  test           - Run all tests with coverage"
 	@echo "  test-fast      - Run tests without coverage (fail fast)"
 	@echo "  coverage       - Run tests with detailed coverage report"
+	@echo "  chrome-debug   - Launch Chrome with remote debugging for AirDNA scraping"
+	@echo "  scrape-airdna  - Run AirDNA scraper standalone"
 
 # Setup target
 setup:
 	@$(PIPENV) install --dev || exit 1
-	pipenv shell
+	$(PIPENV) run playwright install chromium
 
 # Test targets
 test:

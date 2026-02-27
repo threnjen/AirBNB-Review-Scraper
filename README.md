@@ -17,7 +17,7 @@ An active [OpenAI account](https://platform.openai.com/) with API access and a *
 | Correlation insights | Statistical data + descriptions → market analysis for ADR/Occupancy |
 | Description scoring | Each listing description scored on 7 quality dimensions, then synthesized |
 
-For a typical run of ~300 listings, expect significant API usage. The pipeline includes a built-in cost tracker (`utils/cost_tracker.py`) that logs every request to `logs/cost_tracking.json` so you can monitor spend.
+For a typical run of ~300 listings, expect roughly $2–5 in API costs (GPT-4.1-mini at $0.40/1M input, $1.60/1M output tokens). The pipeline includes a built-in cost tracker (`utils/cost_tracker.py`) that logs every request to `logs/cost_tracking.json` so you can monitor spend in real time.
 
 ### 2. Paid AirDNA Subscription
 
@@ -51,19 +51,18 @@ The pipeline automatically looks up each listing discovered in the Airbnb search
 
 ```bash
 # Clone the repository
-git clone https://github.com/M-CDevinW/AirBNB-Review-Scraper.git
+git clone https://github.com/threnjen/AirBNB-Review-Scraper.git
 cd AirBNB-Review-Scraper
 
-# Install dependencies (or use: make setup)
+# Install dependencies
 pipenv install --dev
-
-# Activate environment
-pipenv shell
 
 # Install Playwright browsers (required for AirDNA scraping)
 pipenv run playwright install chromium
 
-# Set OpenAI API key
+# Set OpenAI API key (or copy .env.example to .env and fill it in)
+cp .env.example .env
+# Then edit .env with your key, or export directly:
 export OPENAI_API_KEY="your-api-key-here"
 ```
 
@@ -144,6 +143,14 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 | `correlation_results` | bool | Run correlation analysis of amenities/capacity vs. ADR and Occupancy |
 | `description_analysis` | bool | Run description quality scoring and regression analysis |
 
+**Stage dependencies:** Stages run in order and depend on upstream outputs. Stages 1–5 produce the raw data; stages 6–9 consume it. For example, `listing_summaries` (6) requires `search_results` (1) and `reviews_scrape` (4); `correlation_results` (8) and `description_analysis` (9) require `details_results` (5) and `comp_sets` (3). If you enable a downstream stage without having run its upstream stages first, the pipeline will fail or produce empty results.
+
+**AirDNA data required for stages 8–9:** The `correlation_results` and `description_analysis` stages silently filter out properties without AirDNA financial data. If you skip the `comp_sets` stage, these analysis stages will have no properties to analyze. Run `comp_sets` first to populate AirDNA metrics.
+
+**Entire-home filter:** The `details_results` stage only includes listings with room type "Entire home/apt". Shared rooms, private rooms, and hotel rooms are silently excluded. All downstream analysis operates on entire-home listings only.
+
+**Minimum property requirements:** The correlation analyzer requires at least 4 properties with valid metric values per tier. The description analyzer's OLS regression requires more properties than features (~161+ for the full amenity set). Small zip codes with few listings may produce empty or degraded results.
+
 ### Search Parameters
 
 | Key | Type | Description |
@@ -160,7 +167,7 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `min_days_available` | int | Minimum Days Available to include a listing (default: `100`) |
+| `min_days_available` | int | Minimum Days Available to include a listing in the *cleaned* amenities matrix used by description analysis (default: `100`). The raw matrix used by correlation analysis is unfiltered. |
 | `airdna_cdp_url` | string | Chrome DevTools Protocol URL (default: `http://localhost:9222`) |
 | `airdna_inspect_mode` | bool | Pause after navigation for DOM selector discovery |
 
@@ -189,7 +196,7 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `pipeline_cache_enabled` | bool | `true` | Enable/disable pipeline-level TTL caching |
-| `pipeline_cache_ttl_days` | int | `7` | Number of days before cached outputs expire |
+| `pipeline_cache_ttl_days` | int | `30` | Number of days before cached outputs expire |
 | `force_refresh_search_results` | bool | `false` | Force re-run area search |
 | `force_refresh_details_scrape` | bool | `false` | Force re-scrape all property details |
 | `force_refresh_details_results` | bool | `false` | Force rebuild details fileset |
@@ -224,13 +231,21 @@ To force a single stage to re-run:
 Enrich each discovered listing with financial metrics (ADR, Occupancy, Revenue, Days Available) from AirDNA's rentalizer page. The pipeline automatically feeds listing IDs from the Airbnb search into AirDNA — no manual comp set creation needed.
 
 **Setup:**
-1. Launch Chrome with remote debugging:
+1. **Quit Chrome completely first** (Cmd+Q on macOS) — the debug port won't open if Chrome is already running.
+2. Launch Chrome with remote debugging:
    ```bash
+   # macOS:
    make chrome-debug
    # Or manually:
    open -a "Google Chrome" --args --remote-debugging-port=9222
+
+   # Linux:
+   google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug-profile &
+
+   # Windows (PowerShell):
+   & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="$env:TEMP\chrome-debug-profile"
    ```
-2. In the Chrome window that opens, navigate to [AirDNA](https://app.airdna.co) and log in with your account
+3. In the Chrome window that opens, navigate to [AirDNA](https://app.airdna.co) and log in with your account
 
 **Run:**
 ```bash
@@ -247,6 +262,9 @@ The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}`
 {
     "1050769200886027711": {"ADR": 487.5, "Occupancy": 32, "Revenue": 51700.0, "Days_Available": 333, "Bedrooms": 4, "Bathrooms": 3, "Max_Guests": 15, "Rating": 4.7, "Review_Count": 287, "LY_Revenue": 0.0}
 }
+```
+
+> **Note:** `LY_Revenue` (Last Year Revenue) is a placeholder field — it is always `0.0` in the current implementation and can be ignored.
 ```
 
 **Inspect mode:** If selectors break (AirDNA UI changes), enable `"airdna_inspect_mode": true` to pause the browser and use Playwright Inspector to discover new selectors.
@@ -436,7 +454,7 @@ make coverage
 
 | Target | Description |
 |--------|-------------|
-| `make setup` | Install dependencies and activate pipenv shell |
+| `make setup` | Install dependencies and Playwright browsers |
 | `make test` | Run pytest with coverage |
 | `make test-fast` | Run pytest, fail-fast, no coverage |
 | `make coverage` | Generate HTML coverage report |
@@ -449,6 +467,21 @@ make coverage
 |----------|---------|
 | `eda_property_details.ipynb` | Exploratory data analysis of scraped property details and AirDNA metrics |
 | `model_notebook.ipynb` | Modeling experiments on listing features and pricing relationships |
+
+## Troubleshooting
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| AirDNA scraper can't connect | Chrome not running with `--remote-debugging-port` or regular Chrome already open | Quit Chrome fully (Cmd+Q), then `make chrome-debug` |
+| AirDNA returns empty results | Rate limiting or session expired | Wait 3 minutes and retry; re-login to AirDNA in the debug Chrome window |
+| Correlation/description analysis produces empty results | Missing AirDNA data or too few properties | Ensure `comp_sets` stage ran first; check that the zip code has enough entire-home listings (4+ for correlation, 161+ for full OLS regression) |
+| OpenAI API errors | Insufficient credits or rate limits | Check your OpenAI balance; the pipeline retries 3x with exponential backoff automatically |
+| Search returns fewer listings than expected | `pyairbnb` caps at ~280 listings per geographic bounding box | This is a library limitation; choose smaller/more specific zip codes if needed |
+| `make chrome-debug` hangs | Chrome debug port already in use | Quit all Chrome processes and retry |
+
+## Data Privacy
+
+The pipeline scrapes publicly visible Airbnb review text, which may include reviewer names and personally identifiable information. All scraped data is stored locally in the `outputs/` directory. Users are responsible for handling this data in compliance with applicable privacy regulations and should avoid sharing raw review data publicly.
 
 ## Disclaimer
 

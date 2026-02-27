@@ -155,5 +155,4 @@ All scraper modules insert randomized delays between requests to mimic human bro
 | `tiktoken` | Token counting for OpenAI chunking |
 | `pydantic` | Data validation and settings for all aggregator/utility classes |
 | `pandas` | DataFrames for amenity matrices, correlation analysis, OLS regression |
-| `numpy` | Numeric operations underlying pandas/statsmodels work |
-| `statsmodels` | OLS regression in description quality analysis |
+| `numpy` | Numeric operations, OLS regression via `numpy.linalg.lstsq` in description quality analysis |
