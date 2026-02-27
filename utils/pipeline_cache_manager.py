@@ -38,6 +38,12 @@ class PipelineCacheManager(BaseModel):
         "description_analysis",
     ]
 
+    CASCADE_TARGET_STAGES: set[str] = {
+        "area_summary",
+        "correlation_results",
+        "description_analysis",
+    }
+
     STAGE_OUTPUT_DIRS: dict[str, str] = {
         "search_results": "outputs/01_search_results",
         "details_scrape": "outputs/02_details_scrape",
@@ -436,32 +442,33 @@ class PipelineCacheManager(BaseModel):
     def _apply_init_cascade(self) -> None:
         """Cascade force-refresh flags at init time.
 
-        If any ``force_refresh_*`` flag loaded from config is ``True``, every
-        stage that comes *after* it in :pyattr:`STAGE_ORDER` is also set to
-        ``True``.  This guarantees that refreshing an upstream stage always
-        invalidates all downstream outputs.
+        If any ``force_refresh_*`` flag loaded from config is ``True``, only
+        the analysis stages (``CASCADE_TARGET_STAGES``) that come *after* it
+        in :pyattr:`STAGE_ORDER` are set to ``True``.  Non-analysis stages
+        are never auto-refreshed by upstream flags.
         """
         cascade_active = False
         cascaded: list[str] = []
         for stage in self.STAGE_ORDER:
             if cascade_active:
-                if not self.force_refresh_flags.get(stage, False):
-                    cascaded.append(stage)
-                self.force_refresh_flags[stage] = True
+                if stage in self.CASCADE_TARGET_STAGES:
+                    if not self.force_refresh_flags.get(stage, False):
+                        cascaded.append(stage)
+                    self.force_refresh_flags[stage] = True
             elif self.force_refresh_flags.get(stage, False):
                 cascade_active = True
 
         if cascaded:
             logger.info(
-                "Init cascade: auto-set force_refresh for downstream stages: "
+                "Init cascade: auto-set force_refresh for analysis stages: "
                 f"{', '.join(cascaded)}"
             )
 
     def cascade_force_refresh(self, stage_name: str) -> None:
-        """Force-refresh all stages that come after *stage_name* in the pipeline.
+        """Force-refresh analysis stages that come after *stage_name*.
 
-        This ensures downstream outputs built from the refreshed stage's data
-        are also regenerated.
+        Only stages in ``CASCADE_TARGET_STAGES`` are affected.  Non-analysis
+        stages are never force-refreshed by cascade.
 
         Args:
             stage_name: The stage whose refresh should cascade downstream.
@@ -472,13 +479,40 @@ class PipelineCacheManager(BaseModel):
 
         stage_index = self.STAGE_ORDER.index(stage_name)
         downstream = self.STAGE_ORDER[stage_index + 1 :]
+        targets = [s for s in downstream if s in self.CASCADE_TARGET_STAGES]
 
-        if downstream:
-            for later_stage in downstream:
+        if targets:
+            for later_stage in targets:
                 self.force_refresh_flags[later_stage] = True
             logger.info(
                 f"Stage '{stage_name}' refreshed — cascading force_refresh to: "
-                f"{', '.join(downstream)}"
+                f"{', '.join(targets)}"
+            )
+
+    def notify_stage_ran(self, stage_name: str) -> None:
+        """Notify the cache that a stage performed actual work.
+
+        Called after any stage completes work (whether ``clear_and_run`` or
+        ``resume``).  Forces a refresh of downstream analysis stages in
+        ``CASCADE_TARGET_STAGES`` so their outputs reflect the updated data.
+
+        Args:
+            stage_name: The stage that just ran.
+        """
+        if stage_name not in self.STAGE_ORDER:
+            logger.warning(f"Unknown stage '{stage_name}' — notify skipped.")
+            return
+
+        stage_index = self.STAGE_ORDER.index(stage_name)
+        downstream = self.STAGE_ORDER[stage_index + 1 :]
+        targets = [s for s in downstream if s in self.CASCADE_TARGET_STAGES]
+
+        if targets:
+            for later_stage in targets:
+                self.force_refresh_flags[later_stage] = True
+            logger.info(
+                f"Stage '{stage_name}' ran — marking analysis stages for refresh: "
+                f"{', '.join(targets)}"
             )
 
     # ------------------------------------------------------------------

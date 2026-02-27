@@ -60,7 +60,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     airdna_scraper = AirDNAScraper(
         cdp_url=cdp_url,
@@ -70,4 +69,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     )
     airdna_scraper.run()
     compile_comp_sets(zipcode)
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info("AirDNA per-listing scraping completed.")

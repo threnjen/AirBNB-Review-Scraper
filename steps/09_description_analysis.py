@@ -24,8 +24,8 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     desc_analyzer = DescriptionAnalyzer(zipcode=zipcode)
     desc_analyzer.run_analysis()
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info(f"Description quality analysis for zipcode {zipcode} completed.")

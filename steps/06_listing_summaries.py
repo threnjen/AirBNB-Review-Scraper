@@ -26,7 +26,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     rag_property = PropertyRagAggregator(
         num_listings_to_summarize=num_listings,
@@ -35,4 +34,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         pipeline_cache=pipeline_cache,
     )
     rag_property.rag_description_generation_chain()
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info(f"Listing summaries for zipcode {zipcode} completed.")

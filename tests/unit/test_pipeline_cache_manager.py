@@ -184,8 +184,8 @@ class TestPipelineCacheManager:
 
     # --- cascade_force_refresh ---
 
-    def test_cascade_force_refresh_sets_all_later_stages(self, cache_manager):
-        """Test that cascade_force_refresh sets all downstream stages to True."""
+    def test_cascade_force_refresh_sets_only_analysis_stages(self, cache_manager):
+        """Test that cascade_force_refresh sets only analysis stages to True."""
         cache_manager.cascade_force_refresh("reviews_scrape")
 
         assert cache_manager.force_refresh_flags.get("search_results") is False
@@ -193,8 +193,8 @@ class TestPipelineCacheManager:
         assert cache_manager.force_refresh_flags.get("details_results") is False
         assert cache_manager.force_refresh_flags.get("reviews_scrape") is False
 
-        assert cache_manager.force_refresh_flags.get("comp_sets") is True
-        assert cache_manager.force_refresh_flags.get("listing_summaries") is True
+        assert cache_manager.force_refresh_flags.get("comp_sets") is False
+        assert cache_manager.force_refresh_flags.get("listing_summaries") is False
         assert cache_manager.force_refresh_flags.get("area_summary") is True
         assert cache_manager.force_refresh_flags.get("correlation_results") is True
         assert cache_manager.force_refresh_flags.get("description_analysis") is True
@@ -207,8 +207,8 @@ class TestPipelineCacheManager:
 
         assert cache_manager.force_refresh_flags == original_flags
 
-    def test_cascade_from_first_stage_sets_all_others(self, cache_manager):
-        """Test that cascade from the first stage sets all 8 remaining stages."""
+    def test_cascade_from_first_stage_sets_only_analysis_stages(self, cache_manager):
+        """Test that cascade from the first stage sets only the 3 analysis stages."""
         cache_manager.cascade_force_refresh("search_results")
 
         assert cache_manager.force_refresh_flags.get("search_results") is False
@@ -219,6 +219,12 @@ class TestPipelineCacheManager:
             "reviews_scrape",
             "comp_sets",
             "listing_summaries",
+        ]:
+            assert cache_manager.force_refresh_flags.get(stage) is False, (
+                f"Expected {stage} to be False — non-analysis stages are not cascaded"
+            )
+
+        for stage in [
             "area_summary",
             "correlation_results",
             "description_analysis",
@@ -232,6 +238,68 @@ class TestPipelineCacheManager:
         original_flags = dict(cache_manager.force_refresh_flags)
 
         cache_manager.cascade_force_refresh("nonexistent_stage")
+
+        assert cache_manager.force_refresh_flags == original_flags
+
+    def test_cascade_from_analysis_stage_only_affects_later_analysis(
+        self, cache_manager
+    ):
+        """Test cascade from area_summary only sets correlation + description."""
+        cache_manager.cascade_force_refresh("area_summary")
+
+        assert cache_manager.force_refresh_flags.get("area_summary") is False
+        assert cache_manager.force_refresh_flags.get("correlation_results") is True
+        assert cache_manager.force_refresh_flags.get("description_analysis") is True
+
+    # --- notify_stage_ran ---
+
+    def test_notify_stage_ran_sets_only_analysis_stages(self, cache_manager):
+        """Test that notify_stage_ran sets only downstream analysis stages."""
+        cache_manager.notify_stage_ran("reviews_scrape")
+
+        assert cache_manager.force_refresh_flags.get("search_results") is False
+        assert cache_manager.force_refresh_flags.get("details_scrape") is False
+        assert cache_manager.force_refresh_flags.get("details_results") is False
+        assert cache_manager.force_refresh_flags.get("reviews_scrape") is False
+        assert cache_manager.force_refresh_flags.get("comp_sets") is False
+        assert cache_manager.force_refresh_flags.get("listing_summaries") is False
+        assert cache_manager.force_refresh_flags.get("area_summary") is True
+        assert cache_manager.force_refresh_flags.get("correlation_results") is True
+        assert cache_manager.force_refresh_flags.get("description_analysis") is True
+
+    def test_notify_stage_ran_from_search_results(self, cache_manager):
+        """Test that notify from first stage sets all 3 analysis stages."""
+        cache_manager.notify_stage_ran("search_results")
+
+        for stage in [
+            "details_scrape",
+            "details_results",
+            "reviews_scrape",
+            "comp_sets",
+            "listing_summaries",
+        ]:
+            assert cache_manager.force_refresh_flags.get(stage) is False
+
+        for stage in [
+            "area_summary",
+            "correlation_results",
+            "description_analysis",
+        ]:
+            assert cache_manager.force_refresh_flags.get(stage) is True
+
+    def test_notify_stage_ran_from_last_stage_is_noop(self, cache_manager):
+        """Test that notify from the last stage changes nothing."""
+        original_flags = dict(cache_manager.force_refresh_flags)
+
+        cache_manager.notify_stage_ran("description_analysis")
+
+        assert cache_manager.force_refresh_flags == original_flags
+
+    def test_notify_unknown_stage_is_noop(self, cache_manager):
+        """Test that notify with an unknown stage name does nothing."""
+        original_flags = dict(cache_manager.force_refresh_flags)
+
+        cache_manager.notify_stage_ran("nonexistent_stage")
 
         assert cache_manager.force_refresh_flags == original_flags
 
@@ -255,8 +323,8 @@ class TestPipelineCacheManager:
         assert manager.force_refresh_flags["correlation_results"] is True
         assert manager.force_refresh_flags["description_analysis"] is True
 
-    def test_init_cascade_sets_downstream_flags(self, tmp_path):
-        """Test that on init, a True flag cascades to all later stages."""
+    def test_init_cascade_sets_only_analysis_stage_flags(self, tmp_path):
+        """Test that on init, a True flag cascades only to analysis stages."""
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -272,8 +340,11 @@ class TestPipelineCacheManager:
         assert manager.force_refresh_flags["details_results"] is False
         assert manager.force_refresh_flags["reviews_scrape"] is True
 
-        assert manager.force_refresh_flags["comp_sets"] is True
-        assert manager.force_refresh_flags["listing_summaries"] is True
+        # Non-analysis downstream stages are NOT cascaded
+        assert manager.force_refresh_flags["comp_sets"] is False
+        assert manager.force_refresh_flags["listing_summaries"] is False
+
+        # Analysis stages ARE cascaded
         assert manager.force_refresh_flags["area_summary"] is True
         assert manager.force_refresh_flags["correlation_results"] is True
         assert manager.force_refresh_flags["description_analysis"] is True

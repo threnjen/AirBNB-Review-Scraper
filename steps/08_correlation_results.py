@@ -27,7 +27,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     analyzer = CorrelationAnalyzer(
         zipcode=zipcode,
@@ -36,4 +35,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         bottom_percentile=bottom_pct,
     )
     analyzer.run_analysis()
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info(f"Correlation analysis for zipcode {zipcode} completed.")

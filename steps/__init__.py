@@ -30,6 +30,7 @@ def load_search_results(
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode("search_results", zipcode)
-        pipeline_cache.cascade_force_refresh("search_results")
 
-    return airbnb_searcher(zipcode, iso_code)
+    results = airbnb_searcher(zipcode, iso_code)
+    pipeline_cache.notify_stage_ran("search_results")
+    return results

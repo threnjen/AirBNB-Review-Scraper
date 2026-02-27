@@ -30,7 +30,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     # Part A: generate prose area summary (reports/*.json + *.md)
     rag_area = AreaRagAggregator(
@@ -45,4 +44,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     # Part B: extract structured category data (outputs/07_area_summary/)
     extractor = DataExtractor(zipcode=zipcode)
     extractor.run_extraction()
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info(f"Area data extraction for zipcode {zipcode} completed.")

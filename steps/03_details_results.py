@@ -26,7 +26,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     comp_set_filepath = f"outputs/05_comp_sets/comp_set_{zipcode}.json"
     fileset_builder = DetailsFilesetBuilder(
@@ -36,4 +35,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         min_days_available=min_days_available,
     )
     fileset_builder.build_fileset()
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info("Building details fileset completed.")

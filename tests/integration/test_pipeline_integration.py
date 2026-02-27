@@ -470,7 +470,7 @@ class TestPipelineCacheIntegration:
         assert list(output_dir.iterdir()) == []
 
     def test_cascade_force_refresh_marks_downstream_stale(self, tmp_path):
-        """Test that cascading force-refresh makes downstream stages stale."""
+        """Test that cascading force-refresh makes downstream analysis stages stale."""
 
         with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -484,6 +484,12 @@ class TestPipelineCacheIntegration:
         # Simulate reviews being not-fresh → cascade downstream
         cache.cascade_force_refresh("reviews_scrape")
 
-        # comp_sets (downstream) should now be forced to refresh
-        assert cache.is_stage_fresh("comp_sets", "97067") is False
-        assert cache.force_refresh_flags["comp_sets"] is True
+        # Non-analysis downstream stages are NOT cascaded
+        assert cache.force_refresh_flags["comp_sets"] is False
+        assert cache.force_refresh_flags["listing_summaries"] is False
+
+        # Analysis stages ARE cascaded and therefore stale
+        assert cache.is_stage_fresh("area_summary", "97067") is False
+        assert cache.force_refresh_flags["area_summary"] is True
+        assert cache.force_refresh_flags["correlation_results"] is True
+        assert cache.force_refresh_flags["description_analysis"] is True

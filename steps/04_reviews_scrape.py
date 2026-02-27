@@ -26,7 +26,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
 
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
-        pipeline_cache.cascade_force_refresh(STAGE)
 
     search_results = load_search_results(config, pipeline_cache)
     scrape_reviews(
@@ -35,4 +34,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         num_listings=num_listings,
         pipeline_cache=pipeline_cache,
     )
+    pipeline_cache.notify_stage_ran(STAGE)
     logger.info(f"Reviews scraping for zipcode {zipcode} completed.")

@@ -1,7 +1,7 @@
 {
     "pipeline_cache_enabled": true,
     "pipeline_cache_ttl_days": 30,
-    "search_results": true,
+    "search_results": false,
     "force_refresh_search_results": false,
     "details_scrape": false,
     "force_refresh_details_scrape": false,
@@ -31,8 +31,8 @@
     "zipcode": "97067",
     "iso_code": "us",
     "num_listings_to_summarize": 100000,
-    "num_listings_to_search": 30000,
-    "num_summary_to_process": 10000,
+    "num_listings_to_search": 100000,
+    "num_summary_to_process": 100000,
     "review_thresh_to_include_prop": 3,
     "dataset_use_categoricals": false,
     "openai": {
