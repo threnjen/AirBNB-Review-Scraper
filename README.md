@@ -29,17 +29,6 @@ For a typical run of ~300 listings, expect significant API usage. The pipeline i
 
 Without AirDNA data, the correlation analysis and description quality analysis stages will lack the financial metrics needed to function.
 
-### 3. Manually Created AirDNA Comp Sets
-
-You must **manually create comp sets** in the AirDNA web app for your area of interest before running the pipeline. A comp set is a user-curated group of comparable Airbnb listings that AirDNA tracks together. The scraper reads existing comp sets but does not create them.
-
-**To set up comp sets:**
-1. Log into [AirDNA](https://app.airdna.co)
-2. Navigate to the Comp Sets section
-3. Create one or more comp sets containing listings in your target area
-4. Copy each comp set's ID from the URL (e.g., `https://app.airdna.co/data/comp-sets/365519` → ID is `365519`)
-5. Add the IDs to `config.json` under `airdna_comp_set_ids`
-
 ## Features
 
 - **AirDNA Comp Set Scraping** — Extract listing IDs with ADR, Occupancy, and Days Available via Playwright/CDP
