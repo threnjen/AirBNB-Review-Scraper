@@ -45,9 +45,9 @@ class TestExpectedOutputs:
         }
 
         result = cache_manager.expected_outputs("comp_sets", "97067")
-        assert "outputs/05_comp_sets/comp_set_97067.json" in result
-        assert "outputs/05_comp_sets/listing_111.json" in result
-        assert "outputs/05_comp_sets/listing_222.json" in result
+        assert "outputs/03_comp_sets/comp_set_97067.json" in result
+        assert "outputs/03_comp_sets/listing_111.json" in result
+        assert "outputs/03_comp_sets/listing_222.json" in result
 
     def test_airdna_missing_search_results_returns_empty(self, cache_manager):
         result = cache_manager.expected_outputs("comp_sets", "99999")
@@ -87,15 +87,15 @@ class TestExpectedOutputs:
         result = cache_manager.expected_outputs("details_results", "97067")
         assert len(result) == 5
         assert (
-            "outputs/03_details_results/property_amenities_matrix_97067.csv" in result
+            "outputs/05_details_results/property_amenities_matrix_97067.csv" in result
         )
         assert (
-            "outputs/03_details_results/property_amenities_matrix_cleaned_97067.csv"
+            "outputs/05_details_results/property_amenities_matrix_cleaned_97067.csv"
             in result
         )
-        assert "outputs/03_details_results/house_rules_details_97067.json" in result
-        assert "outputs/03_details_results/property_descriptions_97067.json" in result
-        assert "outputs/03_details_results/neighborhood_highlights_97067.json" in result
+        assert "outputs/05_details_results/house_rules_details_97067.json" in result
+        assert "outputs/05_details_results/property_descriptions_97067.json" in result
+        assert "outputs/05_details_results/neighborhood_highlights_97067.json" in result
 
     def test_aggregate_reviews_returns_per_listing_files(self, cache_manager, tmp_path):
         # listing_summaries derives from review files on disk

@@ -81,7 +81,7 @@ class CorrelationAnalyzer(BaseModel):
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
         csv_path = (
-            f"outputs/03_details_results/property_amenities_matrix_{self.zipcode}.csv"
+            f"outputs/05_details_results/property_amenities_matrix_{self.zipcode}.csv"
         )
 
         if not os.path.exists(csv_path):
@@ -109,7 +109,7 @@ class CorrelationAnalyzer(BaseModel):
     def load_descriptions(self) -> dict[str, str]:
         """Load property descriptions for LLM context."""
         desc_path = (
-            f"outputs/03_details_results/property_descriptions_{self.zipcode}.json"
+            f"outputs/05_details_results/property_descriptions_{self.zipcode}.json"
         )
 
         if not os.path.exists(desc_path):
@@ -135,6 +135,13 @@ class CorrelationAnalyzer(BaseModel):
             return pd.DataFrame(), pd.DataFrame(), 0.0, 0.0
 
         column = config["column"]
+
+        if column not in df.columns:
+            logger.warning(
+                f"Column '{column}' not found in data. "
+                f"Run with comp_sets: true to generate AirDNA financial data."
+            )
+            return pd.DataFrame(), pd.DataFrame(), 0.0, 0.0
 
         # Filter to properties with valid metric values
         valid_df = df[df[column].notna() & (df[column] > 0)].copy()

@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 PIPELINE_STEPS = [
     ("steps.01_search_results", "search_results"),
     ("steps.02_details_scrape", "details_scrape"),
-    ("steps.03_details_results", "details_results"),
+    ("steps.03_comp_sets", "comp_sets"),
     ("steps.04_reviews_scrape", "reviews_scrape"),
-    ("steps.05_comp_sets", "comp_sets"),
+    ("steps.05_details_results", "details_results"),
     ("steps.06_listing_summaries", "listing_summaries"),
     ("steps.07_area_summary", "area_summary"),
     ("steps.08_correlation_results", "correlation_results"),
@@ -47,7 +47,7 @@ class AirBnbReviewAggregator:
         self.pipeline_cache = PipelineCacheManager()
 
     # ----- kept for test_compile_comp_sets -----
-    def compile_comp_sets(self, output_dir="outputs/05_comp_sets"):
+    def compile_comp_sets(self, output_dir="outputs/03_comp_sets"):
         """Merge all per-listing JSON files into a single master file."""
         merged = {}
         duplicates_skipped = 0

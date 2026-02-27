@@ -14,11 +14,11 @@
     "min_days_available": 100,
     "airdna_cdp_url": "http://localhost:9222",
     "airdna_inspect_mode": false,
-    "listing_summaries": true,
+    "listing_summaries": false,
     "force_refresh_listing_summaries": false,
     "area_summary": true,
     "force_refresh_area_summary": false,
-    "correlation_results": true,
+    "correlation_results": false,
     "force_refresh_correlation_results": false,
     "correlation_metrics": [
         "adr",

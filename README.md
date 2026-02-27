@@ -136,9 +136,9 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 |-----|------|-------------|
 | `search_results` | bool | Search for Airbnb listings by zipcode |
 | `details_scrape` | bool | Scrape property details (amenities, rules) |
-| `details_results` | bool | Transform scraped details + AirDNA financials into structured datasets |
-| `reviews_scrape` | bool | Scrape reviews for listings in the zipcode |
 | `comp_sets` | bool | Scrape AirDNA comp sets for property metrics |
+| `reviews_scrape` | bool | Scrape reviews for listings in the zipcode |
+| `details_results` | bool | Transform scraped details + AirDNA financials into structured datasets |
 | `listing_summaries` | bool | Generate AI summaries for each property |
 | `area_summary` | bool | Generate area-level summary + extract structured data from summaries |
 | `correlation_results` | bool | Run correlation analysis of amenities/capacity vs. ADR and Occupancy |
@@ -242,7 +242,7 @@ make scrape-airdna
 
 The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}` for each listing and extracts header metrics (Bedrooms, Bathrooms, Max Guests, Rating, Review Count) and KPI cards (Revenue, Days Available, Annual Revenue, Occupancy, ADR). All listings are saved regardless of Days Available; filtering by `min_days_available` (default: 100) is applied later when the cleaned amenities matrix is built in the `details_results` stage.
 
-**Output:** `listing_{id}.json` — one file per listing in `outputs/05_comp_sets/`:
+**Output:** `listing_{id}.json` — one file per listing in `outputs/03_comp_sets/`:
 ```json
 {
     "1050769200886027711": {"ADR": 487.5, "Occupancy": 32, "Revenue": 51700.0, "Days_Available": 333, "Bedrooms": 4, "Bathrooms": 3, "Max_Guests": 15, "Rating": 4.7, "Review_Count": 287, "LY_Revenue": 0.0}
@@ -309,10 +309,9 @@ Zip Code + config.json
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  3. Details Results                   │
-│     Raw details + AirDNA financials   │
-│     → amenity matrix, descriptions    │
-│     → outputs/03_details_results/     │
+│  3. Comp Sets (AirDNA)                │
+│     Playwright/CDP → Chrome → AirDNA  │
+│     → outputs/03_comp_sets/           │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
@@ -322,9 +321,10 @@ Zip Code + config.json
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  5. Comp Sets (AirDNA)                │
-│     Playwright/CDP → Chrome → AirDNA  │
-│     → outputs/05_comp_sets/           │
+│  5. Details Results                   │
+│     Raw details + AirDNA financials   │
+│     → amenity matrix, descriptions    │
+│     → outputs/05_details_results/     │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
@@ -362,9 +362,9 @@ Zip Code + config.json
 |-----------|---------|
 | `outputs/01_search_results/` | Search results by zipcode |
 | `outputs/02_details_scrape/` | Property details (amenities, rules, descriptions) |
-| `outputs/03_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
+| `outputs/03_comp_sets/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
 | `outputs/04_reviews_scrape/` | Raw review JSON per listing |
-| `outputs/05_comp_sets/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
+| `outputs/05_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
 | `outputs/06_listing_summaries/` | AI-generated summary per property |
 | `outputs/07_area_summary/` | Aggregated numeric data with sentiment categories |
 | `outputs/08_correlation_results/` | Correlation statistics (JSON) for each metric |
@@ -382,9 +382,9 @@ main.py                          # Entry point — config-driven pipeline orches
 │   ├── __init__.py              # Shared helper (load_search_results)
 │   ├── 01_search_results.py     # Listing discovery by zipcode
 │   ├── 02_details_scrape.py     # Scrape property details
-│   ├── 03_details_results.py    # Transform details + AirDNA → structured data
+│   ├── 03_comp_sets.py          # AirDNA per-listing lookup + master comp set
 │   ├── 04_reviews_scrape.py     # Scrape reviews per listing
-│   ├── 05_comp_sets.py          # AirDNA per-listing lookup + master comp set
+│   ├── 05_details_results.py    # Transform details + AirDNA → structured data
 │   ├── 06_listing_summaries.py  # Per-property AI summaries
 │   ├── 07_area_summary.py       # Area-level AI summary + data extraction
 │   ├── 08_correlation_results.py # Percentile-based metric correlation

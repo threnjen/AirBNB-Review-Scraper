@@ -255,34 +255,34 @@ class DetailsFilesetBuilder:
 
         amenities_df.index.name = "property_id"
 
-        os.makedirs("outputs/03_details_results", exist_ok=True)
+        os.makedirs("outputs/05_details_results", exist_ok=True)
         amenities_df.to_csv(
-            f"outputs/03_details_results/property_amenities_matrix_{self.zipcode}.csv"
+            f"outputs/05_details_results/property_amenities_matrix_{self.zipcode}.csv"
         )
         logger.info(
-            f"Details fileset built and saved to outputs/03_details_results/property_amenities_matrix_{self.zipcode}.csv"
+            f"Details fileset built and saved to outputs/05_details_results/property_amenities_matrix_{self.zipcode}.csv"
         )
 
         cleaned_df = self.clean_amenities_df(amenities_df)
         cleaned_df.to_csv(
-            f"outputs/03_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
+            f"outputs/05_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
         )
         logger.info(
-            f"Cleaned details fileset saved to outputs/03_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
+            f"Cleaned details fileset saved to outputs/05_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
         )
 
         with open(
-            f"outputs/03_details_results/house_rules_details_{self.zipcode}.json", "w"
+            f"outputs/05_details_results/house_rules_details_{self.zipcode}.json", "w"
         ) as house_rules_file:
             json.dump(self.house_rules, house_rules_file, indent=4)
 
         with open(
-            f"outputs/03_details_results/property_descriptions_{self.zipcode}.json", "w"
+            f"outputs/05_details_results/property_descriptions_{self.zipcode}.json", "w"
         ) as descriptions_file:
             json.dump(self.property_descriptions, descriptions_file, indent=4)
 
         with open(
-            f"outputs/03_details_results/neighborhood_highlights_{self.zipcode}.json",
+            f"outputs/05_details_results/neighborhood_highlights_{self.zipcode}.json",
             "w",
         ) as highlights_file:
             json.dump(self.neighborhood_highlights, highlights_file, indent=4)

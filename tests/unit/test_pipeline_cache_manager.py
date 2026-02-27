@@ -165,7 +165,7 @@ class TestPipelineCacheManager:
 
     def test_clear_stage_preserves_directory_itself(self, cache_manager, tmp_path):
         """Test that clear_stage keeps the directory after wiping contents."""
-        output_dir = tmp_path / "outputs" / "03_details_results"
+        output_dir = tmp_path / "outputs" / "05_details_results"
         output_dir.mkdir(parents=True)
         (output_dir / "data.csv").write_text("a,b")
 

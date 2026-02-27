@@ -17,9 +17,9 @@ class TestDetailsFilesetBuilderCompSetPath:
 
         builder = DetailsFilesetBuilder(
             use_categoricals=False,
-            comp_set_filepath="outputs/05_comp_sets/comp_set_97067.json",
+            comp_set_filepath="outputs/03_comp_sets/comp_set_97067.json",
         )
-        assert builder.comp_set_filepath == "outputs/05_comp_sets/comp_set_97067.json"
+        assert builder.comp_set_filepath == "outputs/03_comp_sets/comp_set_97067.json"
 
     def test_build_fileset_reads_comp_set_file(self, tmp_path):
         """build_fileset reads properties from the comp_set_filepath."""

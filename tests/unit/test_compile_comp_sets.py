@@ -23,8 +23,8 @@ class TestCompileCompSets:
 
     @pytest.fixture
     def comp_sets_dir(self, tmp_path):
-        """Create a temp directory simulating outputs/05_comp_sets/."""
-        d = tmp_path / "outputs" / "05_comp_sets"
+        """Create a temp directory simulating outputs/03_comp_sets/."""
+        d = tmp_path / "outputs" / "03_comp_sets"
         d.mkdir(parents=True)
         return d
 

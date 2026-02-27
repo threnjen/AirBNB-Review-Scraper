@@ -1,4 +1,4 @@
-"""Step 05 — Comp Sets: scrape AirDNA data and compile comp set files."""
+"""Step 03 — Comp Sets: scrape AirDNA data and compile comp set files."""
 
 import glob
 import json
@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 STAGE = "comp_sets"
-OUTPUT_DIR = "outputs/05_comp_sets"
+OUTPUT_DIR = "outputs/03_comp_sets"
 
 
 def compile_comp_sets(zipcode: str) -> None:

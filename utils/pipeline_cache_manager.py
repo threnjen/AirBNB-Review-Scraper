@@ -29,9 +29,9 @@ class PipelineCacheManager(BaseModel):
     STAGE_ORDER: list[str] = [
         "search_results",
         "details_scrape",
-        "details_results",
-        "reviews_scrape",
         "comp_sets",
+        "reviews_scrape",
+        "details_results",
         "listing_summaries",
         "area_summary",
         "correlation_results",
@@ -47,9 +47,9 @@ class PipelineCacheManager(BaseModel):
     STAGE_OUTPUT_DIRS: dict[str, str] = {
         "search_results": "outputs/01_search_results",
         "details_scrape": "outputs/02_details_scrape",
-        "details_results": "outputs/03_details_results",
+        "comp_sets": "outputs/03_comp_sets",
         "reviews_scrape": "outputs/04_reviews_scrape",
-        "comp_sets": "outputs/05_comp_sets",
+        "details_results": "outputs/05_details_results",
         "listing_summaries": "outputs/06_listing_summaries",
         "area_summary": "outputs/07_area_summary",
         "correlation_results": "outputs/08_correlation_results",
@@ -124,7 +124,7 @@ class PipelineCacheManager(BaseModel):
             listing_ids = self._get_listing_ids_for_zipcode(zipcode)
             if not listing_ids:
                 return []
-            comp_dir = self.STAGE_OUTPUT_DIRS.get("comp_sets", "outputs/05_comp_sets")
+            comp_dir = self.STAGE_OUTPUT_DIRS.get("comp_sets", "outputs/03_comp_sets")
             files = [
                 os.path.join(comp_dir, f"listing_{lid}.json") for lid in listing_ids
             ]
@@ -169,7 +169,7 @@ class PipelineCacheManager(BaseModel):
 
         if stage_name == "details_results":
             dr_dir = self.STAGE_OUTPUT_DIRS.get(
-                "details_results", "outputs/03_details_results"
+                "details_results", "outputs/05_details_results"
             )
             return [
                 os.path.join(dr_dir, f"property_amenities_matrix_{zipcode}.csv"),
