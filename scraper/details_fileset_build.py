@@ -9,13 +9,21 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
-DETAILS_SCRAPED_DIR = "outputs/04_details_scraped"
+DETAILS_SCRAPED_DIR = "outputs/02_details_scrape"
 
 
 class DetailsFilesetBuilder:
-    def __init__(self, use_categoricals: bool, comp_set_filepath: str) -> None:
+    def __init__(
+        self,
+        use_categoricals: bool,
+        comp_set_filepath: str,
+        zipcode: str = "00000",
+        min_days_available: int = 100,
+    ) -> None:
         self.use_categoricals = use_categoricals
         self.comp_set_filepath = comp_set_filepath
+        self.zipcode = zipcode
+        self.min_days_available = min_days_available
         self.property_details = {}
         self.house_rules = {}
         self.property_descriptions = {}
@@ -135,6 +143,19 @@ class DetailsFilesetBuilder:
         if "bedrooms" in df.columns:
             df["bedrooms"] = df["bedrooms"].astype(int)
 
+        # Filter rows by min_days_available (ELT: raw matrix keeps all,
+        # cleaned matrix applies business rules)
+        if "Days_Avail" in df.columns:
+            before = len(df)
+            df = df[df["Days_Avail"] >= self.min_days_available]
+            after = len(df)
+            if before > after:
+                logger.info(
+                    f"Filtered {before - after} listings with "
+                    f"Days_Avail < {self.min_days_available} "
+                    f"({after} remaining)"
+                )
+
         return df
 
     def parse_amenity_flags(self, property_id: str, property_details: dict):
@@ -214,6 +235,7 @@ class DetailsFilesetBuilder:
                     property_id=property_id,
                     property_details=comp_set_data[property_id],
                 )
+                self.property_details[property_id]["has_airdna_data"] = True
 
             file_path = os.path.join(DETAILS_SCRAPED_DIR, file_name)
             with open(file_path, "r") as file:
@@ -233,31 +255,34 @@ class DetailsFilesetBuilder:
 
         amenities_df.index.name = "property_id"
 
-        os.makedirs("outputs/05_details_results", exist_ok=True)
-        amenities_df.to_csv("outputs/05_details_results/property_amenities_matrix.csv")
+        os.makedirs("outputs/03_details_results", exist_ok=True)
+        amenities_df.to_csv(
+            f"outputs/03_details_results/property_amenities_matrix_{self.zipcode}.csv"
+        )
         logger.info(
-            "Details fileset built and saved to outputs/05_details_results/property_amenities_matrix.csv"
+            f"Details fileset built and saved to outputs/03_details_results/property_amenities_matrix_{self.zipcode}.csv"
         )
 
         cleaned_df = self.clean_amenities_df(amenities_df)
         cleaned_df.to_csv(
-            "outputs/05_details_results/property_amenities_matrix_cleaned.csv"
+            f"outputs/03_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
         )
         logger.info(
-            "Cleaned details fileset saved to outputs/05_details_results/property_amenities_matrix_cleaned.csv"
+            f"Cleaned details fileset saved to outputs/03_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
         )
 
         with open(
-            "outputs/05_details_results/house_rules_details.json", "w"
+            f"outputs/03_details_results/house_rules_details_{self.zipcode}.json", "w"
         ) as house_rules_file:
             json.dump(self.house_rules, house_rules_file, indent=4)
 
         with open(
-            "outputs/05_details_results/property_descriptions.json", "w"
+            f"outputs/03_details_results/property_descriptions_{self.zipcode}.json", "w"
         ) as descriptions_file:
             json.dump(self.property_descriptions, descriptions_file, indent=4)
 
         with open(
-            "outputs/05_details_results/neighborhood_highlights.json", "w"
+            f"outputs/03_details_results/neighborhood_highlights_{self.zipcode}.json",
+            "w",
         ) as highlights_file:
             json.dump(self.neighborhood_highlights, highlights_file, indent=4)

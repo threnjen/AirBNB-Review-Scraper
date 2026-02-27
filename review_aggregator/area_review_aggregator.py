@@ -55,18 +55,14 @@ class AreaRagAggregator(BaseModel):
 
         logger.info(f"Saved area summary report to {md_path}")
 
-        if self.pipeline_cache:
-            self.pipeline_cache.record_output("aggregate_summaries", json_path)
-            self.pipeline_cache.record_output("aggregate_summaries", md_path)
-
     def rag_description_generation_chain(self):
         """Generate area-level summary from existing property summaries."""
 
         # Load all property summaries from the output directory
         summary_files = [
             x
-            for x in os.listdir("outputs/06_generated_summaries/")
-            if x.startswith(f"generated_summaries_{self.zipcode}_")
+            for x in os.listdir("outputs/06_listing_summaries/")
+            if x.startswith(f"listing_summary_{self.zipcode}_")
         ]
 
         if not summary_files:
@@ -82,7 +78,7 @@ class AreaRagAggregator(BaseModel):
         # Collect all summaries
         all_summaries = []
         for file in summary_files[: self.num_listings]:
-            file_path = f"outputs/06_generated_summaries/{file}"
+            file_path = f"outputs/06_listing_summaries/{file}"
             summary_data = load_json_file(filename=file_path)
             # Each file is {listing_id: summary_text}
             for listing_id, summary_text in summary_data.items():

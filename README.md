@@ -1,6 +1,6 @@
 # AirBNB Review Scraper & Analyzer
 
-An end-to-end pipeline for short-term rental market analysis. Given a zip code, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, builds structured amenity and financial datasets by merging Airbnb data with AirDNA comp set metrics, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
+An end-to-end pipeline for short-term rental market analysis. Given a zip code, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, enriches each listing with AirDNA financial metrics via per-listing rentalizer lookups, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
 
 ## Prerequisites
 
@@ -21,17 +21,18 @@ For a typical run of ~300 listings, expect significant API usage. The pipeline i
 
 ### 2. Paid AirDNA Subscription
 
-[AirDNA](https://www.airdna.co/) is a third-party short-term rental analytics platform. A **paid subscription** is required to access comp set features, which provide financial metrics not available from Airbnb directly:
+[AirDNA](https://www.airdna.co/) is a third-party short-term rental analytics platform. A **paid subscription** is required to access rentalizer data, which provides financial metrics not available from Airbnb directly:
 
 - **ADR** (Average Daily Rate) — average price per booked night
 - **Occupancy** — percentage of available days that are booked
+- **Revenue** — annual rental revenue
 - **Days Available** — how many days the property is listed per year
 
-Without AirDNA data, the correlation analysis and description quality analysis stages will lack the financial metrics needed to function.
+The pipeline automatically looks up each listing discovered in the Airbnb search on AirDNA's rentalizer page — no manual comp set creation required. Without AirDNA data, the correlation analysis and description quality analysis stages will lack the financial metrics needed to function.
 
 ## Features
 
-- **AirDNA Comp Set Scraping** — Extract listing IDs with ADR, Occupancy, and Days Available via Playwright/CDP
+- **AirDNA Per-Listing Lookup** — Enrich each listing with ADR, Occupancy, Revenue, and Days Available via Playwright/CDP rentalizer pages
 - **Property Search** — Find Airbnb listings within a geographic area using zip code and `pyairbnb`
 - **Review Scraping** — Pull all reviews for discovered listings with per-file caching
 - **Property Details Scraping** — Scrape amenities, descriptions, house rules, and neighborhood info
@@ -72,7 +73,7 @@ The pipeline combines two data sources and four LLM use cases to produce market 
 
 **Data Sources:**
 - **Airbnb** (via `pyairbnb`) — listing search by geographic bounding box, review text, property details, amenities, descriptions, and house rules
-- **AirDNA** (via Playwright/CDP) — financial metrics (ADR, Occupancy, Days Available) scraped from a logged-in Chrome session connected over Chrome DevTools Protocol
+- **AirDNA** (via Playwright/CDP) — financial metrics (ADR, Occupancy, Revenue, Days Available) scraped per-listing from AirDNA's rentalizer page via a logged-in Chrome session connected over Chrome DevTools Protocol
 
 **AI Processing:**
 - All OpenAI calls go through `review_aggregator/openai_aggregator.py`, which handles token estimation via `tiktoken`, automatic chunking at 120K tokens with a merge step, and 3 retries with exponential backoff
@@ -82,9 +83,22 @@ The pipeline combines two data sources and four LLM use cases to produce market 
 - Description prompts use a two-phase approach: first scoring each description on 7 dimensions (1–10), then synthesizing findings with top/bottom examples
 
 **Caching:**
-- TTL-based cache (`utils/pipeline_cache_manager.py`) tracks timestamps for all output files in `cache/pipeline_metadata.json`
+- TTL-based cache (`utils/pipeline_cache_manager.py`) checks file existence and `os.path.getmtime()` against the configured TTL — no metadata file needed
 - Refreshing an early stage automatically cascades invalidation to all downstream stages
 - Per-file caching for reviews and details allows incremental scraping of new listings
+
+## Respectful Scraping
+
+This pipeline automates data collection, but it is designed to browse no faster than a human would. Every scraping stage inserts randomized delays between requests, so the pace of data retrieval is consistent with a person manually clicking through listings. The AirDNA scraper goes further — it connects to a real Chrome browser session via Chrome DevTools Protocol, meaning it appears on the network as a normal logged-in user navigating page by page.
+
+Key principles:
+
+- **Human-speed pacing** — Randomized pauses between every request ensure automated browsing is no faster than manual browsing. There is no parallel request fan-out; listings are visited one at a time.
+- **Caching prevents redundant requests** — TTL-based caching means previously scraped listings are never re-fetched unless their cache expires. A second run against the same zip code hits zero external endpoints if all data is still fresh.
+- **Backoff on rate-limit signals** — If the pipeline detects signs of rate limiting (e.g., AirDNA returning empty results), it pauses for an extended cooldown period before retrying, rather than retrying immediately.
+- **No API abuse** — OpenAI calls use exponential backoff with retry limits. Token usage and costs are tracked per-session so users can monitor spend.
+
+This project is intended for personal market research. The scraping approach is deliberately conservative — the automation saves time by running unattended, not by going faster.
 
 ## Example Output
 
@@ -120,15 +134,15 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `scrape_airdna` | bool | Scrape AirDNA comp sets for property metrics |
-| `scrape_reviews` | bool | Scrape reviews for listings in the zipcode |
-| `scrape_details` | bool | Scrape property details (amenities, rules) |
-| `aggregate_reviews` | bool | Generate AI summaries for each property |
-| `aggregate_summaries` | bool | Generate area-level summary from property summaries |
-| `build_details` | bool | Transform scraped details into structured datasets |
-| `extract_data` | bool | Extract and aggregate numeric review data via LLM |
-| `analyze_correlations` | bool | Run correlation analysis of amenities/capacity vs. ADR and Occupancy |
-| `analyze_descriptions` | bool | Run description quality scoring and regression analysis |
+| `search_results` | bool | Search for Airbnb listings by zipcode |
+| `details_scrape` | bool | Scrape property details (amenities, rules) |
+| `details_results` | bool | Transform scraped details + AirDNA financials into structured datasets |
+| `reviews_scrape` | bool | Scrape reviews for listings in the zipcode |
+| `comp_sets` | bool | Scrape AirDNA comp sets for property metrics |
+| `listing_summaries` | bool | Generate AI summaries for each property |
+| `area_summary` | bool | Generate area-level summary + extract structured data from summaries |
+| `correlation_results` | bool | Run correlation analysis of amenities/capacity vs. ADR and Occupancy |
+| `description_analysis` | bool | Run description quality scoring and regression analysis |
 
 ### Search Parameters
 
@@ -139,12 +153,14 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 | `num_listings_to_search` | int | Max listings to find in search |
 | `num_listings_to_summarize` | int | Max listings to process with AI |
 | `review_thresh_to_include_prop` | int | Minimum reviews required to process a listing |
+| `num_summary_to_process` | int | Max property summaries to process in downstream stages |
+| `dataset_use_categoricals` | bool | Use categorical encoding for amenity features in analysis |
 
 ### AirDNA Settings
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `airdna_comp_set_ids` | array | List of AirDNA comp set IDs to scrape |
+| `min_days_available` | int | Minimum Days Available to include a listing (default: `100`) |
 | `airdna_cdp_url` | string | Chrome DevTools Protocol URL (default: `http://localhost:9222`) |
 | `airdna_inspect_mode` | bool | Pause after navigation for DOM selector discovery |
 
@@ -174,19 +190,18 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 |-----|------|---------|-------------|
 | `pipeline_cache_enabled` | bool | `true` | Enable/disable pipeline-level TTL caching |
 | `pipeline_cache_ttl_days` | int | `7` | Number of days before cached outputs expire |
-| `force_refresh_search` | bool | `false` | Force re-run area search |
-| `force_refresh_scrape_airdna` | bool | `false` | Force re-run AirDNA scraping even if cached |
-| `force_refresh_reviews` | bool | `false` | Force re-scrape all reviews |
-| `force_refresh_scrape_details` | bool | `false` | Force re-scrape all property details |
-| `force_refresh_aggregate_reviews` | bool | `false` | Force regenerate property summaries |
-| `force_refresh_aggregate_summaries` | bool | `false` | Force regenerate area summary |
-| `force_refresh_build_details` | bool | `false` | Force rebuild details fileset |
-| `force_refresh_extract_data` | bool | `false` | Force re-run data extraction |
-| `force_refresh_analyze_correlations` | bool | `false` | Force re-run correlation analysis |
-| `force_refresh_analyze_descriptions` | bool | `false` | Force re-run description quality analysis |
+| `force_refresh_search_results` | bool | `false` | Force re-run area search |
+| `force_refresh_details_scrape` | bool | `false` | Force re-scrape all property details |
+| `force_refresh_details_results` | bool | `false` | Force rebuild details fileset |
+| `force_refresh_reviews_scrape` | bool | `false` | Force re-scrape all reviews |
+| `force_refresh_comp_sets` | bool | `false` | Force re-run AirDNA scraping even if cached |
+| `force_refresh_listing_summaries` | bool | `false` | Force regenerate property summaries |
+| `force_refresh_area_summary` | bool | `false` | Force regenerate area summary + data extraction |
+| `force_refresh_correlation_results` | bool | `false` | Force re-run correlation analysis |
+| `force_refresh_description_analysis` | bool | `false` | Force re-run description quality analysis |
 
 **How it works:**
-- Metadata is stored in `cache/pipeline_metadata.json`, recording when each output file was produced
+- Freshness is determined by file existence and `os.path.getmtime()` — each stage declares its expected output files, and a stage is fresh when all files exist with mtime within the TTL
 - On each run, the pipeline checks whether outputs exist and are within the TTL before executing a stage
 - Refreshing an early stage cascades invalidation to all downstream stages
 - The `force_refresh_*` flags let you bypass the cache for specific stages
@@ -199,14 +214,14 @@ pipenv run python main.py   # Second run: skips cached stages
 
 To force a single stage to re-run:
 ```json
-{"force_refresh_reviews": true}
+{"force_refresh_reviews_scrape": true}
 ```
 
 ## Usage
 
-### AirDNA Comp Set Scraping
+### AirDNA Per-Listing Lookup
 
-Scrape property metrics (ADR, Occupancy, Days Available) from your AirDNA comp sets.
+Enrich each discovered listing with financial metrics (ADR, Occupancy, Revenue, Days Available) from AirDNA's rentalizer page. The pipeline automatically feeds listing IDs from the Airbnb search into AirDNA — no manual comp set creation needed.
 
 **Setup:**
 1. Launch Chrome with remote debugging:
@@ -217,23 +232,20 @@ Scrape property metrics (ADR, Occupancy, Days Available) from your AirDNA comp s
    ```
 2. In the Chrome window that opens, navigate to [AirDNA](https://app.airdna.co) and log in with your account
 
-**Scrape a comp set:**
+**Run:**
 ```bash
-# 1. Set your comp set IDs in config.json:
-#    "scrape_airdna": true,
-#    "airdna_comp_set_ids": ["365519"]
-
-# 2. Run the pipeline (or standalone):
+# Set config.json: "comp_sets": true
 pipenv run python main.py
 # Or:
 make scrape-airdna
 ```
 
-**Output:** `compset_{id}.json` — one file per comp set in `outputs/01_comp_sets/`:
+The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}` for each listing and extracts header metrics (Bedrooms, Bathrooms, Max Guests, Rating, Review Count) and KPI cards (Revenue, Days Available, Annual Revenue, Occupancy, ADR). All listings are saved regardless of Days Available; filtering by `min_days_available` (default: 100) is applied later when the cleaned amenities matrix is built in the `details_results` stage.
+
+**Output:** `listing_{id}.json` — one file per listing in `outputs/05_comp_sets/`:
 ```json
 {
-    "1050769200886027711": {"ADR": 945.57, "Occupancy": 39, "Days_Available": 335},
-    "549180550450067551": {"ADR": 377.19, "Occupancy": 88, "Days_Available": 357}
+    "1050769200886027711": {"ADR": 487.5, "Occupancy": 32, "Revenue": 51700.0, "Days_Available": 333, "Bedrooms": 4, "Bathrooms": 3, "Max_Guests": 15, "Rating": 4.7, "Review_Count": 287, "LY_Revenue": 0.0}
 }
 ```
 
@@ -243,15 +255,15 @@ make scrape-airdna
 
 ```bash
 # 1. Scrape reviews for a zip code
-# Set config.json: "scrape_reviews": true, "zipcode": "97067"
+# Set config.json: "reviews_scrape": true, "zipcode": "97067"
 pipenv run python main.py
 
 # 2. Generate property summaries
-# Set config.json: "aggregate_reviews": true
+# Set config.json: "listing_summaries": true
 pipenv run python main.py
 
 # 3. Generate area summary
-# Set config.json: "aggregate_summaries": true
+# Set config.json: "area_summary": true
 pipenv run python main.py
 ```
 
@@ -261,15 +273,15 @@ Enable all stages in `config.json`:
 
 ```json
 {
-  "scrape_airdna": true,
-  "scrape_reviews": true,
-  "scrape_details": true,
-  "aggregate_reviews": true,
-  "aggregate_summaries": true,
-  "build_details": true,
-  "extract_data": true,
-  "analyze_correlations": true,
-  "analyze_descriptions": true,
+  "search_results": true,
+  "details_scrape": true,
+  "details_results": true,
+  "reviews_scrape": true,
+  "comp_sets": true,
+  "listing_summaries": true,
+  "area_summary": true,
+  "correlation_results": true,
+  "description_analysis": true,
   "zipcode": "97067"
 }
 ```
@@ -285,63 +297,59 @@ pipenv run python main.py
 Zip Code + config.json
         ↓
 ┌───────────────────────────────────────┐
-│  0. AirDNA Comp Set Scraping          │
-│     Playwright/CDP → Chrome → AirDNA  │
-│     → outputs/01_comp_sets/           │
+│  1. Search Results                    │
+│     pyairbnb.search_all() by zipcode  │
+│     → outputs/01_search_results/      │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  1. Listing Discovery                 │
-│     pyairbnb.search_all() or comp set │
-│     IDs → outputs/02_search_results/  │
-└───────────────────────────────────────┘
-        ↓
-┌───────────────────────────────────────┐
-│  2. Review Scraping                   │
-│     pyairbnb.get_reviews() per listing│
-│     → outputs/03_reviews_scraped/     │
-└───────────────────────────────────────┘
-        ↓
-┌───────────────────────────────────────┐
-│  3. Details Scraping                  │
+│  2. Details Scrape                    │
 │     pyairbnb.get_details() per listing│
-│     → outputs/04_details_scraped/     │
+│     → outputs/02_details_scrape/      │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  4. Property Summary Generation (GPT) │
+│  3. Details Results                   │
+│     Raw details + AirDNA financials   │
+│     → amenity matrix, descriptions    │
+│     → outputs/03_details_results/     │
+└───────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────┐
+│  4. Reviews Scrape                    │
+│     pyairbnb.get_reviews() per listing│
+│     → outputs/04_reviews_scrape/      │
+└───────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────┐
+│  5. Comp Sets (AirDNA)                │
+│     Playwright/CDP → Chrome → AirDNA  │
+│     → outputs/05_comp_sets/           │
+└───────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────┐
+│  6. Listing Summaries (GPT)           │
 │     Reviews → structured summaries    │
-│     → outputs/06_generated_summaries/ │
+│     → outputs/06_listing_summaries/   │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  5. Area Summary Generation (GPT)     │
-│     All summaries → area insights     │
+│  7. Area Summary (GPT)                │
+│     Summaries → area insights +       │
+│     structured data extraction        │
+│     → outputs/07_area_summary/        │
 │     → reports/area_summary_*.md/.json │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  6. Details Fileset Build             │
-│     Raw details + AirDNA financials   │
-│     → amenity matrix, descriptions    │
-│     → outputs/05_details_results/     │
-└───────────────────────────────────────┘
-        ↓
-┌───────────────────────────────────────┐
-│  7. Data Extraction (GPT)             │
-│     Summaries → structured categories │
-│     → outputs/07_extracted_data/      │
-└───────────────────────────────────────┘
-        ↓
-┌───────────────────────────────────────┐
-│  8. Correlation Analysis (GPT)        │
+│  8. Correlation Results (GPT)         │
 │     Top/bottom percentile comparison  │
 │     → outputs/08_correlation_results/ │
 │     → reports/correlation_insights_*  │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
-│  9. Description Quality Analysis      │
+│  9. Description Analysis              │
 │     OLS regression + GPT scoring      │
 │     → outputs/09_description_analysis/│
 │     → reports/description_quality_*   │
@@ -352,13 +360,13 @@ Zip Code + config.json
 
 | Directory | Content |
 |-----------|---------|
-| `outputs/01_comp_sets/` | AirDNA comp set metrics per listing (ADR, Occupancy, Days Available) |
-| `outputs/02_search_results/` | Search results by zipcode |
-| `outputs/03_reviews_scraped/` | Raw review JSON per listing |
-| `outputs/04_details_scraped/` | Property details (amenities, rules, descriptions) |
-| `outputs/05_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
-| `outputs/06_generated_summaries/` | AI-generated summary per property |
-| `outputs/07_extracted_data/` | Aggregated numeric data with sentiment categories |
+| `outputs/01_search_results/` | Search results by zipcode |
+| `outputs/02_details_scrape/` | Property details (amenities, rules, descriptions) |
+| `outputs/03_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
+| `outputs/04_reviews_scrape/` | Raw review JSON per listing |
+| `outputs/05_comp_sets/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
+| `outputs/06_listing_summaries/` | AI-generated summary per property |
+| `outputs/07_area_summary/` | Aggregated numeric data with sentiment categories |
 | `outputs/08_correlation_results/` | Correlation statistics (JSON) for each metric |
 | `outputs/09_description_analysis/` | Description quality statistics (JSON) |
 | `reports/` | Markdown and JSON reports: area summaries, correlation insights, description quality analysis |
@@ -366,11 +374,24 @@ Zip Code + config.json
 
 ## Architecture
 
+For a detailed module map, data flow reference, and key patterns guide, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 ```
 main.py                          # Entry point — config-driven pipeline orchestrator
+├── steps/
+│   ├── __init__.py              # Shared helper (load_search_results)
+│   ├── 01_search_results.py     # Listing discovery by zipcode
+│   ├── 02_details_scrape.py     # Scrape property details
+│   ├── 03_details_results.py    # Transform details + AirDNA → structured data
+│   ├── 04_reviews_scrape.py     # Scrape reviews per listing
+│   ├── 05_comp_sets.py          # AirDNA per-listing lookup + master comp set
+│   ├── 06_listing_summaries.py  # Per-property AI summaries
+│   ├── 07_area_summary.py       # Area-level AI summary + data extraction
+│   ├── 08_correlation_results.py # Percentile-based metric correlation
+│   └── 09_description_analysis.py # OLS regression + description scoring
 ├── scraper/
 │   ├── airbnb_searcher.py       # Zip code → geo bounding box → listing search
-│   ├── airdna_scraper.py        # AirDNA comp set scraper (Playwright/CDP)
+│   ├── airdna_scraper.py        # AirDNA per-listing rentalizer scraper (Playwright/CDP)
 │   ├── reviews_scraper.py       # Fetch reviews per listing
 │   ├── details_scraper.py       # Fetch property details
 │   ├── details_fileset_build.py # Transform to structured data + merge AirDNA financials
@@ -421,6 +442,13 @@ make coverage
 | `make coverage` | Generate HTML coverage report |
 | `make chrome-debug` | Launch Chrome with remote debugging port for AirDNA scraping |
 | `make scrape-airdna` | Run AirDNA scraper standalone |
+
+## Notebooks
+
+| Notebook | Purpose |
+|----------|---------|
+| `eda_property_details.ipynb` | Exploratory data analysis of scraped property details and AirDNA metrics |
+| `model_notebook.ipynb` | Modeling experiments on listing features and pricing relationships |
 
 ## Disclaimer
 

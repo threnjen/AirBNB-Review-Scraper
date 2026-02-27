@@ -23,9 +23,11 @@ def scrape_details(search_results, num_listings, pipeline_cache=None):
 
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for room_id in property_ids[:num_listings]:
-        output_path = f"outputs/04_details_scraped/property_details_{room_id}.json"
+        output_path = f"outputs/02_details_scrape/property_details_{room_id}.json"
 
-        if pipeline_cache and pipeline_cache.is_file_fresh("details", output_path):
+        if pipeline_cache and pipeline_cache.is_file_fresh(
+            "details_scrape", output_path
+        ):
             logger.info(f"Skipping listing {room_id} — cached details are fresh.")
             properties_scraped += 1
             continue
@@ -41,7 +43,7 @@ def scrape_details(search_results, num_listings, pipeline_cache=None):
             properties_scraped += 1
 
             # Save the details data to a JSON file
-            os.makedirs("outputs/04_details_scraped", exist_ok=True)
+            os.makedirs("outputs/02_details_scrape", exist_ok=True)
             with open(
                 output_path,
                 "w",
@@ -50,9 +52,6 @@ def scrape_details(search_results, num_listings, pipeline_cache=None):
                 f.write(
                     json.dumps(single_property_details, ensure_ascii=False)
                 )  # Extract details and save them to a file
-
-            if pipeline_cache:
-                pipeline_cache.record_output("details", output_path)
 
             time.sleep(random.uniform(1, 3))
 

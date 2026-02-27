@@ -65,8 +65,8 @@ class TestAreaRagAggregator:
         with patch(
             "os.listdir",
             return_value=[
-                "generated_summaries_12345_abc.json",
-                "generated_summaries_99999_def.json",
+                "listing_summary_12345_abc.json",
+                "listing_summary_99999_def.json",
             ],
         ):
             result = aggregator.rag_description_generation_chain()
@@ -82,7 +82,7 @@ class TestAreaRagAggregator:
         mock_response.choices[0].message.content = "Area summary text"
 
         with patch(
-            "os.listdir", return_value=["generated_summaries_97067_listing123.json"]
+            "os.listdir", return_value=["listing_summary_97067_listing123.json"]
         ):
             with patch(
                 "review_aggregator.area_review_aggregator.load_json_file"
@@ -125,10 +125,10 @@ class TestAreaRagAggregator:
                 )
 
         mock_files = [
-            "generated_summaries_97067_a.json",
-            "generated_summaries_97067_b.json",
-            "generated_summaries_97067_c.json",
-            "generated_summaries_97067_d.json",
+            "listing_summary_97067_a.json",
+            "listing_summary_97067_b.json",
+            "listing_summary_97067_c.json",
+            "listing_summary_97067_d.json",
         ]
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
@@ -166,8 +166,8 @@ class TestAreaRagAggregator:
         with patch(
             "os.listdir",
             return_value=[
-                "generated_summaries_97067_a.json",
-                "generated_summaries_97067_b.json",
+                "listing_summary_97067_a.json",
+                "listing_summary_97067_b.json",
             ],
         ):
             with patch(
@@ -197,7 +197,7 @@ class TestAreaRagAggregator:
 
     def test_rag_chain_all_empty_summaries_returns_early(self, aggregator):
         """Test that if all summaries are empty, the method returns early."""
-        with patch("os.listdir", return_value=["generated_summaries_97067_a.json"]):
+        with patch("os.listdir", return_value=["listing_summary_97067_a.json"]):
             with patch(
                 "review_aggregator.area_review_aggregator.load_json_file"
             ) as mock_load:
@@ -215,7 +215,7 @@ class TestAreaRagAggregator:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Generated area summary"
 
-        with patch("os.listdir", return_value=["generated_summaries_97067_x.json"]):
+        with patch("os.listdir", return_value=["listing_summary_97067_x.json"]):
             with patch(
                 "review_aggregator.area_review_aggregator.load_json_file"
             ) as mock_load:

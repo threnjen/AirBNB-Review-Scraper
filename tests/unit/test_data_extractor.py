@@ -105,8 +105,8 @@ class TestDataExtractor:
             with patch(
                 "review_aggregator.data_extractor.os.listdir",
                 return_value=[
-                    "generated_summaries_97067_12345.json",
-                    "generated_summaries_97067_67890.json",
+                    "listing_summary_97067_12345.json",
+                    "listing_summary_97067_67890.json",
                     "generated_summaries_00000_99999.json",
                 ],
             ):
