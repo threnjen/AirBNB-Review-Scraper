@@ -353,10 +353,8 @@ Zip Code + config.json
         ↓
 ┌───────────────────────────────────────┐
 │  7. Area Summary (GPT)                │
-│     Summaries → area insights +       │
-│     structured data extraction        │
-│     → outputs/07_area_summary/        │
-│     → reports/area_summary_*.md/.json │
+│     Summaries → area insights         │
+│     → reports/area_summary_*.md       │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
@@ -384,7 +382,6 @@ Zip Code + config.json
 | `outputs/04_reviews_scrape/` | Raw review JSON per listing |
 | `outputs/05_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
 | `outputs/06_listing_summaries/` | AI-generated summary per property |
-| `outputs/07_area_summary/` | Aggregated numeric data with sentiment categories |
 | `outputs/08_correlation_results/` | Correlation statistics (JSON) for each metric |
 | `outputs/09_description_analysis/` | Description quality statistics (JSON) |
 | `reports/` | Markdown and JSON reports: area summaries, correlation insights, description quality analysis |
@@ -404,7 +401,7 @@ main.py                          # Entry point — config-driven pipeline orches
 │   ├── 04_reviews_scrape.py     # Scrape reviews per listing
 │   ├── 05_details_results.py    # Transform details + AirDNA → structured data
 │   ├── 06_listing_summaries.py  # Per-property AI summaries
-│   ├── 07_area_summary.py       # Area-level AI summary + data extraction
+│   ├── 07_area_summary.py       # Area-level AI summary
 │   ├── 08_correlation_results.py # Percentile-based metric correlation
 │   └── 09_description_analysis.py # OLS regression + description scoring
 ├── scraper/
@@ -418,7 +415,6 @@ main.py                          # Entry point — config-driven pipeline orches
 │   ├── property_review_aggregator.py  # Per-property AI summaries
 │   ├── area_review_aggregator.py      # Area-level AI summaries
 │   ├── openai_aggregator.py           # OpenAI client with chunking, retry, cost tracking
-│   ├── data_extractor.py              # LLM-powered numeric extraction & clustering
 │   ├── correlation_analyzer.py        # Percentile-based metric correlation analysis
 │   └── description_analyzer.py        # OLS regression + LLM description quality scoring
 ├── utils/

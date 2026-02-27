@@ -260,7 +260,7 @@ class TestSaveResults:
                 )
 
     def test_creates_output_files(self, aggregator, tmp_path):
-        """Should create JSON stats and Markdown report files."""
+        """Should create Markdown report file."""
         aggregator.output_dir = str(tmp_path)
 
         aggregator.save_results(
@@ -269,16 +269,14 @@ class TestSaveResults:
             area_summary="## Area Description\nCozy cabins near Mt Hood.",
         )
 
-        json_path = tmp_path / "area_summary_97067.json"
         md_path = tmp_path / "area_summary_97067.md"
 
-        assert json_path.exists()
         assert md_path.exists()
 
-        stats = json.loads(json_path.read_text())
-        assert stats["zipcode"] == "97067"
-        assert stats["num_properties_analyzed"] == 42
-        assert "Cozy cabins" in stats["area_summary"]
+        md_content = md_path.read_text()
+        assert "# Area Summary: 97067" in md_content
+        assert "**Properties Analyzed:** 42" in md_content
+        assert "Cozy cabins" in md_content
 
     def test_markdown_contains_header_and_body(self, aggregator, tmp_path):
         """Markdown report should have a structured header and LLM body."""
@@ -311,4 +309,3 @@ class TestSaveResults:
         )
 
         assert (nested_dir / "area_summary_97067.md").exists()
-        assert (nested_dir / "area_summary_97067.json").exists()

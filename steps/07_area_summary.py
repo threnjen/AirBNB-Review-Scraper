@@ -1,10 +1,9 @@
-"""Step 07 — Area Summary: generate area-level prose + extract structured data."""
+"""Step 07 — Area Summary: generate area-level prose summary."""
 
 import logging
 import sys
 
 from review_aggregator.area_review_aggregator import AreaRagAggregator
-from review_aggregator.data_extractor import DataExtractor
 from utils.pipeline_cache_manager import PipelineCacheManager
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -14,10 +13,7 @@ STAGE = "area_summary"
 
 
 def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
-    """Generate area-level prose summary and extract structured category data.
-
-    Combines the former ``aggregate_summaries`` and ``extract_data`` steps.
-    """
+    """Generate area-level prose summary from property listing summaries."""
     zipcode = config.get("zipcode", "97067")
     num_summaries = config.get("num_summary_to_process", 3)
     review_thresh = config.get("review_thresh_to_include_prop", 5)
@@ -31,7 +27,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
 
-    # Part A: generate prose area summary (reports/*.json + *.md)
     rag_area = AreaRagAggregator(
         num_listings=num_summaries,
         review_thresh_to_include_prop=review_thresh,
@@ -39,10 +34,5 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         pipeline_cache=pipeline_cache,
     )
     rag_area.rag_description_generation_chain()
-    logger.info(f"Area prose summary for zipcode {zipcode} completed.")
-
-    # Part B: extract structured category data (outputs/07_area_summary/)
-    extractor = DataExtractor(zipcode=zipcode)
-    extractor.run_extraction()
     pipeline_cache.notify_stage_ran(STAGE)
-    logger.info(f"Area data extraction for zipcode {zipcode} completed.")
+    logger.info(f"Area prose summary for zipcode {zipcode} completed.")

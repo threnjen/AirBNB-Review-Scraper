@@ -100,7 +100,7 @@ class TestAreaAggregatorIntegration:
     """Integration tests for AreaRagAggregator with filesystem and OpenAI."""
 
     @pytest.fixture
-    def area_aggregator(self, tmp_logs_dir):
+    def area_aggregator(self, tmp_logs_dir, tmp_path):
         """Create an AreaRagAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
@@ -117,6 +117,7 @@ class TestAreaAggregatorIntegration:
                 agg = AreaRagAggregator(
                     zipcode="97067",
                     num_listings=5,
+                    output_dir=str(tmp_path),
                 )
                 agg.openai_aggregator.cost_tracker.log_file = str(
                     tmp_logs_dir / "cost.json"
@@ -154,102 +155,19 @@ class TestAreaAggregatorIntegration:
                     {"iso_code": "us"},
                 ]
 
-                with patch(
-                    "review_aggregator.area_review_aggregator.save_json_file"
-                ) as mock_save:
-                    with patch.object(
-                        area_aggregator.openai_aggregator.client.chat.completions,
-                        "create",
-                        return_value=mock_response,
-                    ):
-                        area_aggregator.rag_description_generation_chain()
+                with patch.object(
+                    area_aggregator.openai_aggregator.client.chat.completions,
+                    "create",
+                    return_value=mock_response,
+                ):
+                    area_aggregator.rag_description_generation_chain()
 
-                        # Verify save was called
-                        assert mock_save.called
-                        call_args = mock_save.call_args
-                        saved_data = call_args.kwargs.get("data")
-                        if saved_data is None and len(call_args[0]) > 1:
-                            saved_data = call_args[0][1]
-                        assert saved_data["zipcode"] == "97067"
-                        assert saved_data["num_properties_analyzed"] == 3
-
-
-class TestDataExtractorIntegration:
-    """Integration tests for DataExtractor with OpenAI parsing."""
-
-    @pytest.fixture
-    def data_extractor(self, tmp_logs_dir):
-        """Create a DataExtractor with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
-            mock_load.return_value = {
-                "openai": {
-                    "model": "gpt-4.1-mini",
-                    "enable_cost_tracking": False,
-                }
-            }
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
-                from review_aggregator.data_extractor import DataExtractor
-
-                extractor = DataExtractor(zipcode="97067")
-                extractor.openai_aggregator.cost_tracker.log_file = str(
-                    tmp_logs_dir / "cost.json"
-                )
-                return extractor
-
-    def test_extraction_parses_json_response(
-        self, data_extractor, sample_property_summary, sample_extraction_response
-    ):
-        """Test that DataExtractor parses JSON from OpenAI response."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = sample_extraction_response
-
-        with patch.object(
-            data_extractor.openai_aggregator.client.chat.completions,
-            "create",
-            return_value=mock_response,
-        ):
-            result = data_extractor.extract_data_from_summary(
-                "12345678", sample_property_summary
-            )
-
-            assert "listing_id" in result
-            assert result["listing_id"] == "12345678"
-            assert "items" in result
-            assert len(result["items"]) == 3
-
-    def test_extraction_handles_malformed_json(
-        self, data_extractor, sample_property_summary
-    ):
-        """Test that DataExtractor handles malformed JSON gracefully."""
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Not valid JSON at all"
-
-        with patch.object(
-            data_extractor.openai_aggregator.client.chat.completions,
-            "create",
-            return_value=mock_response,
-        ):
-            result = data_extractor.extract_data_from_summary(
-                "12345678", sample_property_summary
-            )
-
-            # Should return empty dict or handle gracefully
-            assert isinstance(result, dict)
-
-    def test_load_property_summaries_from_directory(
-        self, data_extractor, mock_summary_files_dir
-    ):
-        """Test loading property summaries from filesystem."""
-        data_extractor.summary_dir = str(mock_summary_files_dir)
-
-        summaries = data_extractor.load_property_summaries()
-
-        assert len(summaries) == 3
-        assert "12345678" in summaries
-        assert "87654321" in summaries
-        assert "11111111" in summaries
+                    # Verify markdown report was created
+                    md_path = Path(area_aggregator.output_dir) / "area_summary_97067.md"
+                    assert md_path.exists()
+                    md_content = md_path.read_text()
+                    assert "# Area Summary: 97067" in md_content
+                    assert "**Properties Analyzed:** 3" in md_content
 
 
 class TestCostTrackerIntegration:
@@ -320,7 +238,7 @@ class TestCostTrackerIntegration:
 class TestEndToEndPipeline:
     """End-to-end integration tests for full pipeline flows."""
 
-    def test_property_to_area_pipeline(self, sample_property_summary):
+    def test_property_to_area_pipeline(self, sample_property_summary, tmp_path):
         """Test flow from property summaries to area summary."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_config:
             mock_config.return_value = {"openai": {"enable_cost_tracking": False}}
@@ -329,7 +247,11 @@ class TestEndToEndPipeline:
                     AreaRagAggregator,
                 )
 
-                aggregator = AreaRagAggregator(zipcode="97067", num_listings=5)
+                aggregator = AreaRagAggregator(
+                    zipcode="97067",
+                    num_listings=5,
+                    output_dir=str(tmp_path),
+                )
 
                 mock_response = MagicMock()
                 mock_response.choices = [MagicMock()]
@@ -355,27 +277,20 @@ class TestEndToEndPipeline:
                             {"iso_code": "us"},
                         ]
 
-                        with patch(
-                            "review_aggregator.area_review_aggregator.save_json_file"
-                        ) as mock_save:
-                            with patch.object(
-                                aggregator.openai_aggregator.client.chat.completions,
-                                "create",
-                                return_value=mock_response,
-                            ):
-                                aggregator.rag_description_generation_chain()
+                        with patch.object(
+                            aggregator.openai_aggregator.client.chat.completions,
+                            "create",
+                            return_value=mock_response,
+                        ):
+                            aggregator.rag_description_generation_chain()
 
-                                # Verify the end result
-                                assert mock_save.called
-                                saved_data = mock_save.call_args.kwargs.get("data")
-                                if saved_data is None:
-                                    saved_data = mock_save.call_args[0][1]
-                                assert saved_data["zipcode"] == "97067"
-                                assert saved_data["num_properties_analyzed"] == 2
-                                assert (
-                                    saved_data["area_summary"]
-                                    == "Complete area summary"
-                                )
+                            # Verify markdown report was created
+                            md_path = tmp_path / "area_summary_97067.md"
+                            assert md_path.exists()
+                            md_content = md_path.read_text()
+                            assert "# Area Summary: 97067" in md_content
+                            assert "**Properties Analyzed:** 2" in md_content
+                            assert "Complete area summary" in md_content
 
 
 class TestPipelineCacheIntegration:

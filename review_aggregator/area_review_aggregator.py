@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.openai_aggregator import OpenAIAggregator
-from utils.tiny_file_handler import load_json_file, save_json_file
+from utils.tiny_file_handler import load_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)

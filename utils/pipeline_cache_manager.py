@@ -51,7 +51,6 @@ class PipelineCacheManager(BaseModel):
         "reviews_scrape": "outputs/04_reviews_scrape",
         "details_results": "outputs/05_details_results",
         "listing_summaries": "outputs/06_listing_summaries",
-        "area_summary": "outputs/07_area_summary",
         "correlation_results": "outputs/08_correlation_results",
         "description_analysis": "outputs/09_description_analysis",
     }
@@ -182,13 +181,8 @@ class PipelineCacheManager(BaseModel):
             ]
 
         if stage_name == "area_summary":
-            as_dir = self.STAGE_OUTPUT_DIRS.get(
-                "area_summary", "outputs/07_area_summary"
-            )
             return [
-                f"reports/area_summary_{zipcode}.json",
                 f"reports/area_summary_{zipcode}.md",
-                os.path.join(as_dir, f"area_data_{zipcode}.json"),
             ]
 
         if stage_name == "correlation_results":

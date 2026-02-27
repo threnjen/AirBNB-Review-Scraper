@@ -20,7 +20,7 @@ Each step is a numbered module with a `run(config, pipeline_cache)` entry point.
 | `04_reviews_scrape.py` | `reviews_scrape` | `outputs/04_reviews_scrape/` |
 | `05_details_results.py` | `details_results` | `outputs/05_details_results/` |
 | `06_listing_summaries.py` | `listing_summaries` | `outputs/06_listing_summaries/` |
-| `07_area_summary.py` | `area_summary` | `outputs/07_area_summary/` + `reports/` |
+| `07_area_summary.py` | `area_summary` | `reports/` |
 | `08_correlation_results.py` | `correlation_results` | `outputs/08_correlation_results/` + `reports/` |
 | `09_description_analysis.py` | `description_analysis` | `outputs/09_description_analysis/` + `reports/` |
 
@@ -42,7 +42,6 @@ Each step is a numbered module with a `run(config, pipeline_cache)` entry point.
 | `openai_aggregator.py` | `OpenAIAggregator`, `.generate_summary()`, `.call_openai_with_retry()`, `.chunk_reviews()`, `.estimate_tokens()` | Central OpenAI client — tiktoken estimation, 120K-token chunking, 3 retries with exponential backoff, cost tracking |
 | `property_review_aggregator.py` | `PropertyRagAggregator`, `.rag_description_generation_chain()`, `.process_single_listing()` | Per-property: loads reviews → GPT summary with 3-pass process (generate → remove empties → retry incompletes) |
 | `area_review_aggregator.py` | `AreaRagAggregator`, `.rag_description_generation_chain()`, `.save_results()` | Aggregates all property summaries into single area-level analysis via GPT |
-| `data_extractor.py` | `DataExtractor`, `.run_extraction()`, `.extract_data_from_summary()`, `.aggregate_extractions()` | LLM-powered parsing of summaries → structured JSON (categories, mention counts, percentages) |
 | `correlation_analyzer.py` | `CorrelationAnalyzer`, `.run_analysis()`, `.segment_by_metric()`, `.compute_amenity_prevalence()`, `.generate_insights()` | Segments top/bottom percentile tiers by ADR or Occupancy, computes prevalence diffs for 22 amenities + 4 numeric features, sends to GPT |
 | `description_analyzer.py` | `DescriptionAnalyzer`, `.run_analysis()`, `.compute_size_adjusted_residuals()`, `.score_single_description()`, `.correlate_scores_with_premium()`, `.generate_synthesis()` | OLS regression (ADR ~ all features), LLM scores descriptions on 7 dimensions (1–10), Pearson correlation vs ADR residuals |
 
@@ -76,7 +75,7 @@ Execution order as defined in `main.PIPELINE_STEPS` and `PipelineCacheManager.ST
 | 4 | `reviews_scrape` | `steps/04_reviews_scrape.py` | `scraper/reviews_scraper.py` | `outputs/04_reviews_scrape/` |
 | 5 | `details_results` | `steps/05_details_results.py` | `scraper/details_fileset_build.py` | `outputs/05_details_results/` |
 | 6 | `listing_summaries` | `steps/06_listing_summaries.py` | `review_aggregator/property_review_aggregator.py` | `outputs/06_listing_summaries/` |
-| 7 | `area_summary` | `steps/07_area_summary.py` | `review_aggregator/area_review_aggregator.py` + `data_extractor.py` | `outputs/07_area_summary/` + `reports/` |
+| 7 | `area_summary` | `steps/07_area_summary.py` | `review_aggregator/area_review_aggregator.py` | `reports/` |
 | 8 | `correlation_results` | `steps/08_correlation_results.py` | `review_aggregator/correlation_analyzer.py` | `outputs/08_correlation_results/` + `reports/` |
 | 9 | `description_analysis` | `steps/09_description_analysis.py` | `review_aggregator/description_analyzer.py` | `outputs/09_description_analysis/` + `reports/` |
 
@@ -130,7 +129,6 @@ All scraper modules insert randomized delays between requests to mimic human bro
 | `outputs/04_reviews_scrape/` | Raw review JSON per listing |
 | `outputs/05_details_results/` | Structured CSVs: amenity matrix, descriptions, house rules, neighborhood highlights |
 | `outputs/06_listing_summaries/` | AI-generated per-property summaries |
-| `outputs/07_area_summary/` | Aggregated structured data from summaries |
 | `outputs/08_correlation_results/` | Correlation statistics JSON per metric |
 | `outputs/09_description_analysis/` | Description quality statistics JSON |
 | `reports/` | Final markdown + JSON reports (area summary, correlation insights, description quality) |

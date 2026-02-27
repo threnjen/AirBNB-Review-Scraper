@@ -115,12 +115,10 @@ class TestExpectedOutputs:
         # Should NOT include other zipcode's listings
         assert not any("999" in r for r in result)
 
-    def test_area_summary_returns_three_files(self, cache_manager):
+    def test_area_summary_returns_one_file(self, cache_manager):
         result = cache_manager.expected_outputs("area_summary", "97067")
-        assert "reports/area_summary_97067.json" in result
         assert "reports/area_summary_97067.md" in result
-        assert "outputs/07_area_summary/area_data_97067.json" in result
-        assert len(result) == 3
+        assert len(result) == 1
 
     def test_analyze_correlations_returns_per_metric_files(self, cache_manager):
         result = cache_manager.expected_outputs("correlation_results", "97067")

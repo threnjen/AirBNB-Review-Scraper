@@ -166,43 +166,6 @@ def sample_property_summary():
 
 
 @pytest.fixture
-def sample_extraction_response():
-    """Sample extraction JSON response from OpenAI."""
-    return json.dumps(
-        {
-            "listing_id": "12345678",
-            "total_reviews": 25,
-            "items": [
-                {
-                    "category": "Location",
-                    "original_topic": "Location",
-                    "sentiment": "positive",
-                    "mentions": 20,
-                    "total_reviews": 25,
-                    "description": "Central location with easy access to restaurants and shops",
-                },
-                {
-                    "category": "Cleanliness",
-                    "original_topic": "Cleanliness",
-                    "sentiment": "positive",
-                    "mentions": 18,
-                    "total_reviews": 25,
-                    "description": "Property is spotless and well-maintained",
-                },
-                {
-                    "category": "Noise",
-                    "original_topic": "Noise",
-                    "sentiment": "negative",
-                    "mentions": 5,
-                    "total_reviews": 25,
-                    "description": "Street noise on weekends",
-                },
-            ],
-        }
-    )
-
-
-@pytest.fixture
 def mock_summary_files_dir(tmp_path, sample_property_summary):
     """Create a temp directory with sample property summary files."""
     summary_dir = tmp_path / "outputs" / "06_listing_summaries"
