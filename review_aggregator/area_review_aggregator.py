@@ -34,16 +34,6 @@ class AreaRagAggregator(BaseModel):
         """Save JSON stats and Markdown report for the area summary."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
 
-        # Save JSON
-        output_data = {
-            "zipcode": self.zipcode,
-            "num_properties_analyzed": num_properties,
-            "area_summary": area_summary,
-        }
-        json_path = f"{self.output_dir}/area_summary_{self.zipcode}.json"
-        save_json_file(filename=json_path, data=output_data)
-        logger.info(f"Saved area summary JSON to {json_path}")
-
         # Save Markdown report
         md_path = f"{self.output_dir}/area_summary_{self.zipcode}.md"
         with open(md_path, "w", encoding="utf-8") as f:
