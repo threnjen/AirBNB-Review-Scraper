@@ -215,3 +215,4 @@ property_*
 outputs/
 coverage_html/
 *.png
+logs/
