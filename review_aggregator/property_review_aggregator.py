@@ -58,6 +58,8 @@ class PropertyAggregator(BaseModel):
         return mean_rating
 
     def get_overall_mean_rating(self, reviews: dict) -> float:
+        if not reviews:
+            return 0.0
         overall_mean = 0
         for listing_id in reviews:
             overall_mean += self.get_listing_id_mean_rating(

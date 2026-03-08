@@ -4,6 +4,8 @@ Unit tests for scraper/location_calculator.py
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 
 class TestLocationer:
     """Tests for locationer function."""
@@ -54,26 +56,24 @@ class TestLocationer:
             assert result is not None
 
     def test_locationer_invalid_iso_code(self):
-        """Test locationer with invalid ISO code returns None."""
+        """Test locationer with invalid ISO code raises ValueError."""
         with patch("scraper.location_calculator.pgeocode") as mock_pg:
             mock_pg.Nominatim.side_effect = Exception("xyz is not a known country code")
 
             from scraper.location_calculator import locationer
 
-            result = locationer("12345", "xyz")
-
-            assert result is None
+            with pytest.raises(ValueError, match="Could not geocode"):
+                locationer("12345", "xyz")
 
     def test_locationer_general_exception(self):
-        """Test locationer handles general exceptions gracefully."""
+        """Test locationer raises ValueError on general exceptions."""
         with patch("scraper.location_calculator.pgeocode") as mock_pg:
             mock_pg.Nominatim.side_effect = Exception("Network error")
 
             from scraper.location_calculator import locationer
 
-            result = locationer("12345", "us")
-
-            assert result is None
+            with pytest.raises(ValueError, match="Could not geocode"):
+                locationer("12345", "us")
 
     def test_locationer_bounds_precision(self, mock_pgeocode):
         """Test that bounds have correct decimal precision (7 places)."""

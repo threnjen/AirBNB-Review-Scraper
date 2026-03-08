@@ -65,6 +65,7 @@ def scrape_reviews(
         pass_number += 1
         pass_failed = 0
         remaining = total - len(resolved)
+        resolved_at_pass_start = len(resolved)
         scrape_index = 0
 
         logger.info(
@@ -82,7 +83,7 @@ def scrape_reviews(
             scrape_index += 1
             logger.info(
                 f"Retrieving reviews for listing ID {id}; "
-                f"property {scrape_index} of {remaining}"
+                f"property {resolved_at_pass_start + scrape_index} of {total}"
             )
 
             single_property_reviews = _fetch_reviews_with_retry(id, room_url)

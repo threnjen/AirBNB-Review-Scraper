@@ -11,15 +11,9 @@ def locationer(postal_code, iso_code="us"):
         nomi = pgeocode.Nominatim(iso_code)
         query = nomi.query_postal_code(postal_code)
     except Exception as e:
-        if "is not a known country code" in str(
-            e
-        ):  # Checks if the error is due to an unknown ISO code
-            logger.info(
-                f"The code {iso_code} has no available data. Please select a different ISO code."
-            )
-        else:
-            logger.error(f"An error occurred: {e}")
-        return
+        raise ValueError(
+            f"Could not geocode postal_code={postal_code}, iso_code={iso_code}: {e}"
+        ) from e
 
     lat = query.get("latitude")
     lon = query.get("longitude")

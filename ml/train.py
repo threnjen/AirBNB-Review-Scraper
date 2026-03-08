@@ -204,20 +204,20 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
     logger.info("Features selected: %d columns", X.shape[1])
 
     # Check for near-zero-variance amenities
-    system_cols = [c for c in X.columns if c.startswith("SYSTEM_")]
-    prevalence = X[system_cols].mean()
-    low_variance = prevalence[prevalence < 0.05].index.tolist()
-    if low_variance:
-        logger.info(
-            "Dropping %d low-variance amenities (<5%%): %s",
-            len(low_variance),
-            low_variance,
-        )
-        X = X.drop(columns=low_variance)
+    # system_cols = [c for c in X.columns if c.startswith("SYSTEM_")]
+    # prevalence = X[system_cols].mean()
+    # low_variance = prevalence[prevalence < 0.05].index.tolist()
+    # if low_variance:
+    #     logger.info(
+    #         "Dropping %d low-variance amenities (<5%%): %s",
+    #         len(low_variance),
+    #         low_variance,
+    #     )
+    #     X = X.drop(columns=low_variance)
 
     # Drop highly correlated amenity pairs
-    X = drop_correlated(X, threshold=0.9)
-    logger.info("Features after filtering: %d columns", X.shape[1])
+    # X = drop_correlated(X, threshold=0.9)
+    # logger.info("Features after filtering: %d columns", X.shape[1])
 
     model, metrics = train_model(X, y)
 

@@ -80,20 +80,17 @@ class DetailsFilesetBuilder:
 
         sub_details = property_details.get("sub_description", {}).get("items", [])
 
-        if "bedrooms" in sub_details[1]:
-            bedrooms = sub_details[1].split(" bedrooms")[0]
-            self.property_details[property_id]["bedrooms"] = bedrooms
-
-        if "beds" in sub_details[2]:
-            beds = sub_details[2].split(" beds")[0]
-            self.property_details[property_id]["beds"] = beds
-        else:
-            bathrooms = sub_details[2].split(" baths")[0]
-
-        # check if sub_details[3] exists
-        if len(sub_details) > 3 and "baths" in sub_details[3]:
-            bathrooms = sub_details[3].split(" baths")[0]
-            self.property_details[property_id]["bathrooms"] = bathrooms
+        for item in sub_details:
+            if "bedrooms" in item:
+                self.property_details[property_id]["bedrooms"] = item.split(
+                    " bedrooms"
+                )[0]
+            elif "beds" in item:
+                self.property_details[property_id]["beds"] = item.split(" beds")[0]
+            elif "baths" in item:
+                self.property_details[property_id]["bathrooms"] = item.split(" baths")[
+                    0
+                ]
 
         # TO DO location description
         location_description = property_details.get("location_descriptions", "")

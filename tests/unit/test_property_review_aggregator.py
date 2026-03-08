@@ -77,6 +77,11 @@ class TestPropertyAggregator:
         # overall = (5.0 + 3.0) / 2 = 4.0
         assert overall == 4.0
 
+    def test_get_overall_mean_rating_empty_dict(self, aggregator):
+        """Empty reviews dict should return 0.0, not ZeroDivisionError."""
+        result = aggregator.get_overall_mean_rating({})
+        assert result == 0.0
+
     def test_prompt_replacement_all_placeholders(self, aggregator):
         """Test that all placeholders are replaced."""
         prompt = "Zipcode: {ZIP_CODE_HERE}, ISO: {ISO_CODE_HERE}, Rating: {RATING_AVERAGE_HERE}, Overall: {OVERALL_MEAN}"

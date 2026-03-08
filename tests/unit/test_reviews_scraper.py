@@ -318,10 +318,8 @@ class TestProgressCounter:
 
     @patch("scraper.reviews_scraper.time.sleep")
     @patch("scraper.reviews_scraper.pyairbnb.get_reviews")
-    def test_counter_counts_out_of_remaining_not_total(
-        self, mock_get, mock_sleep, caplog
-    ):
-        """'property X of Y' should use remaining count, not total."""
+    def test_counter_shows_overall_progress(self, mock_get, mock_sleep, caplog):
+        """'property X of Y' should show overall progress (resolved + index of total)."""
         results = _make_search_results(5)
 
         # Create review files for listings 1, 2, 3 — only 4 and 5 remain
@@ -338,8 +336,6 @@ class TestProgressCounter:
             scrape_reviews(ZIPCODE, results, num_listings=5)
 
         log_text = caplog.text
-        # Counter should be "property 1 of 2" and "property 2 of 2"
-        assert "property 1 of 2" in log_text
-        assert "property 2 of 2" in log_text
-        # Should NOT show "of 5" in property counter
-        assert "property 1 of 5" not in log_text
+        # Counter should show overall progress: resolved_at_pass_start(3) + scrape_index
+        assert "property 4 of 5" in log_text
+        assert "property 5 of 5" in log_text

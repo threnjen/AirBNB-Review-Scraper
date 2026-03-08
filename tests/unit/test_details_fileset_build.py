@@ -324,3 +324,69 @@ class TestHasAirdnaDataFlag:
                     builder.build_fileset()
 
         assert builder.property_details["222"].get("has_airdna_data") is not True
+
+
+class TestParseBasicDetailsSubDetails:
+    """parse_basic_details must not crash on short or empty sub_details arrays."""
+
+    @pytest.fixture
+    def builder(self):
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        b = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+        )
+        b.property_details["P1"] = {}
+        return b
+
+    def _make_details(self, items):
+        return {
+            "room_type": "Entire home/apt",
+            "person_capacity": 4,
+            "rating": {},
+            "sub_description": {"items": items},
+            "house_rules": {},
+            "location_descriptions": [],
+            "description": [],
+        }
+
+    def test_empty_sub_details(self, builder):
+        """Empty sub_details list should not raise."""
+        result = builder.parse_basic_details("P1", self._make_details([]))
+        assert result is True
+        assert "bedrooms" not in builder.property_details["P1"]
+        assert "beds" not in builder.property_details["P1"]
+        assert "bathrooms" not in builder.property_details["P1"]
+
+    def test_single_element_sub_details(self, builder):
+        """sub_details with only 1 element should not raise."""
+        result = builder.parse_basic_details("P1", self._make_details(["4 guests"]))
+        assert result is True
+
+    def test_two_element_sub_details_with_bedrooms(self, builder):
+        """sub_details with 2 elements should parse bedrooms if present."""
+        result = builder.parse_basic_details(
+            "P1", self._make_details(["4 guests", "2 bedrooms"])
+        )
+        assert result is True
+        assert builder.property_details["P1"]["bedrooms"] == "2"
+
+    def test_beds_without_baths(self, builder):
+        """sub_details = ['guests', 'bed', '3 beds'] must not crash on missing baths."""
+        result = builder.parse_basic_details(
+            "P1", self._make_details(["4 guests", "Studio", "3 beds"])
+        )
+        assert result is True
+        assert builder.property_details["P1"]["beds"] == "3"
+        assert "bathrooms" not in builder.property_details["P1"]
+
+    def test_full_sub_details(self, builder):
+        """Normal 4-element sub_details parses all fields."""
+        result = builder.parse_basic_details(
+            "P1", self._make_details(["4 guests", "2 bedrooms", "3 beds", "1.5 baths"])
+        )
+        assert result is True
+        assert builder.property_details["P1"]["bedrooms"] == "2"
+        assert builder.property_details["P1"]["beds"] == "3"
+        assert builder.property_details["P1"]["bathrooms"] == "1.5"
