@@ -8,35 +8,35 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-class TestAreaRagAggregator:
-    """Tests for AreaRagAggregator class."""
+class TestAreaAggregator:
+    """Tests for AreaAggregator class."""
 
     @pytest.fixture
     def aggregator(self):
-        """Create an AreaRagAggregator with mocked dependencies."""
+        """Create an AreaAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.area_review_aggregator import (
-                    AreaRagAggregator,
+                    AreaAggregator,
                 )
 
-                return AreaRagAggregator(
+                return AreaAggregator(
                     zipcode="97067",
                     num_listings=5,
                     review_thresh_to_include_prop=5,
                 )
 
     def test_initialization_defaults(self):
-        """Test AreaRagAggregator initializes with default values."""
+        """Test AreaAggregator initializes with default values."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.area_review_aggregator import (
-                    AreaRagAggregator,
+                    AreaAggregator,
                 )
 
-                agg = AreaRagAggregator()
+                agg = AreaAggregator()
 
                 assert agg.num_listings == 3
                 assert agg.review_thresh_to_include_prop == 5
@@ -44,7 +44,7 @@ class TestAreaRagAggregator:
                 assert agg.overall_mean == 0.0
 
     def test_initialization_custom_params(self, aggregator):
-        """Test AreaRagAggregator initializes with custom parameters."""
+        """Test AreaAggregator initializes with custom parameters."""
         assert aggregator.zipcode == "97067"
         assert aggregator.num_listings == 5
         assert aggregator.review_thresh_to_include_prop == 5
@@ -54,14 +54,14 @@ class TestAreaRagAggregator:
         assert aggregator.openai_aggregator is not None
 
     def test_rag_chain_no_summary_files_returns_early(self, aggregator):
-        """Test rag_description_generation_chain returns early when no summary files exist."""
+        """Test task_chain returns early when no summary files exist."""
         with patch("os.listdir", return_value=[]):
-            result = aggregator.rag_description_generation_chain()
+            result = aggregator.task_chain()
 
             assert result is None
 
     def test_rag_chain_no_matching_zipcode_files(self, aggregator):
-        """Test rag_description_generation_chain returns early when no files match zipcode."""
+        """Test task_chain returns early when no files match zipcode."""
         with patch(
             "os.listdir",
             return_value=[
@@ -69,13 +69,13 @@ class TestAreaRagAggregator:
                 "listing_summary_99999_def.json",
             ],
         ):
-            result = aggregator.rag_description_generation_chain()
+            result = aggregator.task_chain()
 
             # No files match zipcode 97067
             assert result is None
 
     def test_rag_chain_with_valid_summaries(self, aggregator):
-        """Test rag_description_generation_chain processes valid summaries."""
+        """Test task_chain processes valid summaries."""
         mock_summary_data = {"listing123": "Great property with amazing views."}
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
@@ -95,14 +95,14 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
                 ) as mock_save_results:
                     with patch.object(
                         aggregator.openai_aggregator.client.chat.completions,
                         "create",
                         return_value=mock_response,
                     ):
-                        aggregator.rag_description_generation_chain()
+                        aggregator.task_chain()
 
                         mock_save_results.assert_called_once()
                         call_kwargs = mock_save_results.call_args.kwargs
@@ -116,10 +116,10 @@ class TestAreaRagAggregator:
             mock_cfg.return_value = {"openai": {"enable_cost_tracking": False}}
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.area_review_aggregator import (
-                    AreaRagAggregator,
+                    AreaAggregator,
                 )
 
-                limited_aggregator = AreaRagAggregator(
+                limited_aggregator = AreaAggregator(
                     zipcode="97067",
                     num_listings=2,
                 )
@@ -145,14 +145,14 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
                 ):
                     with patch.object(
                         limited_aggregator.openai_aggregator.client.chat.completions,
                         "create",
                         return_value=mock_response,
                     ):
-                        limited_aggregator.rag_description_generation_chain()
+                        limited_aggregator.task_chain()
 
                         # Should only load 2 summary files (num_listings=2) + prompt + config
                         assert mock_load.call_count == 4
@@ -180,14 +180,14 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
                 ) as mock_save_results:
                     with patch.object(
                         aggregator.openai_aggregator.client.chat.completions,
                         "create",
                         return_value=mock_response,
                     ):
-                        aggregator.rag_description_generation_chain()
+                        aggregator.task_chain()
 
                         # Verify that save_results was called
                         assert mock_save_results.called
@@ -203,7 +203,7 @@ class TestAreaRagAggregator:
             ) as mock_load:
                 mock_load.return_value = {"listing_a": ""}  # Empty summary
 
-                result = aggregator.rag_description_generation_chain()
+                result = aggregator.task_chain()
 
                 # Should return early since no valid summaries
                 assert result is None
@@ -225,14 +225,14 @@ class TestAreaRagAggregator:
                     {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaRagAggregator.save_results"
+                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
                 ) as mock_save_results:
                     with patch.object(
                         aggregator.openai_aggregator.client.chat.completions,
                         "create",
                         return_value=mock_response,
                     ):
-                        aggregator.rag_description_generation_chain()
+                        aggregator.task_chain()
 
                         call_kwargs = mock_save_results.call_args.kwargs
                         assert call_kwargs["num_properties"] == 1
@@ -241,19 +241,19 @@ class TestAreaRagAggregator:
 
 
 class TestSaveResults:
-    """Tests for AreaRagAggregator.save_results."""
+    """Tests for AreaAggregator.save_results."""
 
     @pytest.fixture
     def aggregator(self):
-        """Create an AreaRagAggregator with mocked dependencies."""
+        """Create an AreaAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.area_review_aggregator import (
-                    AreaRagAggregator,
+                    AreaAggregator,
                 )
 
-                return AreaRagAggregator(
+                return AreaAggregator(
                     zipcode="97067",
                     num_listings=5,
                     review_thresh_to_include_prop=5,
