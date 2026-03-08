@@ -17,14 +17,14 @@ class TestPropertyAggregatorIntegration:
     @pytest.fixture
     def property_aggregator(self, tmp_logs_dir):
         """Create a PropertyAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
                     "enable_cost_tracking": True,
                 }
             }
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.property_review_aggregator import (
                     PropertyAggregator,
                 )
@@ -102,14 +102,14 @@ class TestAreaAggregatorIntegration:
     @pytest.fixture
     def area_aggregator(self, tmp_logs_dir, tmp_path):
         """Create an AreaAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
                     "enable_cost_tracking": True,
                 }
             }
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.area_review_aggregator import (
                     AreaAggregator,
                 )
@@ -144,7 +144,7 @@ class TestAreaAggregatorIntegration:
             with patch(
                 "review_aggregator.area_review_aggregator.load_json_file"
             ) as mock_load:
-                # Setup mock to return summary data then prompt then config
+                # Setup mock to return summary data then prompt
                 mock_load.side_effect = [
                     {"12345678": sample_property_summary},
                     {"87654321": "Another great property with mountain views."},
@@ -152,22 +152,27 @@ class TestAreaAggregatorIntegration:
                     {
                         "gpt4o_mini_generate_prompt_structured": "Summarize {ZIP_CODE_HERE}"
                     },
-                    {"iso_code": "us"},
                 ]
 
-                with patch.object(
-                    area_aggregator.openai_aggregator.client.chat.completions,
-                    "create",
-                    return_value=mock_response,
+                with patch(
+                    "review_aggregator.area_review_aggregator.load_config",
+                    return_value={"iso_code": "us"},
                 ):
-                    area_aggregator.task_chain()
+                    with patch.object(
+                        area_aggregator.openai_aggregator.client.chat.completions,
+                        "create",
+                        return_value=mock_response,
+                    ):
+                        area_aggregator.task_chain()
 
-                    # Verify markdown report was created
-                    md_path = Path(area_aggregator.output_dir) / "area_summary_97067.md"
-                    assert md_path.exists()
-                    md_content = md_path.read_text()
-                    assert "# Area Summary: 97067" in md_content
-                    assert "**Properties Analyzed:** 3" in md_content
+                        # Verify markdown report was created
+                        md_path = (
+                            Path(area_aggregator.output_dir) / "area_summary_97067.md"
+                        )
+                        assert md_path.exists()
+                        md_content = md_path.read_text()
+                        assert "# Area Summary: 97067" in md_content
+                        assert "**Properties Analyzed:** 3" in md_content
 
 
 class TestCostTrackerIntegration:
@@ -176,7 +181,7 @@ class TestCostTrackerIntegration:
     @pytest.fixture
     def cost_tracker(self, tmp_logs_dir):
         """Create a CostTracker for testing."""
-        with patch("utils.cost_tracker.load_json_file") as mock_load:
+        with patch("utils.cost_tracker.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": True}}
             from utils.cost_tracker import CostTracker
 
@@ -240,9 +245,9 @@ class TestEndToEndPipeline:
 
     def test_property_to_area_pipeline(self, sample_property_summary, tmp_path):
         """Test flow from property summaries to area summary."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_config:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_config:
             mock_config.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.area_review_aggregator import (
                     AreaAggregator,
                 )
@@ -274,23 +279,26 @@ class TestEndToEndPipeline:
                             {
                                 "gpt4o_mini_generate_prompt_structured": "Summarize area {ZIP_CODE_HERE}"
                             },
-                            {"iso_code": "us"},
                         ]
 
-                        with patch.object(
-                            aggregator.openai_aggregator.client.chat.completions,
-                            "create",
-                            return_value=mock_response,
+                        with patch(
+                            "review_aggregator.area_review_aggregator.load_config",
+                            return_value={"iso_code": "us"},
                         ):
-                            aggregator.task_chain()
+                            with patch.object(
+                                aggregator.openai_aggregator.client.chat.completions,
+                                "create",
+                                return_value=mock_response,
+                            ):
+                                aggregator.task_chain()
 
-                            # Verify markdown report was created
-                            md_path = tmp_path / "area_summary_97067.md"
-                            assert md_path.exists()
-                            md_content = md_path.read_text()
-                            assert "# Area Summary: 97067" in md_content
-                            assert "**Properties Analyzed:** 2" in md_content
-                            assert "Complete area summary" in md_content
+                                # Verify markdown report was created
+                                md_path = tmp_path / "area_summary_97067.md"
+                                assert md_path.exists()
+                                md_content = md_path.read_text()
+                                assert "# Area Summary: 97067" in md_content
+                                assert "**Properties Analyzed:** 2" in md_content
+                                assert "Complete area summary" in md_content
 
 
 class TestPipelineCacheIntegration:
@@ -299,7 +307,7 @@ class TestPipelineCacheIntegration:
     @pytest.fixture
     def pipeline_cache(self, tmp_path):
         """Create a PipelineCacheManager with a temporary metadata path."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -324,7 +332,7 @@ class TestPipelineCacheIntegration:
 
     def test_force_refresh_causes_rerun(self, tmp_path):
         """Test that force_refresh flag overrides cached status."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -363,7 +371,7 @@ class TestPipelineCacheIntegration:
         stale_file = output_dir / "reviews_97067_old_listing.json"
         stale_file.write_text("{}")
 
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -387,7 +395,7 @@ class TestPipelineCacheIntegration:
     def test_cascade_force_refresh_marks_downstream_stale(self, tmp_path):
         """Test that cascading force-refresh makes downstream analysis stages stale."""
 
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,

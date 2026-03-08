@@ -13,15 +13,15 @@
 - [x] Run full test suite: `pipenv run pytest` — 333 passed
 
 ## Stage 2: Security Hardening
-- [ ] 2.1 — Write test: `OpenAIAggregator.__init__` logs warning on bad config
-- [ ] 2.1 — Narrow `except Exception: pass` → specific types + `logger.warning` in `openai_aggregator.py`
-- [ ] 2.2 — Write test: `CostTracker.__init__` logs warning on bad config
-- [ ] 2.2 — Narrow `except Exception: pass` → specific types + `logger.warning` in `cost_tracker.py`
-- [ ] 2.3 — Add `anchored_config_path()` utility or update `load_json_file` for repo-root resolution
-- [ ] 2.3 — Update all 7 callers to use anchored path
-- [ ] 2.3 — Add test: config loads from non-repo-root cwd
-- [ ] 2.4 — Add security note to `README.md` re: CDP port exposure
-- [ ] Run full test suite: `pipenv run pytest`
+- [x] 2.1 — Write test: `OpenAIAggregator.__init__` logs warning on bad config
+- [x] 2.1 — Narrow `except Exception: pass` → specific types + `logger.warning` in `openai_aggregator.py`
+- [x] 2.2 — Write test: `CostTracker.__init__` logs warning on bad config
+- [x] 2.2 — Narrow `except Exception: pass` → specific types + `logger.warning` in `cost_tracker.py`
+- [x] 2.3 — Add `load_config()` utility in `tiny_file_handler.py` for repo-root resolution
+- [x] 2.3 — Update all 7 callers to use `load_config()`
+- [x] 2.3 — Add test: config loads from non-repo-root cwd
+- [x] 2.4 — Add security note to `README.md` re: CDP port exposure
+- [x] Run full test suite: `pipenv run pytest` — 336 passed
 
 ## Stage 3: Fragile Area Guards
 - [ ] 3.1 — Write failing test: missing `outputs/06_listing_summaries/` dir → expect empty list

@@ -2,6 +2,7 @@
 Unit tests for review_aggregator/openai_aggregator.py
 """
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,7 +14,7 @@ class TestOpenAIAggregator:
     @pytest.fixture
     def aggregator(self, tmp_logs_dir):
         """Create an OpenAIAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
@@ -23,7 +24,7 @@ class TestOpenAIAggregator:
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.openai_aggregator import OpenAIAggregator
 
                 agg = OpenAIAggregator()
@@ -205,7 +206,7 @@ class TestOpenAIAggregator:
 
     def test_model_config_from_init(self, tmp_logs_dir):
         """Test that model configuration is loaded from config."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4",
@@ -214,7 +215,7 @@ class TestOpenAIAggregator:
                     "chunk_token_limit": 80000,
                 }
             }
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.openai_aggregator import OpenAIAggregator
 
                 agg = OpenAIAggregator()
@@ -224,6 +225,22 @@ class TestOpenAIAggregator:
                 assert agg.max_tokens == 8000
                 assert agg.chunk_token_limit == 80000
 
+    def test_bad_config_logs_warning(self, tmp_logs_dir):
+        """Test that bad config.json logs a warning and continues with defaults."""
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
+            mock_load.side_effect = json.JSONDecodeError("bad", "doc", 0)
+            with patch("utils.cost_tracker.load_config", return_value={}):
+                with patch("review_aggregator.openai_aggregator.logger") as mock_logger:
+                    from review_aggregator.openai_aggregator import OpenAIAggregator
+
+                    agg = OpenAIAggregator()
+
+                    mock_logger.warning.assert_called_once()
+                    assert "config" in mock_logger.warning.call_args[0][0].lower()
+                    # Defaults should still be set
+                    assert agg.model == "gpt-4.1-mini"
+                    assert agg.temperature == 0.3
+
 
 class TestOpenAIAggregatorGenerateSummary:
     """Tests for OpenAIAggregator.generate_summary method."""
@@ -231,7 +248,7 @@ class TestOpenAIAggregatorGenerateSummary:
     @pytest.fixture
     def aggregator(self, tmp_logs_dir):
         """Create an OpenAIAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {
                 "openai": {
                     "model": "gpt-4.1-mini",
@@ -241,7 +258,7 @@ class TestOpenAIAggregatorGenerateSummary:
                     "enable_cost_tracking": False,
                 }
             }
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.openai_aggregator import OpenAIAggregator
 
                 agg = OpenAIAggregator()

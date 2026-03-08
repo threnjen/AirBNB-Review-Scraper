@@ -2,6 +2,7 @@
 Unit tests for utils/cost_tracker.py
 """
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -13,7 +14,7 @@ class TestCostTracker:
     @pytest.fixture
     def cost_tracker(self, tmp_logs_dir):
         """Create a CostTracker with a temporary log file."""
-        with patch("utils.cost_tracker.load_json_file") as mock_load:
+        with patch("utils.cost_tracker.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": True}}
 
             from utils.cost_tracker import CostTracker
@@ -169,7 +170,7 @@ class TestCostTracker:
 
     def test_tracking_disabled_returns_empty_dict(self, tmp_logs_dir):
         """Test that tracking when disabled returns empty dict."""
-        with patch("utils.cost_tracker.load_json_file") as mock_load:
+        with patch("utils.cost_tracker.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
 
             from utils.cost_tracker import CostTracker
@@ -199,6 +200,23 @@ class TestCostTracker:
         assert "listing1" in cost_tracker.session_stats["listings_processed"]
         assert "listing2" in cost_tracker.session_stats["listings_processed"]
 
+    def test_bad_config_logs_warning(self, tmp_logs_dir):
+        """Test that bad config.json logs a warning and continues with defaults."""
+        with patch("utils.cost_tracker.load_config") as mock_load:
+            mock_load.side_effect = json.JSONDecodeError("bad", "doc", 0)
+            with patch("utils.cost_tracker.logger") as mock_logger:
+                from utils.cost_tracker import CostTracker
+
+                tracker = CostTracker(
+                    log_file=str(tmp_logs_dir / "cost.json"),
+                    enable_tracking=True,
+                )
+
+                mock_logger.warning.assert_called_once()
+                assert "config" in mock_logger.warning.call_args[0][0].lower()
+                # Defaults should still be set
+                assert tracker.enable_tracking is True
+
 
 class TestCostTrackerSessionSummary:
     """Tests for CostTracker session summary methods."""
@@ -206,7 +224,7 @@ class TestCostTrackerSessionSummary:
     @pytest.fixture
     def cost_tracker(self, tmp_logs_dir):
         """Create a CostTracker with a temporary log file."""
-        with patch("utils.cost_tracker.load_json_file") as mock_load:
+        with patch("utils.cost_tracker.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": True}}
 
             from utils.cost_tracker import CostTracker
@@ -231,7 +249,7 @@ class TestCostTrackerSessionSummary:
 
     def test_get_session_summary_disabled(self, tmp_logs_dir):
         """Test get_session_summary when tracking is disabled."""
-        with patch("utils.cost_tracker.load_json_file") as mock_load:
+        with patch("utils.cost_tracker.load_config") as mock_load:
             mock_load.return_value = {}
 
             from utils.cost_tracker import CostTracker
@@ -271,7 +289,7 @@ class TestCostTrackerSessionSummary:
 
     def test_log_session_disabled(self, tmp_logs_dir):
         """Test log_session when tracking is disabled."""
-        with patch("utils.cost_tracker.load_json_file") as mock_load:
+        with patch("utils.cost_tracker.load_config") as mock_load:
             mock_load.return_value = {}
 
             from utils.cost_tracker import CostTracker

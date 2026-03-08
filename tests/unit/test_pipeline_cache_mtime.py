@@ -19,7 +19,7 @@ class TestExpectedOutputs:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -152,7 +152,7 @@ class TestIsFileFreshByMtime:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -188,7 +188,7 @@ class TestIsFileFreshMtime:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -216,7 +216,7 @@ class TestIsFileFreshMtime:
         assert cache_manager.is_file_fresh("reviews_scrape", test_file) is False
 
     def test_force_refresh_overrides_freshness(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -232,7 +232,7 @@ class TestIsFileFreshMtime:
         assert manager.is_file_fresh("reviews_scrape", test_file) is False
 
     def test_cache_disabled_returns_false(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {"pipeline_cache_enabled": False}
             from utils.pipeline_cache_manager import PipelineCacheManager
 
@@ -249,7 +249,7 @@ class TestIsStageFreshMtime:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -318,7 +318,7 @@ class TestIsStageFreshMtime:
         assert cache_manager.is_stage_fresh("comp_sets", "99999") is False
 
     def test_force_refresh_overrides_freshness(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -340,7 +340,7 @@ class TestIsStageFreshMtime:
         assert manager.is_stage_fresh("search_results", "97067") is False
 
     def test_cache_disabled_returns_false(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {"pipeline_cache_enabled": False}
             from utils.pipeline_cache_manager import PipelineCacheManager
 
@@ -354,7 +354,7 @@ class TestGetMissingOutputs:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -436,7 +436,7 @@ class TestShouldRunStageMtime:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -461,7 +461,7 @@ class TestShouldRunStageMtime:
         assert cache_manager.should_run_stage("reviews_scrape", "97067") == "resume"
 
     def test_clear_and_run_when_force_refresh(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -474,7 +474,7 @@ class TestShouldRunStageMtime:
         assert manager.should_run_stage("reviews_scrape", "97067") == "clear_and_run"
 
     def test_resume_when_cache_disabled(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {"pipeline_cache_enabled": False}
             from utils.pipeline_cache_manager import PipelineCacheManager
 
@@ -488,7 +488,7 @@ class TestClearStageForZipcodeMtime:
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,

@@ -14,9 +14,9 @@ class TestCorrelationAnalyzer:
     @pytest.fixture
     def analyzer(self):
         """Create a CorrelationAnalyzer with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.correlation_analyzer import (
                     CorrelationAnalyzer,
                 )
@@ -94,9 +94,9 @@ class TestSegmentByMetricStringColumns:
 
     @pytest.fixture
     def analyzer(self):
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.correlation_analyzer import CorrelationAnalyzer
 
                 return CorrelationAnalyzer(
@@ -175,9 +175,9 @@ class TestLoadPropertyDataAirdnaFilter:
 
     @pytest.fixture
     def analyzer(self):
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.correlation_analyzer import CorrelationAnalyzer
 
                 return CorrelationAnalyzer(zipcode="97067")

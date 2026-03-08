@@ -14,9 +14,9 @@ class TestAreaAggregator:
     @pytest.fixture
     def aggregator(self):
         """Create an AreaAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.area_review_aggregator import (
                     AreaAggregator,
                 )
@@ -29,9 +29,9 @@ class TestAreaAggregator:
 
     def test_initialization_defaults(self):
         """Test AreaAggregator initializes with default values."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.area_review_aggregator import (
                     AreaAggregator,
                 )
@@ -92,29 +92,32 @@ class TestAreaAggregator:
                     {
                         "gpt4o_mini_generate_prompt_structured": "Summarize {ZIP_CODE_HERE} area"
                     },
-                    {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
-                ) as mock_save_results:
-                    with patch.object(
-                        aggregator.openai_aggregator.client.chat.completions,
-                        "create",
-                        return_value=mock_response,
-                    ):
-                        aggregator.task_chain()
+                    "review_aggregator.area_review_aggregator.load_config",
+                    return_value={"iso_code": "us"},
+                ):
+                    with patch(
+                        "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
+                    ) as mock_save_results:
+                        with patch.object(
+                            aggregator.openai_aggregator.client.chat.completions,
+                            "create",
+                            return_value=mock_response,
+                        ):
+                            aggregator.task_chain()
 
-                        mock_save_results.assert_called_once()
-                        call_kwargs = mock_save_results.call_args.kwargs
-                        assert call_kwargs["num_properties"] == 1
-                        assert call_kwargs["iso_code"] == "us"
-                        assert call_kwargs["area_summary"] == "Area summary text"
+                            mock_save_results.assert_called_once()
+                            call_kwargs = mock_save_results.call_args.kwargs
+                            assert call_kwargs["num_properties"] == 1
+                            assert call_kwargs["iso_code"] == "us"
+                            assert call_kwargs["area_summary"] == "Area summary text"
 
     def test_rag_chain_limits_to_num_listings(self):
         """Test that only num_listings files are processed."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_cfg:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_cfg:
             mock_cfg.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.area_review_aggregator import (
                     AreaAggregator,
                 )
@@ -142,20 +145,23 @@ class TestAreaAggregator:
                     {"listing_a": "Summary A"},
                     {"listing_b": "Summary B"},
                     {"gpt4o_mini_generate_prompt_structured": "Prompt"},
-                    {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
+                    "review_aggregator.area_review_aggregator.load_config",
+                    return_value={"iso_code": "us"},
                 ):
-                    with patch.object(
-                        limited_aggregator.openai_aggregator.client.chat.completions,
-                        "create",
-                        return_value=mock_response,
+                    with patch(
+                        "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
                     ):
-                        limited_aggregator.task_chain()
+                        with patch.object(
+                            limited_aggregator.openai_aggregator.client.chat.completions,
+                            "create",
+                            return_value=mock_response,
+                        ):
+                            limited_aggregator.task_chain()
 
-                        # Should only load 2 summary files (num_listings=2) + prompt + config
-                        assert mock_load.call_count == 4
+                            # Should only load 2 summary files (num_listings=2) + prompt
+                            assert mock_load.call_count == 3
 
     def test_rag_chain_skips_empty_summaries(self, aggregator):
         """Test that empty summary texts are skipped."""
@@ -177,23 +183,26 @@ class TestAreaAggregator:
                     {"listing_a": ""},  # Empty summary
                     {"listing_b": "Valid summary"},  # Valid summary
                     {"gpt4o_mini_generate_prompt_structured": "Prompt"},
-                    {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
-                ) as mock_save_results:
-                    with patch.object(
-                        aggregator.openai_aggregator.client.chat.completions,
-                        "create",
-                        return_value=mock_response,
-                    ):
-                        aggregator.task_chain()
+                    "review_aggregator.area_review_aggregator.load_config",
+                    return_value={"iso_code": "us"},
+                ):
+                    with patch(
+                        "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
+                    ) as mock_save_results:
+                        with patch.object(
+                            aggregator.openai_aggregator.client.chat.completions,
+                            "create",
+                            return_value=mock_response,
+                        ):
+                            aggregator.task_chain()
 
-                        # Verify that save_results was called
-                        assert mock_save_results.called
-                        # Verify output shows 1 property analyzed (the non-empty one)
-                        call_kwargs = mock_save_results.call_args.kwargs
-                        assert call_kwargs["num_properties"] == 1
+                            # Verify that save_results was called
+                            assert mock_save_results.called
+                            # Verify output shows 1 property analyzed (the non-empty one)
+                            call_kwargs = mock_save_results.call_args.kwargs
+                            assert call_kwargs["num_properties"] == 1
 
     def test_rag_chain_all_empty_summaries_returns_early(self, aggregator):
         """Test that if all summaries are empty, the method returns early."""
@@ -222,22 +231,27 @@ class TestAreaAggregator:
                 mock_load.side_effect = [
                     mock_summary_data,
                     {"gpt4o_mini_generate_prompt_structured": "Prompt"},
-                    {"iso_code": "us"},
                 ]
                 with patch(
-                    "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
-                ) as mock_save_results:
-                    with patch.object(
-                        aggregator.openai_aggregator.client.chat.completions,
-                        "create",
-                        return_value=mock_response,
-                    ):
-                        aggregator.task_chain()
+                    "review_aggregator.area_review_aggregator.load_config",
+                    return_value={"iso_code": "us"},
+                ):
+                    with patch(
+                        "review_aggregator.area_review_aggregator.AreaAggregator.save_results"
+                    ) as mock_save_results:
+                        with patch.object(
+                            aggregator.openai_aggregator.client.chat.completions,
+                            "create",
+                            return_value=mock_response,
+                        ):
+                            aggregator.task_chain()
 
-                        call_kwargs = mock_save_results.call_args.kwargs
-                        assert call_kwargs["num_properties"] == 1
-                        assert call_kwargs["iso_code"] == "us"
-                        assert call_kwargs["area_summary"] == "Generated area summary"
+                            call_kwargs = mock_save_results.call_args.kwargs
+                            assert call_kwargs["num_properties"] == 1
+                            assert call_kwargs["iso_code"] == "us"
+                            assert (
+                                call_kwargs["area_summary"] == "Generated area summary"
+                            )
 
 
 class TestSaveResults:
@@ -246,9 +260,9 @@ class TestSaveResults:
     @pytest.fixture
     def aggregator(self):
         """Create an AreaAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.area_review_aggregator import (
                     AreaAggregator,
                 )

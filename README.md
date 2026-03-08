@@ -479,6 +479,14 @@ make coverage
 
 The pipeline scrapes publicly visible Airbnb review text, which may include reviewer names and personally identifiable information. All scraped data is stored locally in the `outputs/` directory. Users are responsible for handling this data in compliance with applicable privacy regulations and should avoid sharing raw review data publicly.
 
+## Security Notes
+
+**Chrome DevTools Protocol (CDP) port exposure:** The AirDNA scraper requires Chrome to be launched with `--remote-debugging-port=9222`. This opens a CDP endpoint on `localhost:9222` that allows **any local process** to attach to the browser and control it — including accessing the authenticated AirDNA session, reading cookies, and navigating to arbitrary URLs. On a **single-user development machine** this is low risk, but on **shared servers, multi-user environments, or CI runners** it can be exploited by other users or processes on the same host. Mitigations:
+
+- Only launch Chrome with `--remote-debugging-port` when actively running the AirDNA scraper, and close it immediately afterward.
+- Do not expose port 9222 to the network (the default `localhost` binding is not reachable externally, but verify your firewall configuration).
+- Avoid running the AirDNA scraper on shared or multi-tenant machines.
+
 ## Disclaimer
 
 This tool scrapes data from Airbnb and AirDNA. Use of web scraping may be subject to the terms of service of these platforms. This project is intended for personal market research and analysis. Users are responsible for ensuring their use complies with applicable terms of service and laws.

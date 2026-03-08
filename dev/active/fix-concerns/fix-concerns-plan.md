@@ -49,9 +49,7 @@ Address all 24 concerns across 5 categories in 5 phases, prioritized by severity
 - README documents the security implication of `--remote-debugging-port=9222`
 - Config loading uses repo-root-anchored path resolution
 
-**Status**: Not Started
-
-### 2.1 — Narrow exception handling in `OpenAIAggregator.__init__`
+**Status**: Complete
 - **File**: `review_aggregator/openai_aggregator.py` lines 58–60
 - **Change**: `except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:` + `logger.warning(...)`. Follow pattern in `utils/pipeline_cache_manager.py:93`.
 - **Test**: Add test verifying warning logged on bad config.

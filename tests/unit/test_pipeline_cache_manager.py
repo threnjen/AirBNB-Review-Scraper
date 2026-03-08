@@ -24,7 +24,7 @@ class TestPipelineCacheManager:
     @pytest.fixture
     def cache_manager(self, tmp_path):
         """Create a PipelineCacheManager with a temporary directory."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -45,7 +45,7 @@ class TestPipelineCacheManager:
     @pytest.fixture
     def disabled_cache_manager(self, tmp_path):
         """Create a PipelineCacheManager with caching disabled."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": False,
             }
@@ -73,7 +73,7 @@ class TestPipelineCacheManager:
 
     def test_force_refresh_overrides_file_freshness(self, tmp_path):
         """Test that is_file_fresh returns False when force flag is True."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -91,7 +91,7 @@ class TestPipelineCacheManager:
 
     def test_force_refresh_search_bypasses_file_freshness(self, tmp_path):
         """Test that force_refresh flag makes both file and stage freshness False."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -139,7 +139,7 @@ class TestPipelineCacheManager:
 
     def test_config_load_failure_uses_defaults(self, tmp_path):
         """Test that config load failure falls back to defaults with warning."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.side_effect = FileNotFoundError("config.json not found")
             from utils.pipeline_cache_manager import PipelineCacheManager
 
@@ -307,7 +307,7 @@ class TestPipelineCacheManager:
 
     def test_new_force_refresh_flags_loaded_from_config(self, tmp_path):
         """Test that force_refresh flags are loaded from config with init cascade."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -325,7 +325,7 @@ class TestPipelineCacheManager:
 
     def test_init_cascade_sets_only_analysis_stage_flags(self, tmp_path):
         """Test that on init, a True flag cascades only to analysis stages."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -351,7 +351,7 @@ class TestPipelineCacheManager:
 
     def test_init_no_cascade_when_no_flags_set(self, tmp_path):
         """Test that no cascade occurs when all force_refresh flags are False."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -372,7 +372,7 @@ class TestZipcodeScopedCache:
     @pytest.fixture
     def cache_manager(self, tmp_path):
         """Create a PipelineCacheManager with a temporary directory."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -398,7 +398,7 @@ class TestZipcodeScopedCache:
 
     def test_should_run_stage_clear_when_force_refresh(self, tmp_path):
         """Test that should_run_stage returns 'clear_and_run' when force flag is set."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
@@ -412,7 +412,7 @@ class TestZipcodeScopedCache:
 
     def test_should_run_stage_resume_when_cache_disabled(self, tmp_path):
         """Test that disabled cache always returns 'resume'."""
-        with patch("utils.pipeline_cache_manager.load_json_file") as mock_load:
+        with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {"pipeline_cache_enabled": False}
             from utils.pipeline_cache_manager import PipelineCacheManager
 

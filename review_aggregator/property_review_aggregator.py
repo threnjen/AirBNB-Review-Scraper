@@ -7,7 +7,7 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.openai_aggregator import OpenAIAggregator
-from utils.tiny_file_handler import load_json_file, save_json_file
+from utils.tiny_file_handler import load_config, load_json_file, save_json_file
 
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -81,7 +81,7 @@ class PropertyAggregator(BaseModel):
         # Add more replacements to fill out the entire prompt
         current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.zipcode)
         current_prompt = current_prompt.replace(
-            "{ISO_CODE_HERE}", load_json_file("config.json").get("iso_code", "us")
+            "{ISO_CODE_HERE}", load_config().get("iso_code", "us")
         )
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)

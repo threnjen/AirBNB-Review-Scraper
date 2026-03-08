@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 import tiktoken
 from pydantic import BaseModel, Field
 
-from utils.tiny_file_handler import load_json_file, save_json_file
+from utils.tiny_file_handler import load_config, load_json_file, save_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -37,13 +37,13 @@ class CostTracker(BaseModel):
 
         # Load configuration overrides if available
         try:
-            config = load_json_file("config.json")
+            config = load_config()
             openai_config = config.get("openai", {})
             self.enable_tracking = openai_config.get(
                 "enable_cost_tracking", self.enable_tracking
             )
-        except Exception:
-            pass
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Could not load cost tracker config overrides: {e}")
 
         # Create logs directory if it doesn't exist
         if self.enable_tracking:

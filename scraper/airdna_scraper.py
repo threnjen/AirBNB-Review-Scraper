@@ -562,10 +562,9 @@ class AirDNAScraper:
 
 
 if __name__ == "__main__":
-    import json as json_mod
+    from utils.tiny_file_handler import load_config
 
-    with open("config.json", "r") as f:
-        config = json_mod.load(f)
+    config = load_config()
 
     # Load listing IDs from search results
     zipcode = config.get("zipcode", "97067")
@@ -573,7 +572,7 @@ if __name__ == "__main__":
 
     if os.path.isfile(search_results_path):
         with open(search_results_path, "r", encoding="utf-8") as f:
-            search_results = json_mod.load(f)
+            search_results = json.load(f)
         ids = [str(r.get("room_id", r.get("id", ""))) for r in search_results]
         ids = [i for i in ids if i]
     else:

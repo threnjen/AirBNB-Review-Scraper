@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from utils.local_file_handler import LocalFileHandler
-from utils.tiny_file_handler import load_json_file
+from utils.tiny_file_handler import load_config
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class PipelineCacheManager(BaseModel):
         super().__init__(**kwargs)
 
         try:
-            config = load_json_file("config.json")
+            config = load_config()
             self.enable_cache = config.get("pipeline_cache_enabled", self.enable_cache)
             ttl_days = config.get("pipeline_cache_ttl_days", 7)
             self.ttl_hours = ttl_days * 24

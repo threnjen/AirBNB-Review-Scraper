@@ -13,9 +13,9 @@ class TestPropertyAggregator:
     @pytest.fixture
     def aggregator(self):
         """Create a PropertyAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.property_review_aggregator import (
                     PropertyAggregator,
                 )
@@ -87,7 +87,7 @@ class TestPropertyAggregator:
         prompt = "Zipcode: {ZIP_CODE_HERE}, ISO: {ISO_CODE_HERE}, Rating: {RATING_AVERAGE_HERE}, Overall: {OVERALL_MEAN}"
 
         with patch(
-            "review_aggregator.property_review_aggregator.load_json_file"
+            "review_aggregator.property_review_aggregator.load_config"
         ) as mock:
             mock.return_value = {"iso_code": "us"}
 
@@ -106,7 +106,7 @@ class TestPropertyAggregator:
         prompt = "This is a prompt with {ZIP_CODE_HERE} embedded."
 
         with patch(
-            "review_aggregator.property_review_aggregator.load_json_file"
+            "review_aggregator.property_review_aggregator.load_config"
         ) as mock:
             mock.return_value = {"iso_code": "us"}
 
@@ -173,9 +173,9 @@ class TestPropertyAggregator:
     def test_initialization_defaults(self):
         """Test that aggregator initializes with correct defaults."""
         with patch(
-            "review_aggregator.openai_aggregator.load_json_file", return_value={}
+            "review_aggregator.openai_aggregator.load_config", return_value={}
         ):
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.property_review_aggregator import (
                     PropertyAggregator,
                 )
@@ -193,9 +193,9 @@ class TestPropertyAggregatorFiltering:
     @pytest.fixture
     def aggregator(self):
         """Create a PropertyAggregator with mocked dependencies."""
-        with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
             mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
-            with patch("utils.cost_tracker.load_json_file", return_value={}):
+            with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.property_review_aggregator import (
                     PropertyAggregator,
                 )

@@ -6,6 +6,7 @@ import os
 import sys
 
 from utils.pipeline_cache_manager import PipelineCacheManager
+from utils.tiny_file_handler import load_config
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -42,8 +43,7 @@ class AirBnbReviewAggregator:
         return self.config.get("iso_code", "us")
 
     def load_configs(self):
-        with open("config.json", "r") as f:
-            self.config = json.load(f)
+        self.config = load_config()
         self.pipeline_cache = PipelineCacheManager()
 
     # ----- kept for test_compile_comp_sets -----

@@ -3,10 +3,11 @@ Unit tests for utils/tiny_file_handler.py
 """
 
 import json
+import os
 
 import pytest
 
-from utils.tiny_file_handler import load_json_file, save_json_file
+from utils.tiny_file_handler import load_config, load_json_file, save_json_file
 
 
 class TestLoadJsonFile:
@@ -122,3 +123,18 @@ class TestSaveJsonFile:
         with open(test_file, "r") as f:
             saved_data = json.load(f)
         assert saved_data == test_data
+
+
+class TestLoadConfig:
+    """Tests for load_config function."""
+
+    def test_load_config_from_different_cwd(self, tmp_path):
+        """Test that load_config resolves to repo root regardless of cwd."""
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_path)
+            config = load_config()
+            # Should successfully load the repo-root config.json
+            assert isinstance(config, dict)
+        finally:
+            os.chdir(original_cwd)

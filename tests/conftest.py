@@ -213,7 +213,7 @@ def mock_review_files_dir(tmp_path, sample_reviews):
 @pytest.fixture
 def mocked_openai_aggregator(mock_openai_client, tmp_logs_dir):
     """Create an OpenAIAggregator with mocked OpenAI client for integration tests."""
-    with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
+    with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
         mock_load.return_value = {
             "openai": {
                 "model": "gpt-4.1-mini",
@@ -223,7 +223,7 @@ def mocked_openai_aggregator(mock_openai_client, tmp_logs_dir):
                 "enable_cost_tracking": True,
             }
         }
-        with patch("utils.cost_tracker.load_json_file", return_value={}):
+        with patch("utils.cost_tracker.load_config", return_value={}):
             from review_aggregator.openai_aggregator import OpenAIAggregator
 
             agg = OpenAIAggregator(client=mock_openai_client)

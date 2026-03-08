@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from review_aggregator.openai_aggregator import OpenAIAggregator
-from utils.tiny_file_handler import load_json_file
+from utils.tiny_file_handler import load_config, load_json_file
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ class AreaAggregator(BaseModel):
 
         # Replace placeholders in prompt
         updated_prompt = prompt_template.replace("{ZIP_CODE_HERE}", self.zipcode)
-        iso_code = load_json_file("config.json").get("iso_code", "us")
+        iso_code = load_config().get("iso_code", "us")
         updated_prompt = updated_prompt.replace("{ISO_CODE_HERE}", iso_code)
         updated_prompt = updated_prompt.replace(
             "{OVERALL_MEAN}", str(self.overall_mean)

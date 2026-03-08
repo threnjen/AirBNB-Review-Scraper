@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -10,7 +11,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 
 from utils.cost_tracker import CostTracker
-from utils.tiny_file_handler import load_json_file
+from utils.tiny_file_handler import load_config
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class OpenAIAggregator(BaseModel):
 
         # Load configuration overrides if available
         try:
-            config = load_json_file("config.json")
+            config = load_config()
             openai_config = config.get("openai", {})
 
             if openai_config:
@@ -51,9 +52,8 @@ class OpenAIAggregator(BaseModel):
                 self.chunk_token_limit = openai_config.get(
                     "chunk_token_limit", self.chunk_token_limit
                 )
-        except Exception:
-            # Continue with defaults if config loading fails
-            pass
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Could not load OpenAI config overrides: {e}")
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text using tiktoken."""
