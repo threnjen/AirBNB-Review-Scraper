@@ -3,7 +3,7 @@
 import logging
 import sys
 
-from review_aggregator.property_review_aggregator import PropertyRagAggregator
+from review_aggregator.property_review_aggregator import PropertyAggregator
 from utils.pipeline_cache_manager import PipelineCacheManager
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -27,12 +27,12 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
 
-    rag_property = PropertyRagAggregator(
+    rag_property = PropertyAggregator(
         num_listings_to_summarize=num_listings,
         review_thresh_to_include_prop=review_thresh,
         zipcode=zipcode,
         pipeline_cache=pipeline_cache,
     )
-    rag_property.rag_description_generation_chain()
+    rag_property.task_chain()
     pipeline_cache.notify_stage_ran(STAGE)
     logger.info(f"Listing summaries for zipcode {zipcode} completed.")

@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-class AreaRagAggregator(BaseModel):
+class AreaAggregator(BaseModel):
     """Aggregates property summaries into area-level insights."""
 
     num_listings: int = 3
@@ -45,7 +45,7 @@ class AreaRagAggregator(BaseModel):
 
         logger.info(f"Saved area summary report to {md_path}")
 
-    def rag_description_generation_chain(self):
+    def task_chain(self):
         """Generate area-level summary from existing property summaries."""
 
         # Load all property summaries from the output directory

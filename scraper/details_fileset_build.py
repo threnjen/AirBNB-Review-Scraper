@@ -123,6 +123,23 @@ class DetailsFilesetBuilder:
             "location",
             "value",
             "guest_satisfaction",
+            "SYSTEM_NO_SURVEILLANCE",
+            "SYSTEM_NO_AIR_CONDITIONING",
+            "SYSTEM_NO_PETS",
+            "SYSTEM_SMOKING_NOT_ALLOWED",
+            "SYSTEM_NO_CAMERA",
+            "SYSTEM_NO_ESSENTIALS",
+            "SYSTEM_NO_DETECTOR_CO2",
+            "SYSTEM_NO_WASHER",
+            "SYSTEM_NO_HAIR_DRYER",
+            "SYSTEM_NO_DETECTOR_SMOKE",
+            "SYSTEM_NO_SHAMPOO",
+            "SYSTEM_NO_HEATER",
+            "SYSTEM_NO_KITCHEN",
+            "SYSTEM_NO_TV",
+            "SYSTEM_NO_DRYER",
+            "SYSTEM_NO_HOT_WATER",
+            "SYSTEM_NO_SERVICE",
         ]
         df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
 

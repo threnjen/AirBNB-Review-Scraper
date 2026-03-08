@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-class PropertyRagAggregator(BaseModel):
+class PropertyAggregator(BaseModel):
     review_thresh_to_include_prop: int = 5
     model_config = ConfigDict(arbitrary_types_allowed=True)
     num_completed_listings: int = 0
@@ -186,7 +186,7 @@ class PropertyRagAggregator(BaseModel):
 
         return generated_summaries
 
-    def rag_description_generation_chain(self):
+    def task_chain(self):
         # Load reviews along with any existing aggregated summaries to determine what still needs processing
 
         reviews = {}

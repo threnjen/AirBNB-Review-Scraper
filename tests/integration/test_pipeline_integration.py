@@ -12,11 +12,11 @@ import pytest
 
 
 class TestPropertyAggregatorIntegration:
-    """Integration tests for PropertyRagAggregator with OpenAI and caching."""
+    """Integration tests for PropertyAggregator with OpenAI and caching."""
 
     @pytest.fixture
     def property_aggregator(self, tmp_logs_dir):
-        """Create a PropertyRagAggregator with mocked dependencies."""
+        """Create a PropertyAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
@@ -26,10 +26,10 @@ class TestPropertyAggregatorIntegration:
             }
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.property_review_aggregator import (
-                    PropertyRagAggregator,
+                    PropertyAggregator,
                 )
 
-                agg = PropertyRagAggregator(
+                agg = PropertyAggregator(
                     zipcode="97067",
                     num_listings_to_summarize=3,
                 )
@@ -97,11 +97,11 @@ class TestPropertyAggregatorIntegration:
 
 
 class TestAreaAggregatorIntegration:
-    """Integration tests for AreaRagAggregator with filesystem and OpenAI."""
+    """Integration tests for AreaAggregator with filesystem and OpenAI."""
 
     @pytest.fixture
     def area_aggregator(self, tmp_logs_dir, tmp_path):
-        """Create an AreaRagAggregator with mocked dependencies."""
+        """Create an AreaAggregator with mocked dependencies."""
         with patch("review_aggregator.openai_aggregator.load_json_file") as mock_load:
             mock_load.return_value = {
                 "openai": {
@@ -111,10 +111,10 @@ class TestAreaAggregatorIntegration:
             }
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.area_review_aggregator import (
-                    AreaRagAggregator,
+                    AreaAggregator,
                 )
 
-                agg = AreaRagAggregator(
+                agg = AreaAggregator(
                     zipcode="97067",
                     num_listings=5,
                     output_dir=str(tmp_path),
@@ -127,7 +127,7 @@ class TestAreaAggregatorIntegration:
     def test_area_aggregator_loads_and_aggregates_summaries(
         self, area_aggregator, sample_property_summary
     ):
-        """Test that AreaRagAggregator loads summaries and calls OpenAI."""
+        """Test that AreaAggregator loads summaries and calls OpenAI."""
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Area summary for Mt Hood region"
@@ -160,7 +160,7 @@ class TestAreaAggregatorIntegration:
                     "create",
                     return_value=mock_response,
                 ):
-                    area_aggregator.rag_description_generation_chain()
+                    area_aggregator.task_chain()
 
                     # Verify markdown report was created
                     md_path = Path(area_aggregator.output_dir) / "area_summary_97067.md"
@@ -244,10 +244,10 @@ class TestEndToEndPipeline:
             mock_config.return_value = {"openai": {"enable_cost_tracking": False}}
             with patch("utils.cost_tracker.load_json_file", return_value={}):
                 from review_aggregator.area_review_aggregator import (
-                    AreaRagAggregator,
+                    AreaAggregator,
                 )
 
-                aggregator = AreaRagAggregator(
+                aggregator = AreaAggregator(
                     zipcode="97067",
                     num_listings=5,
                     output_dir=str(tmp_path),
@@ -282,7 +282,7 @@ class TestEndToEndPipeline:
                             "create",
                             return_value=mock_response,
                         ):
-                            aggregator.rag_description_generation_chain()
+                            aggregator.task_chain()
 
                             # Verify markdown report was created
                             md_path = tmp_path / "area_summary_97067.md"
