@@ -60,8 +60,8 @@
 4. **Step 03** — `AirDNAScraper` connects to a running Chrome via CDP, navigates `app.airdna.co/data/rentalizer?listing_id=abnb_{id}` per listing, extracts KPI metrics, writes `outputs/03_comp_sets/listing_{id}.json`; then merges all per-listing files into `comp_set_{zipcode}.json`
 5. **Step 04** — `reviews_scraper` calls `pyairbnb.get_reviews` per listing, writes `outputs/04_reviews_scrape/reviews_{zipcode}_{id}.json`
 6. **Step 05** — `DetailsFilesetBuilder` joins Airbnb details with AirDNA comp set data, produces `outputs/05_details_results/property_amenities_matrix_{zipcode}.csv`, property descriptions, house rules, neighborhood highlights
-7. **Step 06** — `PropertyRagAggregator` loads all review files, calls `OpenAIAggregator.generate_summary` per listing, writes `outputs/06_listing_summaries/listing_summary_{zipcode}_{id}.json`
-8. **Step 07** — `AreaRagAggregator` loads all listing summaries for zipcode, calls `OpenAIAggregator.generate_summary` once for the area, writes `reports/area_summary_{zipcode}.md`
+7. **Step 06** — `PropertyAggregator` loads all review files, calls `OpenAIAggregator.generate_summary` per listing, writes `outputs/06_listing_summaries/listing_summary_{zipcode}_{id}.json`
+8. **Step 07** — `AreaAggregator` loads all listing summaries for zipcode, calls `OpenAIAggregator.generate_summary` once for the area, writes `reports/area_summary_{zipcode}.md`
 9. **Step 08** — `CorrelationAnalyzer` loads the amenities matrix CSV, segments properties into top/bottom percentile tiers per metric (ADR, occupancy), computes amenity prevalence differences, generates LLM insights, writes `outputs/08_correlation_results/` JSON and `reports/correlation_insights_{metric}_{zipcode}.md`
 10. **Step 09** — `DescriptionAnalyzer` loads property descriptions, scores them for quality dimensions, correlates with ADR, writes `outputs/09_description_analysis/` JSON and `reports/description_quality_{zipcode}.md`
 
@@ -97,7 +97,7 @@
 **Aggregator Classes:**
 - Purpose: Encapsulate the multi-pass LLM summarization workflow (load raw data, filter already-processed, batch-process, save, re-process incomplete)
 - Examples: `review_aggregator/property_review_aggregator.py`, `review_aggregator/area_review_aggregator.py`
-- Pattern: Pydantic `BaseModel`; `rag_description_generation_chain()` is the main entry method
+- Pattern: Pydantic `BaseModel`; `task_chain()` is the main entry method
 
 ## Entry Points
 
@@ -127,7 +127,7 @@
 
 **Logging:** `logging.basicConfig(level=logging.INFO, stream=sys.stdout)` is called at module level in every module; all modules use `logger = logging.getLogger(__name__)`
 
-**Validation:** Pydantic `BaseModel` used for `PipelineCacheManager`, `OpenAIAggregator`, `CostTracker`, `PropertyRagAggregator`, `AreaRagAggregator`, `CorrelationAnalyzer`; no input validation on raw scraped data
+**Validation:** Pydantic `BaseModel` used for `PipelineCacheManager`, `OpenAIAggregator`, `CostTracker`, `PropertyAggregator`, `AreaAggregator`, `CorrelationAnalyzer`; no input validation on raw scraped data
 
 **Authentication:** Airbnb is accessed via the `pyairbnb` library (no credentials needed); AirDNA requires a logged-in Chrome session reachable via CDP at `airdna_cdp_url`; OpenAI key is read from the environment (`OPENAI_API_KEY`)
 

@@ -11,11 +11,11 @@
 - Output files at runtime: `{type}_{zipcode}_{listing_id}.json` (e.g., `reviews_97067_12345.json`)
 
 **Classes:**
-- PascalCase (e.g., `PipelineCacheManager`, `OpenAIAggregator`, `AreaRagAggregator`, `CostTracker`)
+- PascalCase (e.g., `PipelineCacheManager`, `OpenAIAggregator`, `AreaAggregator`, `CostTracker`)
 - Test classes use `Test` prefix (e.g., `TestPipelineCacheManager`, `TestCostTracker`)
 
 **Functions/Methods:**
-- `snake_case` throughout (e.g., `get_listing_id_mean_rating`, `rag_description_generation_chain`)
+- `snake_case` throughout (e.g., `get_listing_id_mean_rating`, `task_chain`)
 - Private helpers prefixed with single underscore (e.g., `_is_file_fresh_by_mtime`, `_get_listing_ids_for_zipcode`, `_apply_init_cascade`)
 
 **Variables:**
@@ -137,7 +137,7 @@ def expected_outputs(self, stage_name: str, zipcode: str) -> list[str]:
 
 ## Function Design
 
-**Size:** Methods tend toward single responsibility; complex orchestration (`rag_description_generation_chain`) is allowed to be long when it represents a linear pipeline
+**Size:** Methods tend toward single responsibility; complex orchestration (`task_chain`) is allowed to be long when it represents a linear pipeline
 
 **Parameters:** Keyword arguments used at call sites for clarity when multiple args of same type are passed
 

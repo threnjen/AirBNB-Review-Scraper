@@ -40,8 +40,8 @@ Each step is a numbered module with a `run(config, pipeline_cache)` entry point.
 | File | Key Symbols | Purpose |
 |------|-------------|---------|
 | `openai_aggregator.py` | `OpenAIAggregator`, `.generate_summary()`, `.call_openai_with_retry()`, `.chunk_reviews()`, `.estimate_tokens()` | Central OpenAI client — tiktoken estimation, 120K-token chunking, 3 retries with exponential backoff, cost tracking |
-| `property_review_aggregator.py` | `PropertyRagAggregator`, `.rag_description_generation_chain()`, `.process_single_listing()` | Per-property: loads reviews → GPT summary with 3-pass process (generate → remove empties → retry incompletes) |
-| `area_review_aggregator.py` | `AreaRagAggregator`, `.rag_description_generation_chain()`, `.save_results()` | Aggregates all property summaries into single area-level analysis via GPT |
+| `property_review_aggregator.py` | `PropertyAggregator`, `.task_chain()`, `.process_single_listing()` | Per-property: loads reviews → GPT summary with 3-pass process (generate → remove empties → retry incompletes) |
+| `area_review_aggregator.py` | `AreaAggregator`, `.task_chain()`, `.save_results()` | Aggregates all property summaries into single area-level analysis via GPT |
 | `correlation_analyzer.py` | `CorrelationAnalyzer`, `.run_analysis()`, `.segment_by_metric()`, `.compute_amenity_prevalence()`, `.generate_insights()` | Segments top/bottom percentile tiers by ADR or Occupancy, computes prevalence diffs for 22 amenities + 4 numeric features, sends to GPT |
 | `description_analyzer.py` | `DescriptionAnalyzer`, `.run_analysis()`, `.compute_size_adjusted_residuals()`, `.score_single_description()`, `.correlate_scores_with_premium()`, `.generate_synthesis()` | OLS regression (ADR ~ all features), LLM scores descriptions on 7 dimensions (1–10), Pearson correlation vs ADR residuals |
 

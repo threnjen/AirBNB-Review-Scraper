@@ -25,7 +25,7 @@
 - Fix approach: Implement extraction in `_extract_kpi_metrics` or document the field as unsupported and remove it from the schema.
 
 **`config.json` loaded at call-time inside per-listing loops:**
-- Issue: `property_review_aggregator.py` calls `load_json_file("config.json")` inside `prompt_replacement` (line 82), which is called once per listing. `area_review_aggregator.py` does the same inside `rag_description_generation_chain` (line 92).
+- Issue: `property_review_aggregator.py` calls `load_json_file("config.json")` inside `prompt_replacement` (line 82), which is called once per listing. `area_review_aggregator.py` does the same inside `task_chain` (line 92).
 - Files: `review_aggregator/property_review_aggregator.py`, `review_aggregator/area_review_aggregator.py`
 - Impact: Disk I/O on every listing iteration; also means the config cannot be injected for testing without patching the file system.
 - Fix approach: Pass `iso_code` as a constructor argument or load config once at init time.
@@ -34,7 +34,7 @@
 - Issue: `property_review_aggregator.py` calls `load_json_file("prompts/prompt.json")` inside `process_single_listing` (line 119), which is called for every listing in the run.
 - Files: `review_aggregator/property_review_aggregator.py`
 - Impact: File I/O on every OpenAI call; prompt template is re-read hundreds of times per pipeline run.
-- Fix approach: Load prompt once in `rag_description_generation_chain` and pass to `process_single_listing`.
+- Fix approach: Load prompt once in `task_chain` and pass to `process_single_listing`.
 
 **`get_cache_stats` method is a stub:**
 - Issue: `PipelineCacheManager.get_cache_stats` (lines 516-532 in `utils/pipeline_cache_manager.py`) initializes a `stats["stages"]` dict but never populates it, always returning `{}` for the stages key.
@@ -67,7 +67,7 @@
 **`get_overall_mean_rating` divides by zero on empty reviews dict:**
 - Symptoms: `ZeroDivisionError` crash when `reviews` dict is empty.
 - Files: `review_aggregator/property_review_aggregator.py` line 67
-- Trigger: Called in `rag_description_generation_chain` (line 223) after loading all review files. If the review output directory is empty (no files scraped yet), `reviews` is an empty dict and `len(reviews)` is 0.
+- Trigger: Called in `task_chain` (line 223) after loading all review files. If the review output directory is empty (no files scraped yet), `reviews` is an empty dict and `len(reviews)` is 0.
 - Workaround: None; the pipeline will crash before processing begins.
 
 **`locationer` returns `None` on error, caller unpacks as tuple:**
@@ -121,7 +121,7 @@
 - Improvement path: Fetch full page text once in `scrape_listing` and pass it to both extraction methods as a parameter.
 
 **All review files loaded into memory at once in `property_review_aggregator.py`:**
-- Problem: `rag_description_generation_chain` builds a single `reviews` dict containing every review for every listing (lines 196-204). For large zip codes with thousands of listings and hundreds of reviews each, this can exhaust available RAM.
+- Problem: `task_chain` builds a single `reviews` dict containing every review for every listing (lines 196-204). For large zip codes with thousands of listings and hundreds of reviews each, this can exhaust available RAM.
 - Files: `review_aggregator/property_review_aggregator.py`
 - Cause: Batch-load design; no streaming or pagination.
 - Improvement path: Process listings one at a time by iterating review files directly rather than loading all into memory first.
@@ -203,7 +203,7 @@
 - Blocks: Clean user experience and any CI/CD usage outside the repo root.
 
 **No cross-zipcode review file isolation in `property_review_aggregator.py`:**
-- Problem: `rag_description_generation_chain` loads ALL files in `outputs/04_reviews_scrape/` that start with `"reviews_"`, regardless of zipcode (line 197). If multiple zipcodes have been scraped, reviews from other zipcodes will be included in the current area's analysis.
+- Problem: `task_chain` loads ALL files in `outputs/04_reviews_scrape/` that start with `"reviews_"`, regardless of zipcode (line 197). If multiple zipcodes have been scraped, reviews from other zipcodes will be included in the current area's analysis.
 - Files: `review_aggregator/property_review_aggregator.py` line 197
 - Blocks: Accurate results for any user who runs the pipeline against more than one zipcode.
 

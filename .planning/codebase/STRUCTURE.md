@@ -96,7 +96,7 @@ AirBNB-Review-Scraper/
 
 **`review_aggregator/`:**
 - Purpose: LLM-powered analysis and statistical insight generation
-- Contains: Pydantic model classes with `rag_description_generation_chain()` or `run_analysis()` as main entry methods
+- Contains: Pydantic model classes with `task_chain()` or `run_analysis()` as main entry methods
 - Key files: `review_aggregator/openai_aggregator.py` (shared by all LLM steps), `review_aggregator/correlation_analyzer.py`
 
 **`utils/`:**
@@ -156,7 +156,7 @@ AirBNB-Review-Scraper/
 - Reports: `area_summary_{zipcode}.md`, `correlation_insights_{metric}_{zipcode}.md`
 
 **Classes:**
-- PascalCase (`AirDNAScraper`, `CorrelationAnalyzer`, `PropertyRagAggregator`)
+- PascalCase (`AirDNAScraper`, `CorrelationAnalyzer`, `PropertyAggregator`)
 - Pydantic `BaseModel` used for all main service classes
 
 **Functions:**
