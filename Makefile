@@ -18,6 +18,8 @@ help:
 	@echo "  coverage       - Run tests with detailed coverage report"
 	@echo "  chrome-debug   - Launch Chrome with remote debugging for AirDNA scraping"
 	@echo "  scrape-airdna  - Run AirDNA scraper standalone"
+	@echo "  train          - Train the ADR prediction model"
+	@echo "  run-app        - Start the ADR prediction web app"
 
 # Setup target
 setup:
@@ -48,6 +50,13 @@ chrome-debug:
 
 scrape-airdna:
 	$(PYTHON) -m scraper.airdna_scraper
+
+# ADR prediction targets
+train:
+	$(PYTHON) ml/train.py
+
+run-app:
+	$(PIPENV) run flask --app app/app run --debug
 
 
 .PHONY: default help setup test test-fast coverage run clean chrome-debug scrape-airdna

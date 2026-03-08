@@ -14,88 +14,90 @@
 
 ## 1. Key Differentiators
 
-The following features most strongly distinguish high-ADR properties (top 25%) from low-ADR properties (bottom 25%), based on prevalence differences:
+The following features most strongly distinguish high-ADR properties (top 25%) from low-ADR properties (bottom 25%), based on percentage point differences in amenity prevalence:
 
-| Feature    | Difference in Prevalence (High ADR % - Low ADR %) |
-|------------|--------------------------------------------------|
-| Jacuzzi    | +60.8%                                           |
-| Dishwasher | +40.0%                                           |
-| Grill      | +32.3%                                           |
-| Snowflake (likely a winter/ski amenity) | +32.3%                    |
-| Washer     | +29.2%                                           |
-| View Ocean | +29.2%                                           |
-| Dryer      | +28.5%                                           |
+| Feature      | Difference (%) |
+|--------------|----------------|
+| Jacuzzi      | +60.8%         |
+| Dishwasher   | +40.0%         |
+| Grill        | +32.3%         |
+| Snowflake (likely a heating/AC amenity) | +32.3%         |
+| Washer       | +29.2%         |
+| View Ocean   | +29.2%         |
+| Dryer        | +28.5%         |
 
-**Summary:** High-ADR properties are significantly more likely to offer luxury amenities such as Jacuzzis (+60.8%), dishwashers (+40.0%), and grills (+32.3%). They also emphasize convenience features like washers and dryers (~29% more prevalent) and desirable location-based amenities like ocean views (+29.2%).
+Additional notable differences include Firepit (+23.8%) and Fireplace (+15.4%).
 
 ---
 
 ## 2. Luxury Amenity Patterns
 
-Amenities correlating with premium pricing include:
+Amenities strongly correlated with premium pricing include:
 
-- **Jacuzzi / Hot Tub:** Present in 80.0% of high-tier vs. 19.2% low-tier (+60.8%)
-- **Game Rooms / Entertainment:** Pool tables (13.8% vs 0.8%, +13.1%), converted garage rec rooms (from descriptions)
-- **Outdoor Features:** Grill (93.1% vs 60.8%, +32.3%), firepit (72.3% vs 48.5%, +23.8%)
-- **Views:** Ocean views (40.8% vs 11.5%, +29.2%), mountain views mentioned in descriptions
-- **Winter/Ski Amenities:** Snowflake amenity (75.4% vs 43.1%, +32.3%) indicating ski-season relevance
+- **Jacuzzi/Hot Tub:** Present in 80.0% of high-ADR vs. 19.2% of low-ADR properties (+60.8%)
+- **Game/Entertainment Features:** Pool Table (13.8% vs. 0.8%, +13.1%), and mentions of converted game rooms in descriptions.
+- **Outdoor Amenities:** Grill (93.1% vs. 60.8%, +32.3%), Firepit (72.3% vs. 48.5%, +23.8%)
+- **Scenic Views:** Ocean View (40.8% vs. 11.5%, +29.2%)
+- **Special Features:** Sauna (mentioned in descriptions), Snowflake (likely indicating climate control), EV Charger (+9.2%)
 
-**Insight:** Properties with hot tubs, dedicated entertainment spaces, scenic views, and outdoor cooking/heating amenities command higher rates, reflecting a luxury and experience-driven market.
+These amenities suggest that properties offering relaxation, entertainment, and premium outdoor experiences command higher rates.
 
 ---
 
 ## 3. Capacity & Size Analysis
 
-| Attribute | High Tier Avg | Low Tier Avg | Difference |
-|-----------|---------------|--------------|------------|
-| Capacity  | 10.12         | 4.42         | +5.70      |
-| Bedrooms  | 3.89          | 2.28         | +1.62      |
-| Beds      | 6.56          | 3.05         | +3.51      |
-| Bathrooms | 2.8           | 2.0          | +0.80      |
+There is a clear positive relationship between property size and ADR:
 
-**Relationship:** Larger properties with more bedrooms, beds, and bathrooms correlate strongly with higher ADRs. High-tier listings accommodate more than double the guests on average (10.12 vs. 4.42).
+| Attribute  | High Tier Avg | Low Tier Avg | Difference |
+|------------|---------------|--------------|------------|
+| Capacity   | 10.12 guests  | 4.42 guests  | +5.70      |
+| Bedrooms   | 3.89          | 2.28         | +1.62      |
+| Beds       | 6.56          | 3.05         | +3.51      |
+| Bathrooms  | 2.8           | 2.0          | +0.80      |
 
-**Optimal Size for Maximum Rates:** Properties designed for groups of 8-16 guests with 3-4 bedrooms and multiple bathrooms tend to achieve premium pricing.
+**Insight:** Larger properties accommodating around 10 guests with nearly 4 bedrooms and multiple bathrooms tend to achieve top-tier ADRs. This suggests that targeting group travelers or multi-family stays is optimal for maximizing nightly rates in this market.
 
 ---
 
 ## 4. Pet Policy Impact
 
-- **Data on pet policies is not explicitly provided in the dataset.**
-- **Indirect inference:** None of the highlighted amenities or descriptions mention pet-friendliness as a differentiator.
-- Given the luxury focus and larger group orientation, pet policies likely have minimal or neutral impact on ADR in this market.
+The dataset does not explicitly include pet policy data. However, based on the available information and typical market trends, pet allowance is not highlighted as a differentiator in either tier.
+
+**Inference:** There is no clear evidence from this data that allowing pets correlates with higher or lower ADR in zipcode 97067. Hosts should consider local demand and guest preferences when deciding pet policies.
 
 ---
 
 ## 5. Description Language Patterns
 
-**High-ADR Listings:**
+**High-ADR Properties:**
 
-- Emphasize **spaciousness** and **group accommodation** (e.g., "accommodating up to 16 guests," "ideal for large groups").
-- Highlight **luxury and comfort**: "cozy gas fireplace," "chef’s kitchen," "private suite," "hot tub," "sauna."
-- Use evocative, experience-driven language: "stunning mountain views," "rustic elegance meets modern luxury," "create lasting memories surrounded by nature’s beauty."
-- Mention **unique features** and **multiple entertainment options**: pool tables, game rooms, outdoor firepits.
+- Emphasize **luxury, spaciousness, and group suitability** (e.g., "accommodating up to 16 guests," "spacious lodge," "large chef’s kitchen").
+- Highlight **premium amenities** such as hot tubs, saunas, fireplaces, game rooms, and scenic views.
+- Use evocative, experience-focused language: "stunning mountain views," "rustic elegance meets modern luxury," "create lasting memories surrounded by nature’s beauty."
+- Mention **unique selling points** and media features (e.g., "Featured in the Oregonian and on the Travel Channel").
+- Focus on **relaxation and entertainment** spaces (e.g., "fun game room," "convertible pool table," "private suite for ultimate relaxation").
 
-**Low-ADR Listings:**
+**Low-ADR Properties:**
 
-- Focus on **coziness and convenience**: "cute and cozy A-Frame cabin," "comforts of home."
-- Highlight **proximity to activities** rather than luxury: "near The Resort at the Mountain," "close to hiking, golf, skiing."
-- Simpler descriptions with fewer luxury or group-oriented features.
+- Describe **cozy, functional, and convenient** stays (e.g., "cute and cozy A-Frame cabin," "comfortable 2-bedroom condo").
+- Focus on **proximity to activities** and nature rather than luxury (e.g., "nearby hiking," "close to golf, skiing, cycling").
+- Highlight **basic amenities** and privacy rather than upscale features.
+- Language is straightforward and practical, targeting smaller groups or couples.
 
 ---
 
 ## 6. Recommendations for Hosts
 
-1. **Invest in Luxury Amenities:** Adding or highlighting Jacuzzis/hot tubs, dishwashers, grills, and washers/dryers can significantly increase appeal and justify higher rates.
+1. **Invest in High-Value Amenities:** Adding or highlighting features like jacuzzis/hot tubs, dishwashers, grills, and fireplaces can significantly increase appeal and justify higher nightly rates.
 
-2. **Target Larger Groups:** Optimize your property to accommodate 8+ guests with multiple bedrooms and bathrooms to tap into the premium segment.
+2. **Target Larger Groups:** Consider expanding capacity by adding bedrooms, beds, and bathrooms to accommodate 8-10+ guests, as larger properties command premium pricing.
 
-3. **Enhance Outdoor and Entertainment Spaces:** Create inviting outdoor areas with firepits, grills, and game rooms or pool tables to attract high-paying guests.
+3. **Enhance Outdoor and Entertainment Spaces:** Incorporate firepits, game rooms or pool tables, and scenic views to create memorable guest experiences that differentiate your listing.
 
-4. **Leverage Scenic Views:** If your property has ocean or mountain views, emphasize these prominently in your listing to differentiate from competitors.
+4. **Use Engaging, Experience-Focused Descriptions:** Emphasize luxury, spaciousness, and unique experiences in your listing descriptions to attract higher-paying guests.
 
-5. **Use Premium, Experience-Focused Language:** Craft descriptions that evoke luxury, spaciousness, and memorable experiences rather than just functional details.
+5. **Highlight Unique Features and Media Mentions:** If applicable, showcase any awards, media features, or special characteristics that elevate your property’s status.
 
 ---
 
-*This analysis is specific to Airbnb properties in zipcode 97067 and reflects data-driven insights from the top and bottom quartiles of nightly rates.*
+*This analysis is specific to the Airbnb market in zipcode 97067 and is based on comparative data between the top and bottom quartiles of nightly rates.*

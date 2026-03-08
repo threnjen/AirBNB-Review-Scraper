@@ -12,6 +12,9 @@ pgeocode = "*"
 pyairbnb = "*"
 playwright = "*"
 tiktoken = "*"
+xgboost = "*"
+scikit-learn = "*"
+flask = "*"
 
 [dev-packages]
 pytest = "*"

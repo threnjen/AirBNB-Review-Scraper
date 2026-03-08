@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADR Prediction Tool</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px;
+            background: #f8f9fa;
+            color: #212529;
+        }
+        h1 { margin-bottom: 8px; }
+        .subtitle { color: #6c757d; margin-bottom: 24px; }
+        .result-box {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            font-size: 1.1em;
+        }
+        .result-box.success {
+            background: #d1e7dd;
+            border: 1px solid #badbcc;
+            color: #0f5132;
+        }
+        .result-box.error {
+            background: #f8d7da;
+            border: 1px solid #f5c2c7;
+            color: #842029;
+        }
+        .prediction-value {
+            font-size: 2em;
+            font-weight: 700;
+        }
+        form { background: #fff; border-radius: 8px; padding: 24px; border: 1px solid #dee2e6; }
+        .numeric-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .numeric-field label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .numeric-field input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .numeric-field .hint {
+            color: #6c757d;
+            font-size: 0.85em;
+            margin-top: 2px;
+        }
+        fieldset {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        legend {
+            font-weight: 600;
+            font-size: 1.05em;
+            padding: 0 8px;
+        }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 6px;
+        }
+        .checkbox-grid label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .checkbox-grid label:hover { background: #f8f9fa; }
+        .checkbox-grid input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+        .actions {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+        }
+        button {
+            padding: 10px 24px;
+            font-size: 1em;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        button[type="submit"] {
+            background: #0d6efd;
+            color: #fff;
+        }
+        button[type="submit"]:hover { background: #0b5ed7; }
+        button[type="reset"] {
+            background: #fff;
+            color: #6c757d;
+            border-color: #ced4da;
+        }
+        button[type="reset"]:hover { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>ADR Prediction Tool</h1>
+    <p class="subtitle">Predict the Average Daily Rate for an Airbnb property based on its amenities and characteristics.</p>
+
+    {% if prediction %}
+    <div class="result-box success">
+        Predicted ADR: <span class="prediction-value">{{ prediction }}</span>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="result-box error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/predict">
+        <h2 style="margin-bottom: 16px;">Property Details</h2>
+        <div class="numeric-section">
+            {% for col in numeric_features %}
+            <div class="numeric-field">
+                <label for="{{ col }}">{{ col | title }}</label>
+                <input type="number"
+                       id="{{ col }}"
+                       name="{{ col }}"
+                       value="{{ form_values.get(col, '') }}"
+                       step="{{ '0.5' if col == 'bathrooms' else '1' }}"
+                       min="{{ numeric_ranges[col][0] }}"
+                       max="{{ numeric_ranges[col][1] }}">
+                <div class="hint">Range: {{ numeric_ranges[col][2] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h2 style="margin-bottom: 16px;">Amenities</h2>
+        {% for category, amenities in categories.items() %}
+        <fieldset>
+            <legend>{{ category }} ({{ amenities | length }})</legend>
+            <div class="checkbox-grid">
+                {% for item in amenities %}
+                <label>
+                    <input type="checkbox"
+                           name="{{ item.col }}"
+                           value="on"
+                           {{ 'checked' if form_values.get(item.col) }}>
+                    {{ item.label }}
+                </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+        {% endfor %}
+
+        <div class="actions">
+            <button type="submit">Predict ADR</button>
+            <button type="reset">Reset All</button>
+        </div>
+    </form>
+</body>
+</html>

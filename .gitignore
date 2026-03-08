@@ -216,3 +216,6 @@ outputs/
 coverage_html/
 *.png
 logs/
+
+# ML model artifacts
+ml/model/*.joblib
