@@ -393,8 +393,9 @@ class DescriptionAnalyzer(BaseModel):
         scores_df: pd.DataFrame,
         synthesis: str,
         features: list[str] | None = None,
+        descriptions: dict[str, str] | None = None,
     ):
-        """Save JSON stats and Markdown insights."""
+        """Save JSON stats, Markdown insights, and top-15 property JSON."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
 
         features = features or []
@@ -468,6 +469,32 @@ class DescriptionAnalyzer(BaseModel):
             f.write(synthesis)
 
         logger.info(f"Saved description quality insights to {md_path}")
+
+        # Save top 15 properties JSON for manual analysis
+        descriptions = descriptions or {}
+        top_15_list = []
+        for pid in top_ids:
+            mask = residuals.index.astype(str) == pid
+            if not mask.any():
+                continue
+            entry = {
+                "property_id": pid,
+                "adr_premium": round(float(residuals.loc[mask].iloc[0]), 2),
+                "airbnb_url": f"https://www.airbnb.com/rooms/{pid}",
+                "description": descriptions.get(pid, ""),
+            }
+            if pid in scores_df.index:
+                row = scores_df.loc[pid]
+                entry["description_scores"] = {
+                    dim: int(row[dim]) for dim in SCORE_DIMENSIONS if dim in row.index
+                }
+                if "word_count" in row.index:
+                    entry["word_count"] = int(row["word_count"])
+            top_15_list.append(entry)
+
+        top_15_path = f"{self.output_dir}/top_15_properties_{self.zipcode}.json"
+        save_json_file(top_15_path, top_15_list)
+        logger.info(f"Saved top 15 properties to {top_15_path}")
 
     def run_analysis(self):
         """Main orchestrator: run description quality analysis."""
@@ -543,6 +570,7 @@ class DescriptionAnalyzer(BaseModel):
             scores_df=scores_df,
             synthesis=synthesis,
             features=features,
+            descriptions=descriptions,
         )
 
         # Log cost summary

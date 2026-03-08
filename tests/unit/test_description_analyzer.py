@@ -524,6 +524,82 @@ class TestSaveResults(TestDescriptionAnalyzer):
         assert "Test synthesis content" in md_content
         assert "97067" in md_content
 
+    def test_creates_top_15_json(self, analyzer, tmp_path):
+        """Should create a top 15 properties JSON sorted by adr_premium descending."""
+        from review_aggregator.description_analyzer import SCORE_DIMENSIONS
+
+        analyzer.output_dir = str(tmp_path)
+        analyzer.reports_dir = str(tmp_path)
+
+        # 20 properties so we can verify only top 15 are included
+        ids = [f"p{i}" for i in range(20)]
+        residual_values = list(range(20))  # p0=0, p1=1, ..., p19=19
+        residuals = pd.Series(residual_values, index=ids)
+
+        scores_data = {dim: list(range(1, 21)) for dim in SCORE_DIMENSIONS}
+        scores_data["word_count"] = [50 + i for i in range(20)]
+        scores_df = pd.DataFrame(scores_data, index=ids)
+
+        descriptions = {f"p{i}": f"Description for property {i}" for i in range(20)}
+
+        analyzer.save_results(
+            r_squared=0.80,
+            correlation_results={},
+            residuals=residuals,
+            scores_df=scores_df,
+            synthesis="",
+            features=["bedrooms"],
+            descriptions=descriptions,
+        )
+
+        top_15_path = tmp_path / "top_15_properties_97067.json"
+        assert top_15_path.exists()
+
+        import json
+
+        top_15 = json.loads(top_15_path.read_text())
+        assert len(top_15) == 15
+
+        # Sorted descending by adr_premium
+        premiums = [entry["adr_premium"] for entry in top_15]
+        assert premiums == sorted(premiums, reverse=True)
+
+        # First entry should be p19 (highest residual)
+        assert top_15[0]["property_id"] == "p19"
+        assert top_15[0]["adr_premium"] == 19.0
+        assert top_15[0]["airbnb_url"] == "https://www.airbnb.com/rooms/p19"
+        assert top_15[0]["description"] == "Description for property 19"
+        assert "description_scores" in top_15[0]
+        assert "word_count" in top_15[0]
+
+        # Last entry should be p5 (15th highest)
+        assert top_15[-1]["property_id"] == "p5"
+
+    def test_top_15_without_descriptions(self, analyzer, tmp_path):
+        """Top 15 JSON should have empty description when descriptions not provided."""
+        analyzer.output_dir = str(tmp_path)
+        analyzer.reports_dir = str(tmp_path)
+
+        residuals = pd.Series([10, 5], index=["p1", "p2"])
+        scores_df = pd.DataFrame({"evocativeness": [8, 3]}, index=["p1", "p2"])
+
+        analyzer.save_results(
+            r_squared=0.5,
+            correlation_results={},
+            residuals=residuals,
+            scores_df=scores_df,
+            synthesis="",
+        )
+
+        import json
+
+        top_15_path = tmp_path / "top_15_properties_97067.json"
+        top_15 = json.loads(top_15_path.read_text())
+
+        assert len(top_15) == 2
+        assert top_15[0]["description"] == ""
+        assert top_15[1]["description"] == ""
+
 
 class TestRunAnalysis(TestDescriptionAnalyzer):
     """Tests for run_analysis orchestrator."""
