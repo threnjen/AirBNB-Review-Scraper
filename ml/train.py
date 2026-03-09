@@ -15,17 +15,25 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, RandomizedSearchCV, cross_val_score
 from xgboost import XGBRegressor
+from utils.tiny_file_handler import load_config
 
 logger = logging.getLogger(__name__)
 
 NUMERIC_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms", "DIST_TO_POI"]
-EXCLUDED_COLUMNS = {"property_id", "ADR", "Days_Avail", "has_airdna_data"}
+EXCLUDED_COLUMNS = {
+    "property_id",
+    "ADR",
+    "Days_Avail",
+    "has_airdna_data",
+}
+config = load_config()
+ZONE_NAME = config.get("search_zone_name", "00000")
 
 DEFAULT_CSV_PATH = (
     Path(__file__).parent.parent
     / "outputs"
     / "06_details_results"
-    / "property_amenities_matrix_cleaned_97067.csv"
+    / f"property_amenities_matrix_cleaned_{ZONE_NAME}.csv"
 )
 DEFAULT_MODEL_DIR = Path(__file__).parent / "model"
 

@@ -166,6 +166,8 @@ class DetailsFilesetBuilder:
             "SYSTEM_SKATEBOARDING",
             "SYSTEM_SKI",
             "SYSTEM_WINDOW_GUARD",
+            "latitude",
+            "longitude",
         ]
         df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
 

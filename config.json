@@ -8,7 +8,7 @@
     "details_results": false,
     "area_summary": false,
     "correlation_results": true,
-    "description_analysis": false,
+    "description_analysis": true,
     "min_days_available": 100,
     "airdna_cdp_url": "http://localhost:9222",
     "airdna_inspect_mode": false,
