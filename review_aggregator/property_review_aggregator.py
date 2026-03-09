@@ -198,14 +198,15 @@ class PropertyAggregator(BaseModel):
         reviews = {}
         generated_summaries = {}
 
+        zone_reviews_dir = f"outputs/04_reviews_scrape/{self.zone_name}/"
         review_files = [
             x
-            for x in os.listdir("outputs/04_reviews_scrape/")
+            for x in os.listdir(zone_reviews_dir)
             if x.startswith(f"reviews_{self.zone_name}_")
         ]
 
         for file in review_files:
-            one_property = load_json_file(filename=f"outputs/04_reviews_scrape/{file}")
+            one_property = load_json_file(filename=f"{zone_reviews_dir}{file}")
             reviews.update(one_property)
         logger.info(f"Total property loaded: {len(reviews)}")
 

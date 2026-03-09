@@ -199,15 +199,16 @@ def mock_summary_files_dir(tmp_path, sample_property_summary):
 def mock_review_files_dir(tmp_path, sample_reviews):
     """Create a temp directory with sample property review files."""
     review_dir = tmp_path / "outputs" / "04_reviews_scrape"
-    review_dir.mkdir(parents=True)
+    zone_dir = review_dir / "97067"
+    zone_dir.mkdir(parents=True)
 
     # Create sample review files
     for i, listing_id in enumerate(["12345678", "87654321", "11111111"]):
-        file_path = review_dir / f"property_reviews_97067_{listing_id}.json"
+        file_path = zone_dir / f"reviews_97067_{listing_id}.json"
         with open(file_path, "w") as f:
             json.dump(sample_reviews, f)
 
-    return review_dir
+    return zone_dir
 
 
 @pytest.fixture

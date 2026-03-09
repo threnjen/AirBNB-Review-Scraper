@@ -77,8 +77,8 @@ class TestExpectedOutputs:
         )
 
         result = cache_manager.expected_outputs("reviews_scrape", "97067")
-        assert "outputs/04_reviews_scrape/reviews_97067_111.json" in result
-        assert "outputs/04_reviews_scrape/reviews_97067_222.json" in result
+        assert "outputs/04_reviews_scrape/97067/reviews_97067_111.json" in result
+        assert "outputs/04_reviews_scrape/97067/reviews_97067_222.json" in result
 
     def test_details_returns_per_listing_files(
         self, cache_manager, tmp_path, monkeypatch
@@ -120,9 +120,10 @@ class TestExpectedOutputs:
     ):
         # listing_summaries derives from review files on disk
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
-        reviews_dir.mkdir(parents=True)
-        (reviews_dir / "reviews_97067_111.json").write_text('{"111": []}')
-        (reviews_dir / "reviews_97067_222.json").write_text('{"222": []}')
+        zone_dir = reviews_dir / "97067"
+        zone_dir.mkdir(parents=True)
+        (zone_dir / "reviews_97067_111.json").write_text('{"111": []}')
+        (zone_dir / "reviews_97067_222.json").write_text('{"222": []}')
         (reviews_dir / "reviews_90210_999.json").write_text('{"999": []}')
         monkeypatch.setattr(
             type(cache_manager),
@@ -435,8 +436,9 @@ class TestGetMissingOutputs:
 
         # Create one review file, leave one missing
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
-        reviews_dir.mkdir(parents=True)
-        (reviews_dir / "reviews_97067_111.json").write_text("{}")
+        zone_dir = reviews_dir / "97067"
+        zone_dir.mkdir(parents=True)
+        (zone_dir / "reviews_97067_111.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),
@@ -570,7 +572,8 @@ class TestClearStageForZoneMtime:
     ):
         """Only files in expected_outputs for the zone are deleted."""
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
-        reviews_dir.mkdir(parents=True)
+        zone_dir = reviews_dir / "97067"
+        zone_dir.mkdir(parents=True)
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
 
@@ -578,8 +581,8 @@ class TestClearStageForZoneMtime:
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
 
-        (reviews_dir / "reviews_97067_111.json").write_text("{}")
-        (reviews_dir / "reviews_97067_222.json").write_text("{}")
+        (zone_dir / "reviews_97067_111.json").write_text("{}")
+        (zone_dir / "reviews_97067_222.json").write_text("{}")
         (reviews_dir / "reviews_90210_999.json").write_text("{}")
 
         monkeypatch.setattr(
@@ -594,10 +597,10 @@ class TestClearStageForZoneMtime:
 
         cache_manager.clear_stage_for_zone("reviews_scrape", "97067")
 
-        remaining = sorted(f.name for f in reviews_dir.iterdir())
-        assert remaining == [
-            "reviews_90210_999.json",
-        ]
+        remaining = sorted(f.name for f in zone_dir.iterdir())
+        assert remaining == []
+        # Other zone's flat file is untouched
+        assert (reviews_dir / "reviews_90210_999.json").exists()
 
     def test_preserves_other_zone_files(self, cache_manager, tmp_path, monkeypatch):
         """Files for other zones are never touched."""

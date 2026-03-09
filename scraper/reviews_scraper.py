@@ -48,7 +48,9 @@ def scrape_reviews(
 
     # Pre-scan: identify listings with fresh cached review files on disk
     for id in ids_to_scrape:
-        output_path = f"outputs/04_reviews_scrape/reviews_{zone_name}_{id}.json"
+        output_path = (
+            f"outputs/04_reviews_scrape/{zone_name}/reviews_{zone_name}_{id}.json"
+        )
         if pipeline_cache and pipeline_cache.is_file_fresh(
             "reviews_scrape", output_path
         ):
@@ -81,7 +83,9 @@ def scrape_reviews(
             if id in resolved:
                 continue
 
-            output_path = f"outputs/04_reviews_scrape/reviews_{zone_name}_{id}.json"
+            output_path = (
+                f"outputs/04_reviews_scrape/{zone_name}/reviews_{zone_name}_{id}.json"
+            )
 
             room_url = f"https://www.airbnb.com/rooms/{id}"
             scrape_index += 1
@@ -119,7 +123,7 @@ def scrape_reviews(
 
             # Save the reviews data to a JSON file
             review_results = {id: single_property_formatted_reviews}
-            os.makedirs("outputs/04_reviews_scrape", exist_ok=True)
+            os.makedirs(f"outputs/04_reviews_scrape/{zone_name}", exist_ok=True)
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(json.dumps(review_results, ensure_ascii=False))
 

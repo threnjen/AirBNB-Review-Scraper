@@ -21,7 +21,7 @@ ZONE_NAME = "97067"
 LISTING_ID = "123456789"
 SEARCH_RESULTS = [{"room_id": LISTING_ID}]
 OUTPUT_DIR = "outputs/04_reviews_scrape"
-OUTPUT_PATH = f"{OUTPUT_DIR}/reviews_{ZONE_NAME}_{LISTING_ID}.json"
+OUTPUT_PATH = f"{OUTPUT_DIR}/{ZONE_NAME}/reviews_{ZONE_NAME}_{LISTING_ID}.json"
 
 
 def _make_search_results(n: int) -> list[dict]:
@@ -30,7 +30,7 @@ def _make_search_results(n: int) -> list[dict]:
 
 
 def _output_path_for(listing_id: str) -> str:
-    return f"{OUTPUT_DIR}/reviews_{ZONE_NAME}_{listing_id}.json"
+    return f"{OUTPUT_DIR}/{ZONE_NAME}/reviews_{ZONE_NAME}_{listing_id}.json"
 
 
 @pytest.fixture(autouse=True)
@@ -311,7 +311,7 @@ class TestCacheSkip:
     @patch("scraper.reviews_scraper.pyairbnb.get_reviews")
     def test_existing_file_is_skipped(self, mock_get, mock_sleep):
         """When review file already exists on disk, pyairbnb is not called."""
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        os.makedirs(f"{OUTPUT_DIR}/{ZONE_NAME}", exist_ok=True)
         with open(OUTPUT_PATH, "w") as f:
             json.dump({LISTING_ID: [{"review": "Old", "rating": 5}]}, f)
 
@@ -326,7 +326,7 @@ class TestCacheSkip:
         results = _make_search_results(3)
 
         # Create review file for listing "2" only
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        os.makedirs(f"{OUTPUT_DIR}/{ZONE_NAME}", exist_ok=True)
         with open(_output_path_for("2"), "w") as f:
             json.dump({"2": [{"review": "Old", "rating": 5}]}, f)
 
@@ -349,7 +349,7 @@ class TestProgressCounter:
         results = _make_search_results(5)
 
         # Create review files for listings 1 and 3
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        os.makedirs(f"{OUTPUT_DIR}/{ZONE_NAME}", exist_ok=True)
         for lid in ("1", "3"):
             with open(_output_path_for(lid), "w") as f:
                 json.dump({lid: [{"review": "Old", "rating": 5}]}, f)
@@ -373,7 +373,7 @@ class TestProgressCounter:
         results = _make_search_results(5)
 
         # Create review files for listings 1, 2, 3 — only 4 and 5 remain
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        os.makedirs(f"{OUTPUT_DIR}/{ZONE_NAME}", exist_ok=True)
         for lid in ("1", "2", "3"):
             with open(_output_path_for(lid), "w") as f:
                 json.dump({lid: [{"review": "Old", "rating": 5}]}, f)
