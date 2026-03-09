@@ -133,46 +133,48 @@ class TestAreaAggregatorIntegration:
         mock_response.choices[0].message.content = "Area summary for Mt Hood region"
 
         # Mock the os.listdir to return matching files
-        with patch(
-            "os.listdir",
-            return_value=[
-                "listing_summary_97067_12345678.json",
-                "listing_summary_97067_87654321.json",
-                "listing_summary_97067_11111111.json",
-            ],
-        ):
+        with patch("os.path.isdir", return_value=True):
             with patch(
-                "review_aggregator.area_review_aggregator.load_json_file"
-            ) as mock_load:
-                # Setup mock to return summary data then prompt
-                mock_load.side_effect = [
-                    {"12345678": sample_property_summary},
-                    {"87654321": "Another great property with mountain views."},
-                    {"11111111": "Cozy cabin perfect for families."},
-                    {
-                        "gpt4o_mini_generate_prompt_structured": "Summarize {SEARCH_ZONE_HERE}"
-                    },
-                ]
-
+                "os.listdir",
+                return_value=[
+                    "listing_summary_97067_12345678.json",
+                    "listing_summary_97067_87654321.json",
+                    "listing_summary_97067_11111111.json",
+                ],
+            ):
                 with patch(
-                    "review_aggregator.area_review_aggregator.load_config",
-                    return_value={"iso_code": "us"},
-                ):
-                    with patch.object(
-                        area_aggregator.openai_aggregator.client.chat.completions,
-                        "create",
-                        return_value=mock_response,
-                    ):
-                        area_aggregator.task_chain()
+                    "review_aggregator.area_review_aggregator.load_json_file"
+                ) as mock_load:
+                    # Setup mock to return summary data then prompt
+                    mock_load.side_effect = [
+                        {"12345678": sample_property_summary},
+                        {"87654321": "Another great property with mountain views."},
+                        {"11111111": "Cozy cabin perfect for families."},
+                        {
+                            "gpt4o_mini_generate_prompt_structured": "Summarize {SEARCH_ZONE_HERE}"
+                        },
+                    ]
 
-                        # Verify markdown report was created
-                        md_path = (
-                            Path(area_aggregator.output_dir) / "area_summary_97067.md"
-                        )
-                        assert md_path.exists()
-                        md_content = md_path.read_text()
-                        assert "# Area Summary: 97067" in md_content
-                        assert "**Properties Analyzed:** 3" in md_content
+                    with patch(
+                        "review_aggregator.area_review_aggregator.load_config",
+                        return_value={"iso_code": "us"},
+                    ):
+                        with patch.object(
+                            area_aggregator.openai_aggregator.client.chat.completions,
+                            "create",
+                            return_value=mock_response,
+                        ):
+                            area_aggregator.task_chain()
+
+                            # Verify markdown report was created
+                            md_path = (
+                                Path(area_aggregator.output_dir)
+                                / "area_summary_97067.md"
+                            )
+                            assert md_path.exists()
+                            md_content = md_path.read_text()
+                            assert "# Area Summary: 97067" in md_content
+                            assert "**Properties Analyzed:** 3" in md_content
 
 
 class TestCostTrackerIntegration:
@@ -263,42 +265,43 @@ class TestEndToEndPipeline:
                 mock_response.choices[0].message.content = "Complete area summary"
 
                 # Mock the filesystem interactions
-                with patch(
-                    "os.listdir",
-                    return_value=[
-                        "listing_summary_97067_123.json",
-                        "listing_summary_97067_456.json",
-                    ],
-                ):
+                with patch("os.path.isdir", return_value=True):
                     with patch(
-                        "review_aggregator.area_review_aggregator.load_json_file"
-                    ) as mock_load:
-                        mock_load.side_effect = [
-                            {"123": sample_property_summary},
-                            {"456": "Another property summary"},
-                            {
-                                "gpt4o_mini_generate_prompt_structured": "Summarize area {SEARCH_ZONE_HERE}"
-                            },
-                        ]
-
+                        "os.listdir",
+                        return_value=[
+                            "listing_summary_97067_123.json",
+                            "listing_summary_97067_456.json",
+                        ],
+                    ):
                         with patch(
-                            "review_aggregator.area_review_aggregator.load_config",
-                            return_value={"iso_code": "us"},
-                        ):
-                            with patch.object(
-                                aggregator.openai_aggregator.client.chat.completions,
-                                "create",
-                                return_value=mock_response,
-                            ):
-                                aggregator.task_chain()
+                            "review_aggregator.area_review_aggregator.load_json_file"
+                        ) as mock_load:
+                            mock_load.side_effect = [
+                                {"123": sample_property_summary},
+                                {"456": "Another property summary"},
+                                {
+                                    "gpt4o_mini_generate_prompt_structured": "Summarize area {SEARCH_ZONE_HERE}"
+                                },
+                            ]
 
-                                # Verify markdown report was created
-                                md_path = tmp_path / "area_summary_97067.md"
-                                assert md_path.exists()
-                                md_content = md_path.read_text()
-                                assert "# Area Summary: 97067" in md_content
-                                assert "**Properties Analyzed:** 2" in md_content
-                                assert "Complete area summary" in md_content
+                            with patch(
+                                "review_aggregator.area_review_aggregator.load_config",
+                                return_value={"iso_code": "us"},
+                            ):
+                                with patch.object(
+                                    aggregator.openai_aggregator.client.chat.completions,
+                                    "create",
+                                    return_value=mock_response,
+                                ):
+                                    aggregator.task_chain()
+
+                                    # Verify markdown report was created
+                                    md_path = tmp_path / "area_summary_97067.md"
+                                    assert md_path.exists()
+                                    md_content = md_path.read_text()
+                                    assert "# Area Summary: 97067" in md_content
+                                    assert "**Properties Analyzed:** 2" in md_content
+                                    assert "Complete area summary" in md_content
 
 
 class TestPipelineCacheIntegration:

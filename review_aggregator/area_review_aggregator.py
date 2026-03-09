@@ -48,7 +48,7 @@ class AreaAggregator(BaseModel):
     def task_chain(self):
         """Generate area-level summary from existing property summaries."""
 
-        summary_dir = "outputs/05_listing_summaries/"
+        summary_dir = f"outputs/05_listing_summaries/{self.zone_name}/"
         if not os.path.isdir(summary_dir):
             logger.info(f"Summary directory '{summary_dir}' does not exist; exiting.")
             return
@@ -71,7 +71,7 @@ class AreaAggregator(BaseModel):
         # Collect all summaries
         all_summaries = []
         for file in summary_files[: self.num_listings]:
-            file_path = f"outputs/05_listing_summaries/{file}"
+            file_path = f"outputs/05_listing_summaries/{self.zone_name}/{file}"
             summary_data = load_json_file(filename=file_path)
             # Each file is {listing_id: summary_text}
             for listing_id, summary_text in summary_data.items():

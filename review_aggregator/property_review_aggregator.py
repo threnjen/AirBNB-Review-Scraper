@@ -148,7 +148,7 @@ class PropertyAggregator(BaseModel):
         for listing_id, review_data in reviews.items():
             if listing_id in already_processed_reviews_ids:
                 if self.pipeline_cache:
-                    summary_path = f"outputs/05_listing_summaries/listing_summary_{listing_id}.json"
+                    summary_path = f"outputs/05_listing_summaries/{self.zone_name}/listing_summary_{listing_id}.json"
                     if not self.pipeline_cache.is_file_fresh(
                         "listing_summaries", summary_path
                     ):
@@ -188,7 +188,9 @@ class PropertyAggregator(BaseModel):
         )
         for empty_id in empty_aggregated_reviews:
             del generated_summaries[empty_id]
-            os.remove(f"outputs/05_listing_summaries/listing_summary_{empty_id}.json")
+            os.remove(
+                f"outputs/05_listing_summaries/{self.zone_name}/listing_summary_{empty_id}.json"
+            )
 
         return generated_summaries
 
@@ -210,10 +212,10 @@ class PropertyAggregator(BaseModel):
             reviews.update(one_property)
         logger.info(f"Total property loaded: {len(reviews)}")
 
-        os.makedirs("outputs/05_listing_summaries", exist_ok=True)
+        os.makedirs(f"outputs/05_listing_summaries/{self.zone_name}", exist_ok=True)
         generated_summaries_files = [
             x
-            for x in os.listdir("outputs/05_listing_summaries/")
+            for x in os.listdir(f"outputs/05_listing_summaries/{self.zone_name}/")
             if x.startswith("listing_summary_")
         ]
         # logger.info(f"Generated summaries files found: {generated_summaries_files}")
@@ -221,7 +223,7 @@ class PropertyAggregator(BaseModel):
         for file in generated_summaries_files:
             # logger.info(f"Using generated summaries file: {file}")
             one_property = load_json_file(
-                filename=f"outputs/05_listing_summaries/{file}"
+                filename=f"outputs/05_listing_summaries/{self.zone_name}/{file}"
             )
             generated_summaries.update(one_property)
 
@@ -267,7 +269,7 @@ class PropertyAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"outputs/05_listing_summaries/listing_summary_{listing_id}.json",
+                filename=f"outputs/05_listing_summaries/{self.zone_name}/listing_summary_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
 
@@ -293,7 +295,7 @@ class PropertyAggregator(BaseModel):
             self.num_completed_listings += 1
 
             save_json_file(
-                filename=f"outputs/05_listing_summaries/listing_summary_{listing_id}.json",
+                filename=f"outputs/05_listing_summaries/{self.zone_name}/listing_summary_{listing_id}.json",
                 data={listing_id: generated_summaries[listing_id]},
             )
 

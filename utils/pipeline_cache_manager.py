@@ -168,7 +168,7 @@ class PipelineCacheManager(BaseModel):
                 "listing_summaries", "outputs/05_listing_summaries"
             )
             return [
-                os.path.join(summaries_dir, f"listing_summary_{lid}.json")
+                os.path.join(summaries_dir, zone_name, f"listing_summary_{lid}.json")
                 for lid in listing_ids
             ]
 

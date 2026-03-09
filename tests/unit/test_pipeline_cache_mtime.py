@@ -135,8 +135,8 @@ class TestExpectedOutputs:
         )
 
         result = cache_manager.expected_outputs("listing_summaries", "97067")
-        assert "outputs/05_listing_summaries/listing_summary_111.json" in result
-        assert "outputs/05_listing_summaries/listing_summary_222.json" in result
+        assert "outputs/05_listing_summaries/97067/listing_summary_111.json" in result
+        assert "outputs/05_listing_summaries/97067/listing_summary_222.json" in result
         # Should NOT include other zone's listings
         assert not any("999" in r for r in result)
 
