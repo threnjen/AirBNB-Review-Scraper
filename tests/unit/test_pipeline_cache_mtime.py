@@ -77,8 +77,8 @@ class TestExpectedOutputs:
         )
 
         result = cache_manager.expected_outputs("reviews_scrape", "97067")
-        assert "outputs/04_reviews_scrape/97067/reviews_97067_111.json" in result
-        assert "outputs/04_reviews_scrape/97067/reviews_97067_222.json" in result
+        assert "outputs/04_reviews_scrape/97067/reviews_111.json" in result
+        assert "outputs/04_reviews_scrape/97067/reviews_222.json" in result
 
     def test_details_returns_per_listing_files(
         self, cache_manager, tmp_path, monkeypatch
@@ -122,9 +122,9 @@ class TestExpectedOutputs:
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         zone_dir = reviews_dir / "97067"
         zone_dir.mkdir(parents=True)
-        (zone_dir / "reviews_97067_111.json").write_text('{"111": []}')
-        (zone_dir / "reviews_97067_222.json").write_text('{"222": []}')
-        (reviews_dir / "reviews_90210_999.json").write_text('{"999": []}')
+        (zone_dir / "reviews_111.json").write_text('{"111": []}')
+        (zone_dir / "reviews_222.json").write_text('{"222": []}')
+        (reviews_dir / "reviews_999.json").write_text('{"999": []}')
         monkeypatch.setattr(
             type(cache_manager),
             "STAGE_OUTPUT_DIRS",
@@ -223,7 +223,7 @@ class TestIsFileFreshMtime:
             return PipelineCacheManager()
 
     def test_fresh_existing_file(self, cache_manager, tmp_path):
-        test_file = str(tmp_path / "reviews_97067_123.json")
+        test_file = str(tmp_path / "reviews_123.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
         assert cache_manager.is_file_fresh("reviews_scrape", test_file) is True
@@ -233,7 +233,7 @@ class TestIsFileFreshMtime:
         assert cache_manager.is_file_fresh("reviews_scrape", test_file) is False
 
     def test_stale_file_returns_false(self, cache_manager, tmp_path):
-        test_file = str(tmp_path / "reviews_97067_123.json")
+        test_file = str(tmp_path / "reviews_123.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
         old_time = time.time() - (10 * 24 * 3600)
@@ -251,7 +251,7 @@ class TestIsFileFreshMtime:
 
             manager = PipelineCacheManager()
 
-        test_file = str(tmp_path / "reviews_97067_123.json")
+        test_file = str(tmp_path / "reviews_123.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
         assert manager.is_file_fresh("reviews_scrape", test_file) is False
@@ -322,7 +322,7 @@ class TestIsStageFreshMtime:
         # Create only one of two expected review files
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         reviews_dir.mkdir(parents=True)
-        (reviews_dir / "reviews_97067_111.json").write_text("{}")
+        (reviews_dir / "reviews_111.json").write_text("{}")
         monkeypatch.setattr(
             type(cache_manager),
             "STAGE_OUTPUT_DIRS",
@@ -438,7 +438,7 @@ class TestGetMissingOutputs:
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         zone_dir = reviews_dir / "97067"
         zone_dir.mkdir(parents=True)
-        (zone_dir / "reviews_97067_111.json").write_text("{}")
+        (zone_dir / "reviews_111.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),
@@ -451,8 +451,8 @@ class TestGetMissingOutputs:
         )
 
         missing = cache_manager.get_missing_outputs("reviews_scrape", "97067")
-        assert any("reviews_97067_222" in m for m in missing)
-        assert not any("reviews_97067_111" in m for m in missing)
+        assert any("reviews_222" in m for m in missing)
+        assert not any("reviews_111" in m for m in missing)
 
     def test_stale_files_included_in_missing(
         self, cache_manager, tmp_path, monkeypatch
@@ -581,9 +581,9 @@ class TestClearStageForZoneMtime:
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
 
-        (zone_dir / "reviews_97067_111.json").write_text("{}")
-        (zone_dir / "reviews_97067_222.json").write_text("{}")
-        (reviews_dir / "reviews_90210_999.json").write_text("{}")
+        (zone_dir / "reviews_111.json").write_text("{}")
+        (zone_dir / "reviews_222.json").write_text("{}")
+        (reviews_dir / "reviews_999.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),
@@ -600,7 +600,7 @@ class TestClearStageForZoneMtime:
         remaining = sorted(f.name for f in zone_dir.iterdir())
         assert remaining == []
         # Other zone's flat file is untouched
-        assert (reviews_dir / "reviews_90210_999.json").exists()
+        assert (reviews_dir / "reviews_999.json").exists()
 
     def test_preserves_other_zone_files(self, cache_manager, tmp_path, monkeypatch):
         """Files for other zones are never touched."""
@@ -688,7 +688,7 @@ class TestClearStageForZoneMtime:
 
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         reviews_dir.mkdir(parents=True)
-        (reviews_dir / "reviews_97067_111.json").write_text("{}")
+        (reviews_dir / "reviews_111.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),

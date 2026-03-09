@@ -18,7 +18,7 @@ from xgboost import XGBRegressor
 
 logger = logging.getLogger(__name__)
 
-NUMERIC_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms"]
+NUMERIC_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms", "DIST_TO_POI"]
 EXCLUDED_COLUMNS = {"property_id", "ADR", "Days_Avail", "has_airdna_data"}
 
 DEFAULT_CSV_PATH = (

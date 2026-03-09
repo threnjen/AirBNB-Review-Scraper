@@ -144,7 +144,7 @@ class PipelineCacheManager(BaseModel):
                 "reviews_scrape", "outputs/04_reviews_scrape"
             )
             return [
-                os.path.join(reviews_dir, zone_name, f"reviews_{zone_name}_{lid}.json")
+                os.path.join(reviews_dir, zone_name, f"reviews_{lid}.json")
                 for lid in listing_ids
             ]
 
@@ -401,14 +401,14 @@ class PipelineCacheManager(BaseModel):
         reviews_dir = self.STAGE_OUTPUT_DIRS.get(
             "reviews_scrape", "outputs/04_reviews_scrape"
         )
-        pattern = os.path.join(reviews_dir, zone_name, f"reviews_{zone_name}_*.json")
+        pattern = os.path.join(reviews_dir, zone_name, "reviews_*.json")
         listing_ids = []
         for filepath in glob.glob(pattern):
             filename = os.path.basename(filepath)
-            # reviews_{zone_name}_{listing_id}.json
-            parts = filename.replace(".json", "").split("_", 2)
-            if len(parts) >= 3:
-                listing_ids.append(parts[2])
+            # reviews_{listing_id}.json
+            parts = filename.replace(".json", "").split("_", 1)
+            if len(parts) == 2:
+                listing_ids.append(parts[1])
         return listing_ids
 
     # ------------------------------------------------------------------

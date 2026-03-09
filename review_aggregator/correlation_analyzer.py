@@ -62,7 +62,7 @@ AMENITY_COLUMNS = [
 ]
 
 # Numeric columns for average comparison
-NUMERIC_COLUMNS = ["capacity", "bedrooms", "beds", "bathrooms"]
+NUMERIC_COLUMNS = ["capacity", "bedrooms", "beds", "bathrooms", "DIST_TO_POI"]
 
 
 class CorrelationAnalyzer(BaseModel):

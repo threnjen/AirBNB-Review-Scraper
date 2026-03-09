@@ -393,3 +393,188 @@ class TestParseBasicDetailsSubDetails:
         assert builder.property_details["P1"]["bedrooms"] == "2"
         assert builder.property_details["P1"]["beds"] == "3"
         assert builder.property_details["P1"]["bathrooms"] == "1.5"
+
+
+class TestCoordinatesAndDistToPoi:
+    """Tests for lat/lng extraction and DIST_TO_POI calculation."""
+
+    def _make_property_json(self, lat=None, lon=None):
+        """Minimal property details JSON with optional coordinates."""
+        data = {
+            "room_type": "Entire home/apt",
+            "person_capacity": 6,
+            "rating": {},
+            "sub_description": {
+                "items": ["6 guests", "2 bedrooms", "3 beds", "1 baths"]
+            },
+            "amenities": [],
+            "house_rules": {},
+            "highlights": [],
+            "location_descriptions": [],
+            "description": [],
+        }
+        if lat is not None and lon is not None:
+            data["coordinates"] = {"latitude": lat, "longitude": lon}
+        return data
+
+    def test_coordinates_extracted_into_property_details(self, tmp_path):
+        """build_fileset should store latitude and longitude from JSON."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        comp_set_file = tmp_path / "comp_set.json"
+        comp_set_file.write_text(json.dumps({}))
+
+        details_dir = tmp_path / "details"
+        (details_dir / "zone1").mkdir(parents=True)
+        (details_dir / "zone1" / "property_details_100.json").write_text(
+            json.dumps(self._make_property_json(lat=45.37, lon=-121.91))
+        )
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath=str(comp_set_file),
+            zone_name="zone1",
+            poi_lat=45.31,
+            poi_long=-121.83,
+        )
+        with patch(
+            "scraper.details_fileset_build.DETAILS_SCRAPED_DIR", str(details_dir)
+        ):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
+                    builder.build_fileset()
+
+        assert builder.property_details["100"]["latitude"] == 45.37
+        assert builder.property_details["100"]["longitude"] == -121.91
+
+    def test_dist_to_poi_calculated_when_poi_and_coords_present(self, tmp_path):
+        """DIST_TO_POI should be a positive float when POI and coords exist."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        comp_set_file = tmp_path / "comp_set.json"
+        comp_set_file.write_text(json.dumps({}))
+
+        details_dir = tmp_path / "details"
+        (details_dir / "zone1").mkdir(parents=True)
+        (details_dir / "zone1" / "property_details_100.json").write_text(
+            json.dumps(self._make_property_json(lat=45.37, lon=-121.91))
+        )
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath=str(comp_set_file),
+            zone_name="zone1",
+            poi_lat=45.31,
+            poi_long=-121.83,
+        )
+        with patch(
+            "scraper.details_fileset_build.DETAILS_SCRAPED_DIR", str(details_dir)
+        ):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
+                    builder.build_fileset()
+
+        dist = builder.property_details["100"]["DIST_TO_POI"]
+        assert isinstance(dist, float)
+        assert dist > 0
+
+    def test_missing_coordinates_yields_none(self, tmp_path):
+        """Properties without coordinates should have None lat/lng and DIST_TO_POI."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        comp_set_file = tmp_path / "comp_set.json"
+        comp_set_file.write_text(json.dumps({}))
+
+        details_dir = tmp_path / "details"
+        (details_dir / "zone1").mkdir(parents=True)
+        (details_dir / "zone1" / "property_details_200.json").write_text(
+            json.dumps(self._make_property_json())  # no coordinates
+        )
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath=str(comp_set_file),
+            zone_name="zone1",
+            poi_lat=45.31,
+            poi_long=-121.83,
+        )
+        with patch(
+            "scraper.details_fileset_build.DETAILS_SCRAPED_DIR", str(details_dir)
+        ):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
+                    builder.build_fileset()
+
+        assert builder.property_details["200"]["latitude"] is None
+        assert builder.property_details["200"]["longitude"] is None
+        assert builder.property_details["200"]["DIST_TO_POI"] is None
+
+    def test_no_poi_configured_yields_none_dist(self, tmp_path):
+        """Without poi_lat/poi_long, DIST_TO_POI should be None."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        comp_set_file = tmp_path / "comp_set.json"
+        comp_set_file.write_text(json.dumps({}))
+
+        details_dir = tmp_path / "details"
+        (details_dir / "zone1").mkdir(parents=True)
+        (details_dir / "zone1" / "property_details_300.json").write_text(
+            json.dumps(self._make_property_json(lat=45.37, lon=-121.91))
+        )
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath=str(comp_set_file),
+            zone_name="zone1",
+        )
+        with patch(
+            "scraper.details_fileset_build.DETAILS_SCRAPED_DIR", str(details_dir)
+        ):
+            with patch("pandas.DataFrame.to_csv"):
+                with patch("scraper.details_fileset_build.json.dump"):
+                    builder.build_fileset()
+
+        assert builder.property_details["300"]["latitude"] == 45.37
+        assert builder.property_details["300"]["DIST_TO_POI"] is None
+
+    def test_dist_to_poi_not_dropped_by_clean(self):
+        """clean_amenities_df should preserve DIST_TO_POI column."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0],
+                "DIST_TO_POI": [5.3],
+                "latitude": [45.37],
+                "longitude": [-121.91],
+                "capacity": [4],
+            },
+            index=["p1"],
+        )
+        result = builder.clean_amenities_df(df)
+        assert "DIST_TO_POI" in result.columns
+        assert "latitude" in result.columns
+        assert "longitude" in result.columns
+
+    def test_dist_to_poi_coerced_to_float(self):
+        """clean_amenities_df should coerce DIST_TO_POI to float."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [150.0],
+                "DIST_TO_POI": ["5.3"],
+                "capacity": [4],
+            },
+            index=["p1"],
+        )
+        result = builder.clean_amenities_df(df)
+        assert result["DIST_TO_POI"].dtype == float

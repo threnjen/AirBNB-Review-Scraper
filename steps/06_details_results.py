@@ -33,6 +33,8 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         comp_set_filepath=comp_set_filepath,
         zone_name=zone_name,
         min_days_available=min_days_available,
+        poi_lat=config.get("poi_lat"),
+        poi_long=config.get("poi_long"),
     )
     fileset_builder.build_fileset()
     pipeline_cache.notify_stage_ran(STAGE)

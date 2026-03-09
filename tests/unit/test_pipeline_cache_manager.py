@@ -112,7 +112,7 @@ class TestPipelineCacheManager:
         self, cache_manager, tmp_path
     ):
         """Test that is_file_fresh returns True when force flag is False and file exists."""
-        test_file = str(tmp_path / "reviews_97067_99999.json")
+        test_file = str(tmp_path / "reviews_99999.json")
         with open(test_file, "w") as f:
             json.dump({}, f)
 
@@ -150,8 +150,8 @@ class TestPipelineCacheManager:
         """Test that clear_stage wipes the output directory contents."""
         output_dir = tmp_path / "outputs" / "04_reviews_scrape"
         output_dir.mkdir(parents=True)
-        (output_dir / "reviews_97067_123.json").write_text("{}")
-        (output_dir / "reviews_97067_456.json").write_text("{}")
+        (output_dir / "reviews_123.json").write_text("{}")
+        (output_dir / "reviews_456.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),
@@ -550,8 +550,8 @@ class TestZoneScopedCache:
         """Test that the deprecated clear_stage still does a full wipe."""
         output_dir = tmp_path / "outputs" / "04_reviews_scrape"
         output_dir.mkdir(parents=True)
-        (output_dir / "reviews_97067_123.json").write_text("{}")
-        (output_dir / "reviews_90210_456.json").write_text("{}")
+        (output_dir / "reviews_123.json").write_text("{}")
+        (output_dir / "reviews_456.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),

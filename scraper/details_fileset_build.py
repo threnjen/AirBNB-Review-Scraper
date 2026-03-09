@@ -6,6 +6,8 @@ from math import ceil
 
 import pandas as pd
 
+from utils.geo_utils import manhattan_surface_distance
+
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
@@ -19,11 +21,15 @@ class DetailsFilesetBuilder:
         comp_set_filepath: str,
         zone_name: str = "00000",
         min_days_available: int = 100,
+        poi_lat: float = None,
+        poi_long: float = None,
     ) -> None:
         self.use_categoricals = use_categoricals
         self.comp_set_filepath = comp_set_filepath
         self.zone_name = zone_name
         self.min_days_available = min_days_available
+        self.poi_lat = poi_lat
+        self.poi_long = poi_long
         self.property_details = {}
         self.house_rules = {}
         self.property_descriptions = {}
@@ -177,6 +183,8 @@ class DetailsFilesetBuilder:
             df["beds"] = df["beds"].astype(int)
         if "bathrooms" in df.columns:
             df["bathrooms"] = df["bathrooms"].astype(float)
+        if "DIST_TO_POI" in df.columns:
+            df["DIST_TO_POI"] = pd.to_numeric(df["DIST_TO_POI"], errors="coerce")
         if "bedrooms" in df.columns:
             df["bedrooms"] = df["bedrooms"].astype(int)
 
@@ -281,6 +289,25 @@ class DetailsFilesetBuilder:
 
             if not self.parse_basic_details(property_id, property_details):
                 continue
+
+            # Extract coordinates and compute distance to POI
+            coords = property_details.get("coordinates") or {}
+            lat = coords.get("latitude")
+            lon = coords.get("longitude")
+            self.property_details[property_id]["latitude"] = lat
+            self.property_details[property_id]["longitude"] = lon
+
+            if (
+                self.poi_lat is not None
+                and self.poi_long is not None
+                and lat is not None
+                and lon is not None
+            ):
+                self.property_details[property_id]["DIST_TO_POI"] = (
+                    manhattan_surface_distance(lat, lon, self.poi_lat, self.poi_long)
+                )
+            else:
+                self.property_details[property_id]["DIST_TO_POI"] = None
 
             self.parse_amenity_flags(property_id, property_details)
 
