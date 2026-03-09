@@ -426,24 +426,27 @@ class TestPipelineCacheIntegration:
         assert cache.force_refresh_flags["description_analysis"] is True
 
 
-class TestMultiZipcodeOrchestration:
-    """Integration tests for multi-zipcode two-phase pipeline execution."""
+class TestSingleZoneOrchestration:
+    """Integration tests for single-zone pipeline execution."""
 
     def test_scraping_completes_before_processing(self):
-        """All scraping steps for all zipcodes run before any processing step."""
+        """All scraping steps run before any processing step."""
         call_log = []
 
         def make_mock_module(module_name):
             mock_mod = MagicMock()
 
             def mock_run(config, pipeline_cache):
-                call_log.append((module_name, config.get("zipcode")))
+                call_log.append(module_name)
 
             mock_mod.run = mock_run
             return mock_mod
 
         mock_config = {
-            "zipcodes": ["97011", "97067"],
+            "search_zone_name": "test_zone",
+            "start_lat": 45.33,
+            "start_long": -121.87,
+            "search_radius_miles": 25.0,
             "search_results": True,
             "details_scrape": True,
             "airdna_data": True,
@@ -463,17 +466,16 @@ class TestMultiZipcodeOrchestration:
                 agg = AirBnbReviewAggregator()
                 agg.run_tasks_from_config()
 
-        # Identify scraping vs processing calls
         from main import SCRAPING_STEPS, PROCESSING_STEPS
 
         scraping_modules = {mod for mod, _ in SCRAPING_STEPS}
         processing_modules = {mod for mod, _ in PROCESSING_STEPS}
 
         scraping_indices = [
-            i for i, (mod, _) in enumerate(call_log) if mod in scraping_modules
+            i for i, mod in enumerate(call_log) if mod in scraping_modules
         ]
         processing_indices = [
-            i for i, (mod, _) in enumerate(call_log) if mod in processing_modules
+            i for i, mod in enumerate(call_log) if mod in processing_modules
         ]
 
         assert scraping_indices, "Expected scraping calls"
@@ -484,21 +486,24 @@ class TestMultiZipcodeOrchestration:
             f"Call log: {call_log}"
         )
 
-    def test_zipcode_injected_correctly_per_step(self):
-        """Each step receives the correct zipcode in config."""
-        call_log = []
+    def test_search_zone_name_in_config(self):
+        """Each enabled step receives search_zone_name in config."""
+        received_zone_names = []
 
         def make_mock_module(module_name):
             mock_mod = MagicMock()
 
             def mock_run(config, pipeline_cache):
-                call_log.append((module_name, config.get("zipcode")))
+                received_zone_names.append(config.get("search_zone_name"))
 
             mock_mod.run = mock_run
             return mock_mod
 
         mock_config = {
-            "zipcodes": ["97011", "97067"],
+            "search_zone_name": "mt_hood_corridor",
+            "start_lat": 45.33,
+            "start_long": -121.87,
+            "search_radius_miles": 25.0,
             "search_results": True,
             "details_scrape": False,
             "airdna_data": False,
@@ -518,13 +523,6 @@ class TestMultiZipcodeOrchestration:
                 agg = AirBnbReviewAggregator()
                 agg.run_tasks_from_config()
 
-        from main import SCRAPING_STEPS
-
-        search_module = SCRAPING_STEPS[0][0]
-
-        # search_results should run once per zipcode, each with correct zipcode
-        search_calls = [(mod, zc) for mod, zc in call_log if mod == search_module]
-        assert search_calls == [
-            (search_module, "97011"),
-            (search_module, "97067"),
-        ]
+        # search_results and details_results are the two enabled steps
+        assert len(received_zone_names) == 2
+        assert all(zone == "mt_hood_corridor" for zone in received_zone_names)

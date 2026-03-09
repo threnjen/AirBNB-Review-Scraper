@@ -27,12 +27,10 @@
     "force_refresh_area_summary": false,
     "force_refresh_correlation_results": false,
     "force_refresh_description_analysis": false,
-    "zipcodes": [
-        "97011",
-        "97067",
-        "97049",
-        "97028"
-    ],
+    "search_zone_name": "mt_hood_corridor",
+    "start_lat": 45.33,
+    "start_long": -121.87,
+    "search_radius_miles": 25,
     "dest_lat": 45.3131819,
     "dest_long": -121.8263023,
     "iso_code": "us",
