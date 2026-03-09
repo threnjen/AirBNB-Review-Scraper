@@ -17,11 +17,11 @@ STAGE = "comp_sets"
 OUTPUT_DIR = "outputs/03_comp_sets"
 
 
-def compile_comp_sets(zipcode: str) -> None:
+def compile_comp_sets(zipcode: str, output_dir: str = OUTPUT_DIR) -> None:
     """Merge per-listing JSON files into a single master comp set file."""
     merged = {}
     duplicates_skipped = 0
-    pattern = os.path.join(OUTPUT_DIR, "listing_*.json")
+    pattern = os.path.join(output_dir, "listing_*.json")
 
     for filepath in sorted(glob.glob(pattern)):
         with open(filepath, "r", encoding="utf-8") as f:
@@ -32,7 +32,7 @@ def compile_comp_sets(zipcode: str) -> None:
             else:
                 merged[listing_id] = details
 
-    master_path = os.path.join(OUTPUT_DIR, f"comp_set_{zipcode}.json")
+    master_path = os.path.join(output_dir, f"comp_set_{zipcode}.json")
     with open(master_path, "w", encoding="utf-8") as f:
         json.dump(merged, f, indent=4)
 

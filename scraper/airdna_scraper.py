@@ -348,6 +348,7 @@ class AirDNAScraper:
                 "Bathrooms": 0.0,
                 "Max_Guests": 0,
                 "Days_Available": 0,
+                # Not extractable from AirDNA Rentalizer page; placeholder for future implementation
                 "LY_Revenue": 0.0,
                 "Rating": 0.0,
                 "Review_Count": 0,
@@ -374,6 +375,7 @@ class AirDNAScraper:
             "Bathrooms": header_metrics.get("Bathrooms", 0.0),
             "Max_Guests": header_metrics.get("Max_Guests", 0),
             "Days_Available": kpi_metrics.get("Days_Available", 0),
+            # Not extractable from AirDNA Rentalizer page; placeholder for future implementation
             "LY_Revenue": 0.0,
             "Rating": header_metrics.get("Rating", 0.0),
             "Review_Count": header_metrics.get("Review_Count", 0),

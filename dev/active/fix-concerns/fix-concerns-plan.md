@@ -115,7 +115,7 @@ Address all 24 concerns across 5 categories in 5 phases, prioritized by severity
 - `config.json` and `prompts/prompt.json` loaded once per run, not per-listing
 - `LY_Revenue` field is documented as unsupported
 
-**Status**: Not Started
+**Status**: Complete
 
 ### 4.1 — Wire `pipeline_cache` in `reviews_scraper`
 - **File**: `scraper/reviews_scraper.py` line 47

@@ -77,12 +77,11 @@ class PropertyAggregator(BaseModel):
         current_prompt: str,
         listing_mean: str,
         overall_mean: str,
+        iso_code: str = "us",
     ) -> str:
         # Add more replacements to fill out the entire prompt
         current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.zipcode)
-        current_prompt = current_prompt.replace(
-            "{ISO_CODE_HERE}", load_config().get("iso_code", "us")
-        )
+        current_prompt = current_prompt.replace("{ISO_CODE_HERE}", iso_code)
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
         return current_prompt
@@ -98,7 +97,9 @@ class PropertyAggregator(BaseModel):
 
         return df["combined_review"].to_list()
 
-    def process_single_listing(self, one_property_reviews, listing_id):
+    def process_single_listing(
+        self, one_property_reviews, listing_id, generated_prompt=None, iso_code="us"
+    ):
         logger.info(
             f"\nProcessing listing {listing_id}\n{self.num_completed_listings} of {self.num_listings_to_summarize}"
         )
@@ -118,12 +119,14 @@ class PropertyAggregator(BaseModel):
             )
             return
 
-        generated_prompt = load_json_file("prompts/prompt.json")["prompt"]
+        if generated_prompt is None:
+            generated_prompt = load_json_file("prompts/prompt.json")["prompt"]
 
         updated_prompt = self.prompt_replacement(
             current_prompt=generated_prompt,
             listing_mean=str(listing_mean_rating),
             overall_mean=str(self.overall_mean),
+            iso_code=iso_code,
         )
         reviews = self.clean_single_item_reviews(ratings=one_property_reviews)
 
@@ -248,12 +251,18 @@ class PropertyAggregator(BaseModel):
         start_index = 0
         end_index = start_index + self.num_listings_to_summarize
 
+        # Load config and prompt once for all listings
+        iso_code = load_config().get("iso_code", "us")
+        generated_prompt = load_json_file("prompts/prompt.json")["prompt"]
+
         # First pass: process each unprocessed listing up to the configured limit
 
         for listing_id in unprocessed_reviews_ids[start_index:end_index]:
             generated_summaries[listing_id] = self.process_single_listing(
                 one_property_reviews=unprocessed_reviews[listing_id],
                 listing_id=listing_id,
+                generated_prompt=generated_prompt,
+                iso_code=iso_code,
             )
 
             self.num_completed_listings += 1
@@ -278,6 +287,8 @@ class PropertyAggregator(BaseModel):
             generated_summaries[listing_id] = self.process_single_listing(
                 one_property_reviews=reviews[listing_id],
                 listing_id=listing_id,
+                generated_prompt=generated_prompt,
+                iso_code=iso_code,
             )
 
             self.num_completed_listings += 1

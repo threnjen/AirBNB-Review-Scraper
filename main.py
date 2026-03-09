@@ -1,8 +1,5 @@
-import glob
 import importlib
-import json
 import logging
-import os
 import sys
 
 from utils.pipeline_cache_manager import PipelineCacheManager
@@ -45,31 +42,6 @@ class AirBnbReviewAggregator:
     def load_configs(self):
         self.config = load_config()
         self.pipeline_cache = PipelineCacheManager()
-
-    # ----- kept for test_compile_comp_sets -----
-    def compile_comp_sets(self, output_dir="outputs/03_comp_sets"):
-        """Merge all per-listing JSON files into a single master file."""
-        merged = {}
-        duplicates_skipped = 0
-        pattern = os.path.join(output_dir, "listing_*.json")
-
-        for filepath in sorted(glob.glob(pattern)):
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            for listing_id, details in data.items():
-                if listing_id in merged:
-                    duplicates_skipped += 1
-                else:
-                    merged[listing_id] = details
-
-        master_path = os.path.join(output_dir, f"comp_set_{self.zipcode}.json")
-        with open(master_path, "w", encoding="utf-8") as f:
-            json.dump(merged, f, indent=4)
-
-        logger.info(
-            f"Compiled {len(merged)} listings into {master_path} "
-            f"({duplicates_skipped} duplicates skipped)."
-        )
 
     # ----- main entry point -----
     def run_tasks_from_config(self):

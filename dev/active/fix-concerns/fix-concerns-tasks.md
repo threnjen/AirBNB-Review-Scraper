@@ -38,15 +38,15 @@
 - [x] Run full test suite: `pipenv run pytest` — 339 passed
 
 ## Stage 4: Tech Debt Cleanup
-- [ ] 4.1 — Write test: `pipeline_cache.is_file_fresh` called when cache provided in `reviews_scraper`
-- [ ] 4.1 — Replace `os.path.exists` with `pipeline_cache.is_file_fresh` (fallback to `os.path.exists` when None)
-- [ ] 4.2 — Update `test_compile_comp_sets.py` to import from `steps.03_comp_sets`; adjust fixture for `zipcode` param
-- [ ] 4.2 — Delete `compile_comp_sets` method + comment from `main.py`
-- [ ] 4.3 — Add comment to `LY_Revenue: 0.0` lines in `airdna_scraper.py`
-- [ ] 4.4 — Hoist `load_json_file("config.json")` out of `prompt_replacement` loop in `property_review_aggregator.py`
-- [ ] 4.4 — Hoist `load_json_file("config.json")` out of `task_chain` loop in `area_review_aggregator.py`
-- [ ] 4.5 — Hoist `load_json_file("prompts/prompt.json")` out of `process_single_listing` loop
-- [ ] Run full test suite: `pipenv run pytest`
+- [x] 4.1 — Write test: `pipeline_cache.is_file_fresh` called when cache provided in `reviews_scraper`
+- [x] 4.1 — Replace `os.path.exists` with `pipeline_cache.is_file_fresh` (fallback to `os.path.exists` when None)
+- [x] 4.2 — Update `test_compile_comp_sets.py` to import from `steps.03_comp_sets`; adjust fixture for `zipcode` param
+- [x] 4.2 — Delete `compile_comp_sets` method + comment from `main.py`
+- [x] 4.3 — Add comment to `LY_Revenue: 0.0` lines in `airdna_scraper.py`
+- [x] 4.4 — Hoist `load_json_file("config.json")` out of `prompt_replacement` loop in `property_review_aggregator.py`
+- [x] 4.4 — Hoist `load_json_file("config.json")` out of `task_chain` loop in `area_review_aggregator.py`
+- [x] 4.5 — Hoist `load_json_file("prompts/prompt.json")` out of `process_single_listing` loop
+- [x] Run full test suite: `pipenv run pytest` — 342 passed
 
 ## Stage 5: Performance Improvements
 - [ ] 5.1 — Write test: AirDNA sleep range read from config (defaults to 10/15)

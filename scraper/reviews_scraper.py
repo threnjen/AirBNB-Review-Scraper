@@ -46,10 +46,14 @@ def scrape_reviews(
     total_reviews = 0
     resolved: set[str] = set()  # IDs that succeeded or were cached
 
-    # Pre-scan: identify listings with review files already on disk
+    # Pre-scan: identify listings with fresh cached review files on disk
     for id in ids_to_scrape:
         output_path = f"outputs/04_reviews_scrape/reviews_{zipcode}_{id}.json"
-        if os.path.exists(output_path):
+        if pipeline_cache and pipeline_cache.is_file_fresh(
+            "reviews_scrape", output_path
+        ):
+            resolved.add(id)
+        elif not pipeline_cache and os.path.exists(output_path):
             resolved.add(id)
 
     already_scraped = len(resolved)

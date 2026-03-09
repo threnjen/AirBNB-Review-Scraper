@@ -127,6 +127,12 @@ This project uses **pipenv**. All Python and pytest commands must be prefixed wi
 ## Extended Guides
 
 Load when applicable:
-- *Architecture Overview* -> `docs/ARCHITECTURE.md` - When onboarding to the project, locating modules/symbols, or understanding data flow and key patterns
-- *Phase Planning* -> `docs/PLANNING_WORKFLOW.md` - for migrations or multi-stage projects spanning multiple commits
-- *Style Guide* -> `docs/STYLE_GUIDE.md` - When writing new modules or unfamiliar with project conventions
+- *Architecture Overview* -> `.planning/codebase/ARCHITECTURE.md` - When onboarding to the project, locating modules/symbols, or understanding data flow and key patterns
+- *Codebase Structure* -> `.planning/codebase/STRUCTURE.md` - When looking for file locations, directory layout, or where to add new modules
+- *Conventions* -> `.planning/codebase/CONVENTIONS.md` - When following naming patterns, import ordering, or step-module conventions
+- *Style Guide* -> `.planning/codebase/STYLE_GUIDE.md` - When writing new modules, creating classes, or unfamiliar with project code style
+- *Testing Patterns* -> `.planning/codebase/TESTING.md` - When writing or updating tests, configuring pytest, or understanding test infrastructure
+- *Integrations* -> `.planning/codebase/INTEGRATIONS.md` - When working with external APIs (Airbnb, OpenAI, Weaviate, S3) or understanding auth/client patterns
+- *Technology Stack* -> `.planning/codebase/STACK.md` - When checking language versions, dependencies, or tooling choices
+- *Concerns* -> `.planning/codebase/CONCERNS.md` - When triaging tech debt, known issues, or reviewing open risks
+- *Phase Planning* -> `.planning/codebase/PLANNING_WORKFLOW.md` - For migrations or multi-stage projects spanning multiple commits

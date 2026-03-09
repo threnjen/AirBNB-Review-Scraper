@@ -86,12 +86,12 @@ class TestPropertyAggregator:
         """Test that all placeholders are replaced."""
         prompt = "Zipcode: {ZIP_CODE_HERE}, ISO: {ISO_CODE_HERE}, Rating: {RATING_AVERAGE_HERE}, Overall: {OVERALL_MEAN}"
 
-        with patch("review_aggregator.property_review_aggregator.load_config") as mock:
-            mock.return_value = {"iso_code": "us"}
-
-            result = aggregator.prompt_replacement(
-                current_prompt=prompt, listing_mean="4.5", overall_mean="4.2"
-            )
+        result = aggregator.prompt_replacement(
+            current_prompt=prompt,
+            listing_mean="4.5",
+            overall_mean="4.2",
+            iso_code="us",
+        )
 
         assert "97067" in result
         assert "us" in result
@@ -103,10 +103,7 @@ class TestPropertyAggregator:
         """Test that non-placeholder text is preserved."""
         prompt = "This is a prompt with {ZIP_CODE_HERE} embedded."
 
-        with patch("review_aggregator.property_review_aggregator.load_config") as mock:
-            mock.return_value = {"iso_code": "us"}
-
-            result = aggregator.prompt_replacement(prompt, "4.0", "4.0")
+        result = aggregator.prompt_replacement(prompt, "4.0", "4.0", iso_code="us")
 
         assert "This is a prompt with" in result
         assert "embedded." in result

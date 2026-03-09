@@ -199,6 +199,56 @@ class TestPassLevelRetry:
         for lid in ("1", "2", "3"):
             assert os.path.exists(_output_path_for(lid))
 
+
+class TestPipelineCacheIntegration:
+    """reviews_scraper should use pipeline_cache.is_file_fresh when provided."""
+
+    @patch("scraper.reviews_scraper.time.sleep")
+    @patch(
+        "scraper.reviews_scraper.pyairbnb.get_reviews",
+        return_value=[{"comments": "Nice", "rating": 5}],
+    )
+    def test_is_file_fresh_called_when_cache_provided(self, mock_get, mock_sleep):
+        """When pipeline_cache is provided, is_file_fresh is used for pre-scan."""
+        from unittest.mock import MagicMock
+
+        cache = MagicMock()
+        cache.is_file_fresh.return_value = True  # simulate fresh cached file
+
+        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1, pipeline_cache=cache)
+
+        cache.is_file_fresh.assert_called_with("reviews_scrape", OUTPUT_PATH)
+        # Listing was cached — pyairbnb.get_reviews should NOT be called
+        mock_get.assert_not_called()
+
+    @patch("scraper.reviews_scraper.time.sleep")
+    @patch(
+        "scraper.reviews_scraper.pyairbnb.get_reviews",
+        return_value=[{"comments": "Nice", "rating": 5}],
+    )
+    def test_stale_cache_triggers_scrape(self, mock_get, mock_sleep):
+        """When is_file_fresh returns False, the listing is scraped."""
+        from unittest.mock import MagicMock
+
+        cache = MagicMock()
+        cache.is_file_fresh.return_value = False
+
+        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1, pipeline_cache=cache)
+
+        mock_get.assert_called_once()
+
+    @patch("scraper.reviews_scraper.time.sleep")
+    @patch(
+        "scraper.reviews_scraper.pyairbnb.get_reviews",
+        return_value=[{"comments": "Nice", "rating": 5}],
+    )
+    def test_no_cache_falls_back_to_os_path_exists(self, mock_get, mock_sleep):
+        """Without pipeline_cache, falls back to os.path.exists."""
+        # No file on disk → listing should be scraped
+        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1, pipeline_cache=None)
+
+        mock_get.assert_called_once()
+
     @patch("scraper.reviews_scraper.time.sleep")
     @patch("scraper.reviews_scraper.pyairbnb.get_reviews")
     def test_no_pass_retry_when_failure_rate_below_threshold(
