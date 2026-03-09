@@ -457,9 +457,7 @@ class TestMultiZipcodeOrchestration:
         }
 
         with patch("main.load_config", return_value=mock_config):
-            with patch(
-                "main.importlib.import_module", side_effect=make_mock_module
-            ):
+            with patch("main.importlib.import_module", side_effect=make_mock_module):
                 from main import AirBnbReviewAggregator
 
                 agg = AirBnbReviewAggregator()
@@ -514,9 +512,7 @@ class TestMultiZipcodeOrchestration:
         }
 
         with patch("main.load_config", return_value=mock_config):
-            with patch(
-                "main.importlib.import_module", side_effect=make_mock_module
-            ):
+            with patch("main.importlib.import_module", side_effect=make_mock_module):
                 from main import AirBnbReviewAggregator
 
                 agg = AirBnbReviewAggregator()
