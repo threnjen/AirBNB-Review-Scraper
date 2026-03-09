@@ -22,7 +22,7 @@ class TestAreaAggregator:
                 )
 
                 return AreaAggregator(
-                    zipcode="97067",
+                    zone_name="97067",
                     num_listings=5,
                     review_thresh_to_include_prop=5,
                 )
@@ -40,12 +40,12 @@ class TestAreaAggregator:
 
                 assert agg.num_listings == 3
                 assert agg.review_thresh_to_include_prop == 5
-                assert agg.zipcode == "00501"
+                assert agg.zone_name == "00501"
                 assert agg.overall_mean == 0.0
 
     def test_initialization_custom_params(self, aggregator):
         """Test AreaAggregator initializes with custom parameters."""
-        assert aggregator.zipcode == "97067"
+        assert aggregator.zone_name == "97067"
         assert aggregator.num_listings == 5
         assert aggregator.review_thresh_to_include_prop == 5
 
@@ -68,8 +68,8 @@ class TestAreaAggregator:
 
                 assert result is None
 
-    def test_rag_chain_no_matching_zipcode_files(self, aggregator):
-        """Test task_chain returns early when no files match zipcode."""
+    def test_rag_chain_no_matching_zone_files(self, aggregator):
+        """Test task_chain returns early when no files match zone."""
         with patch(
             "os.listdir",
             return_value=[
@@ -79,7 +79,7 @@ class TestAreaAggregator:
         ):
             result = aggregator.task_chain()
 
-            # No files match zipcode 97067
+            # No files match zone 97067
             assert result is None
 
     def test_rag_chain_with_valid_summaries(self, aggregator):
@@ -98,7 +98,7 @@ class TestAreaAggregator:
                 mock_load.side_effect = [
                     mock_summary_data,
                     {
-                        "gpt4o_mini_generate_prompt_structured": "Summarize {ZIP_CODE_HERE} area"
+                        "gpt4o_mini_generate_prompt_structured": "Summarize {SEARCH_ZONE_HERE} area"
                     },
                 ]
                 with patch(
@@ -131,7 +131,7 @@ class TestAreaAggregator:
                 )
 
                 limited_aggregator = AreaAggregator(
-                    zipcode="97067",
+                    zone_name="97067",
                     num_listings=2,
                 )
 
@@ -276,7 +276,7 @@ class TestSaveResults:
                 )
 
                 return AreaAggregator(
-                    zipcode="97067",
+                    zone_name="97067",
                     num_listings=5,
                     review_thresh_to_include_prop=5,
                 )

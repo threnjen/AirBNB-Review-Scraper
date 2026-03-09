@@ -17,12 +17,12 @@ class DetailsFilesetBuilder:
         self,
         use_categoricals: bool,
         comp_set_filepath: str,
-        zipcode: str = "00000",
+        zone_name: str = "00000",
         min_days_available: int = 100,
     ) -> None:
         self.use_categoricals = use_categoricals
         self.comp_set_filepath = comp_set_filepath
-        self.zipcode = zipcode
+        self.zone_name = zone_name
         self.min_days_available = min_days_available
         self.property_details = {}
         self.house_rules = {}
@@ -294,32 +294,33 @@ class DetailsFilesetBuilder:
 
         os.makedirs("outputs/06_details_results", exist_ok=True)
         amenities_df.to_csv(
-            f"outputs/06_details_results/property_amenities_matrix_{self.zipcode}.csv"
+            f"outputs/06_details_results/property_amenities_matrix_{self.zone_name}.csv"
         )
         logger.info(
-            f"Details fileset built and saved to outputs/06_details_results/property_amenities_matrix_{self.zipcode}.csv"
+            f"Details fileset built and saved to outputs/06_details_results/property_amenities_matrix_{self.zone_name}.csv"
         )
 
         cleaned_df = self.clean_amenities_df(amenities_df)
         cleaned_df.to_csv(
-            f"outputs/06_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
+            f"outputs/06_details_results/property_amenities_matrix_cleaned_{self.zone_name}.csv"
         )
         logger.info(
-            f"Cleaned details fileset saved to outputs/06_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
+            f"Cleaned details fileset saved to outputs/06_details_results/property_amenities_matrix_cleaned_{self.zone_name}.csv"
         )
 
         with open(
-            f"outputs/06_details_results/house_rules_details_{self.zipcode}.json", "w"
+            f"outputs/06_details_results/house_rules_details_{self.zone_name}.json", "w"
         ) as house_rules_file:
             json.dump(self.house_rules, house_rules_file, indent=4)
 
         with open(
-            f"outputs/06_details_results/property_descriptions_{self.zipcode}.json", "w"
+            f"outputs/06_details_results/property_descriptions_{self.zone_name}.json",
+            "w",
         ) as descriptions_file:
             json.dump(self.property_descriptions, descriptions_file, indent=4)
 
         with open(
-            f"outputs/06_details_results/neighborhood_highlights_{self.zipcode}.json",
+            f"outputs/06_details_results/neighborhood_highlights_{self.zone_name}.json",
             "w",
         ) as highlights_file:
             json.dump(self.neighborhood_highlights, highlights_file, indent=4)

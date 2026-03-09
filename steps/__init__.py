@@ -31,7 +31,7 @@ def load_search_results(
             return json.load(f)
 
     if action == "clear_and_run":
-        pipeline_cache.clear_stage_for_zipcode("search_results", search_zone_name)
+        pipeline_cache.clear_stage_for_zone("search_results", search_zone_name)
 
     results = airbnb_searcher(
         start_lat=start_lat,

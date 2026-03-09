@@ -569,8 +569,8 @@ if __name__ == "__main__":
     config = load_config()
 
     # Load listing IDs from search results
-    zipcode = config.get("zipcode", "97067")
-    search_results_path = f"outputs/01_search_results/search_results_{zipcode}.json"
+    zone_name = config.get("search_zone_name")
+    search_results_path = f"outputs/01_search_results/search_results_{zone_name}.json"
 
     if os.path.isfile(search_results_path):
         with open(search_results_path, "r", encoding="utf-8") as f:

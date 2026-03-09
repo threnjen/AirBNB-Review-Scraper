@@ -41,14 +41,14 @@ class DescriptionAnalyzer(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    zipcode: str = "00000"
+    zone_name: str = "00000"
     output_dir: str = "outputs/09_description_analysis"
     reports_dir: str = "reports"
     openai_aggregator: OpenAIAggregator = Field(default_factory=OpenAIAggregator)
 
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
-        csv_path = f"outputs/06_details_results/property_amenities_matrix_cleaned_{self.zipcode}.csv"
+        csv_path = f"outputs/06_details_results/property_amenities_matrix_cleaned_{self.zone_name}.csv"
 
         if not os.path.exists(csv_path):
             logger.error(f"Property amenities matrix not found at {csv_path}")
@@ -75,7 +75,7 @@ class DescriptionAnalyzer(BaseModel):
     def load_descriptions(self) -> dict[str, str]:
         """Load property descriptions for analysis."""
         desc_path = (
-            f"outputs/06_details_results/property_descriptions_{self.zipcode}.json"
+            f"outputs/06_details_results/property_descriptions_{self.zone_name}.json"
         )
 
         if not os.path.exists(desc_path):
@@ -370,7 +370,7 @@ class DescriptionAnalyzer(BaseModel):
         correlation_table = "\n".join(corr_lines)
 
         # Fill prompt
-        prompt = synthesis_prompt_template.replace("{ZIPCODE}", self.zipcode)
+        prompt = synthesis_prompt_template.replace("{ZIPCODE}", self.zone_name)
         prompt = prompt.replace("{R_SQUARED}", f"{r_squared:.3f}")
         prompt = prompt.replace("{CORRELATION_TABLE}", correlation_table)
         prompt = prompt.replace("{HIGH_PREMIUM_DESCRIPTIONS}", high_premium_text)
@@ -380,7 +380,7 @@ class DescriptionAnalyzer(BaseModel):
         synthesis = self.openai_aggregator.generate_summary(
             reviews=[prompt],
             prompt="Analyze the description data and provide the requested insights in Markdown format.",
-            listing_id=f"desc_synthesis_{self.zipcode}",
+            listing_id=f"desc_synthesis_{self.zone_name}",
         )
 
         return synthesis or ""
@@ -402,7 +402,7 @@ class DescriptionAnalyzer(BaseModel):
 
         # Build stats JSON
         stats = {
-            "zipcode": self.zipcode,
+            "zone_name": self.zone_name,
             "analysis_type": "description_quality",
             "regression_r_squared": round(r_squared, 4),
             "regression_features_used": features,
@@ -418,13 +418,13 @@ class DescriptionAnalyzer(BaseModel):
             },
         }
 
-        json_path = f"{self.output_dir}/description_quality_stats_{self.zipcode}.json"
+        json_path = f"{self.output_dir}/description_quality_stats_{self.zone_name}.json"
         save_json_file(json_path, stats)
         logger.info(f"Saved description quality stats to {json_path}")
 
         # Save Markdown insights
         Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
-        md_path = f"{self.reports_dir}/description_quality_{self.zipcode}.md"
+        md_path = f"{self.reports_dir}/description_quality_{self.zone_name}.md"
 
         # Build top/bottom 15 property links section
         sorted_residuals = residuals.sort_values(ascending=False)
@@ -449,7 +449,7 @@ class DescriptionAnalyzer(BaseModel):
 
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("# Listing Description Quality Analysis\n\n")
-            f.write(f"**Zipcode:** {self.zipcode}\n\n")
+            f.write(f"**Search Zone:** {self.zone_name}\n\n")
             features_str = ", ".join(features) if features else "(none)"
             f.write(
                 f"**Feature-Adjustment R²:** {r_squared:.3f} "
@@ -492,7 +492,7 @@ class DescriptionAnalyzer(BaseModel):
                     entry["word_count"] = int(row["word_count"])
             top_15_list.append(entry)
 
-        top_15_path = f"{self.output_dir}/top_15_properties_{self.zipcode}.json"
+        top_15_path = f"{self.output_dir}/top_15_properties_{self.zone_name}.json"
         save_json_file(top_15_path, top_15_list)
         logger.info(f"Saved top 15 properties to {top_15_path}")
 

@@ -70,7 +70,7 @@ class CorrelationAnalyzer(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    zipcode: str = "00000"
+    zone_name: str = "00000"
     metrics: list[str] = ["adr", "occupancy"]
     top_percentile: int = 25
     bottom_percentile: int = 25
@@ -81,7 +81,7 @@ class CorrelationAnalyzer(BaseModel):
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
         csv_path = (
-            f"outputs/06_details_results/property_amenities_matrix_{self.zipcode}.csv"
+            f"outputs/06_details_results/property_amenities_matrix_{self.zone_name}.csv"
         )
 
         if not os.path.exists(csv_path):
@@ -109,7 +109,7 @@ class CorrelationAnalyzer(BaseModel):
     def load_descriptions(self) -> dict[str, str]:
         """Load property descriptions for LLM context."""
         desc_path = (
-            f"outputs/06_details_results/property_descriptions_{self.zipcode}.json"
+            f"outputs/06_details_results/property_descriptions_{self.zone_name}.json"
         )
 
         if not os.path.exists(desc_path):
@@ -320,7 +320,7 @@ class CorrelationAnalyzer(BaseModel):
             low_str = f"{low_threshold:.1f}%"
 
         # Replace placeholders
-        prompt = prompt_template.replace("{ZIPCODE}", self.zipcode)
+        prompt = prompt_template.replace("{ZIPCODE}", self.zone_name)
         prompt = prompt.replace("{HIGH_THRESHOLD}", high_str)
         prompt = prompt.replace("{LOW_THRESHOLD}", low_str)
         prompt = prompt.replace("{TOP_PERCENTILE}", str(self.top_percentile))
@@ -339,7 +339,7 @@ class CorrelationAnalyzer(BaseModel):
         insights = self.openai_aggregator.generate_summary(
             reviews=[prompt],
             prompt="Analyze the data and provide the requested insights in Markdown format.",
-            listing_id=f"correlation_{metric}_{self.zipcode}",
+            listing_id=f"correlation_{metric}_{self.zone_name}",
         )
 
         return insights
@@ -363,7 +363,7 @@ class CorrelationAnalyzer(BaseModel):
 
         # Build stats JSON
         stats = {
-            "zipcode": self.zipcode,
+            "zone_name": self.zone_name,
             "metric": metric,
             "metric_column": config.get("column", ""),
             "high_tier_threshold": round(high_threshold, 2),
@@ -377,16 +377,20 @@ class CorrelationAnalyzer(BaseModel):
         }
 
         # Save JSON
-        json_path = f"{self.output_dir}/correlation_stats_{metric}_{self.zipcode}.json"
+        json_path = (
+            f"{self.output_dir}/correlation_stats_{metric}_{self.zone_name}.json"
+        )
         save_json_file(json_path, stats)
         logger.info(f"Saved stats to {json_path}")
 
         # Save Markdown insights
         Path(self.reports_dir).mkdir(parents=True, exist_ok=True)
-        md_path = f"{self.reports_dir}/correlation_insights_{metric}_{self.zipcode}.md"
+        md_path = (
+            f"{self.reports_dir}/correlation_insights_{metric}_{self.zone_name}.md"
+        )
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(f"# {config.get('display_name', metric)} Correlation Analysis\n\n")
-            f.write(f"**Zipcode:** {self.zipcode}\n\n")
+            f.write(f"**Search Zone:** {self.zone_name}\n\n")
             f.write(
                 f"**High Tier:** {config.get('unit', '')}{high_threshold:.2f} "
                 f"(top {self.top_percentile}%, n={high_tier_count})\n\n"

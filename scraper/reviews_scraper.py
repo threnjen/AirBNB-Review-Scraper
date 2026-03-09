@@ -18,7 +18,7 @@ PASS_RETRY_WAIT_SECONDS = 120  # cooldown between full passes
 
 
 def scrape_reviews(
-    zipcode: str,
+    zone_name: str,
     search_results: list[dict[str, Any]],
     num_listings: int,
     pipeline_cache: Optional[Any] = None,
@@ -31,7 +31,7 @@ def scrape_reviews(
     listings that return zero reviews.
 
     Args:
-        zipcode: Target area zip code used in output file names.
+        zone_name: Search zone name used in output file names.
         search_results: List of dicts, each containing a ``room_id`` key.
         num_listings: Maximum number of listings to process.
         pipeline_cache: Optional cache manager; fresh files are skipped.
@@ -48,7 +48,7 @@ def scrape_reviews(
 
     # Pre-scan: identify listings with fresh cached review files on disk
     for id in ids_to_scrape:
-        output_path = f"outputs/04_reviews_scrape/reviews_{id}.json"
+        output_path = f"outputs/04_reviews_scrape/reviews_{zone_name}_{id}.json"
         if pipeline_cache and pipeline_cache.is_file_fresh(
             "reviews_scrape", output_path
         ):
@@ -81,7 +81,7 @@ def scrape_reviews(
             if id in resolved:
                 continue
 
-            output_path = f"outputs/04_reviews_scrape/reviews_{id}.json"
+            output_path = f"outputs/04_reviews_scrape/reviews_{zone_name}_{id}.json"
 
             room_url = f"https://www.airbnb.com/rooms/{id}"
             scrape_index += 1

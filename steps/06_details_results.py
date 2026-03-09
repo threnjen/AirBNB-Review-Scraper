@@ -14,24 +14,24 @@ STAGE = "details_results"
 
 def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     """Parse raw detail JSON into amenities matrix, descriptions, etc."""
-    zipcode = config.get("zipcode", "97067")
+    zone_name = config.get("search_zone_name")
     use_categoricals = config.get("dataset_use_categoricals", False)
     min_days_available = config.get("min_days_available", 100)
 
-    action = pipeline_cache.should_run_stage(STAGE, zipcode)
+    action = pipeline_cache.should_run_stage(STAGE, zone_name)
 
     if action == "skip":
         logger.info("Skipping details fileset build — cached outputs are fresh.")
         return
 
     if action == "clear_and_run":
-        pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
+        pipeline_cache.clear_stage_for_zone(STAGE, zone_name)
 
-    comp_set_filepath = f"outputs/03_airdna_data/comp_set_{zipcode}.json"
+    comp_set_filepath = f"outputs/03_airdna_data/comp_set_{zone_name}.json"
     fileset_builder = DetailsFilesetBuilder(
         use_categoricals=use_categoricals,
         comp_set_filepath=comp_set_filepath,
-        zipcode=zipcode,
+        zone_name=zone_name,
         min_days_available=min_days_available,
     )
     fileset_builder.build_fileset()

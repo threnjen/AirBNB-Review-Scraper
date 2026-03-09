@@ -30,7 +30,7 @@ class TestPropertyAggregatorIntegration:
                 )
 
                 agg = PropertyAggregator(
-                    zipcode="97067",
+                    zone_name="97067",
                     num_listings_to_summarize=3,
                 )
                 agg.openai_aggregator.cost_tracker.log_file = str(
@@ -115,7 +115,7 @@ class TestAreaAggregatorIntegration:
                 )
 
                 agg = AreaAggregator(
-                    zipcode="97067",
+                    zone_name="97067",
                     num_listings=5,
                     output_dir=str(tmp_path),
                 )
@@ -150,7 +150,7 @@ class TestAreaAggregatorIntegration:
                     {"87654321": "Another great property with mountain views."},
                     {"11111111": "Cozy cabin perfect for families."},
                     {
-                        "gpt4o_mini_generate_prompt_structured": "Summarize {ZIP_CODE_HERE}"
+                        "gpt4o_mini_generate_prompt_structured": "Summarize {SEARCH_ZONE_HERE}"
                     },
                 ]
 
@@ -253,7 +253,7 @@ class TestEndToEndPipeline:
                 )
 
                 aggregator = AreaAggregator(
-                    zipcode="97067",
+                    zone_name="97067",
                     num_listings=5,
                     output_dir=str(tmp_path),
                 )
@@ -277,7 +277,7 @@ class TestEndToEndPipeline:
                             {"123": sample_property_summary},
                             {"456": "Another property summary"},
                             {
-                                "gpt4o_mini_generate_prompt_structured": "Summarize area {ZIP_CODE_HERE}"
+                                "gpt4o_mini_generate_prompt_structured": "Summarize area {SEARCH_ZONE_HERE}"
                             },
                         ]
 

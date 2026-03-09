@@ -18,7 +18,7 @@ class AreaAggregator(BaseModel):
 
     num_listings: int = 3
     review_thresh_to_include_prop: int = 5
-    zipcode: str = "00501"
+    zone_name: str = "00501"
     overall_mean: float = 0.0
     output_dir: str = "reports"
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -35,9 +35,9 @@ class AreaAggregator(BaseModel):
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
 
         # Save Markdown report
-        md_path = f"{self.output_dir}/area_summary_{self.zipcode}.md"
+        md_path = f"{self.output_dir}/area_summary_{self.zone_name}.md"
         with open(md_path, "w", encoding="utf-8") as f:
-            f.write(f"# Area Summary: {self.zipcode}\n\n")
+            f.write(f"# Area Summary: {self.zone_name}\n\n")
             f.write(f"**ISO Code:** {iso_code}\n\n")
             f.write(f"**Properties Analyzed:** {num_properties}\n\n")
             f.write("---\n\n")
@@ -60,12 +60,12 @@ class AreaAggregator(BaseModel):
 
         if not summary_files:
             logger.info(
-                f"No property summaries found for zipcode {self.zipcode}; exiting."
+                f"No property summaries found for zone {self.zone_name}; exiting."
             )
             return
 
         logger.info(
-            f"Found {len(summary_files)} property summaries for zipcode {self.zipcode}"
+            f"Found {len(summary_files)} property summaries for zone {self.zone_name}"
         )
 
         # Collect all summaries
@@ -87,11 +87,11 @@ class AreaAggregator(BaseModel):
         )
 
         # Load area-level prompt template
-        prompt_data = load_json_file("prompts/zipcode_prompt.json")
+        prompt_data = load_json_file("prompts/zone_prompt.json")
         prompt_template = prompt_data.get("gpt4o_mini_generate_prompt_structured", "")
 
         # Replace placeholders in prompt
-        updated_prompt = prompt_template.replace("{ZIP_CODE_HERE}", self.zipcode)
+        updated_prompt = prompt_template.replace("{SEARCH_ZONE_HERE}", self.zone_name)
         iso_code = load_config().get("iso_code", "us")
         updated_prompt = updated_prompt.replace("{ISO_CODE_HERE}", iso_code)
         updated_prompt = updated_prompt.replace(
@@ -102,7 +102,7 @@ class AreaAggregator(BaseModel):
         area_summary = self.openai_aggregator.generate_summary(
             reviews=all_summaries,  # Pass summaries as "reviews" input
             prompt=updated_prompt,
-            listing_id=f"area_{self.zipcode}",
+            listing_id=f"area_{self.zone_name}",
         )
 
         # Save area-level summary (JSON + Markdown report)

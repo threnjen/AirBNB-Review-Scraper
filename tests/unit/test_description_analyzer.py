@@ -25,7 +25,7 @@ class TestDescriptionAnalyzer:
                     DescriptionAnalyzer,
                 )
 
-                return DescriptionAnalyzer(zipcode="97067")
+                return DescriptionAnalyzer(zone_name="97067")
 
     @pytest.fixture
     def sample_property_df(self):
@@ -515,7 +515,7 @@ class TestSaveResults(TestDescriptionAnalyzer):
         import json
 
         stats = json.loads(json_path.read_text())
-        assert stats["zipcode"] == "97067"
+        assert stats["zone_name"] == "97067"
         assert stats["regression_r_squared"] == 0.75
         assert stats["num_properties_analyzed"] == 2
         assert stats["regression_features_used"] == features

@@ -22,7 +22,7 @@ class PropertyAggregator(BaseModel):
     overall_stats: dict = Field(default_factory=dict)
     listing_ids: list = Field(default_factory=list)
     generate_prompt: str = "None"  # consider Optional[str] = None
-    zipcode: str = "00501"
+    zone_name: str = "00501"
     overall_mean: float = 0.0
     num_listings_to_summarize: int = 0
     empty_aggregated_reviews: list = Field(default_factory=list)
@@ -80,7 +80,7 @@ class PropertyAggregator(BaseModel):
         iso_code: str = "us",
     ) -> str:
         # Add more replacements to fill out the entire prompt
-        current_prompt = current_prompt.replace("{ZIP_CODE_HERE}", self.zipcode)
+        current_prompt = current_prompt.replace("{SEARCH_ZONE_HERE}", self.zone_name)
         current_prompt = current_prompt.replace("{ISO_CODE_HERE}", iso_code)
         current_prompt = current_prompt.replace("{RATING_AVERAGE_HERE}", listing_mean)
         current_prompt = current_prompt.replace("{OVERALL_MEAN}", overall_mean)
@@ -201,7 +201,7 @@ class PropertyAggregator(BaseModel):
         review_files = [
             x
             for x in os.listdir("outputs/04_reviews_scrape/")
-            if x.startswith("reviews_")
+            if x.startswith(f"reviews_{self.zone_name}_")
         ]
 
         for file in review_files:

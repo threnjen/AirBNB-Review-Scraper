@@ -21,7 +21,7 @@ class TestCorrelationAnalyzer:
                     CorrelationAnalyzer,
                 )
 
-                return CorrelationAnalyzer(zipcode="97067")
+                return CorrelationAnalyzer(zone_name="97067")
 
     @pytest.fixture
     def sample_tier_with_string_false(self):
@@ -100,7 +100,7 @@ class TestSegmentByMetricStringColumns:
                 from review_aggregator.correlation_analyzer import CorrelationAnalyzer
 
                 return CorrelationAnalyzer(
-                    zipcode="97067", top_percentile=25, bottom_percentile=25
+                    zone_name="97067", top_percentile=25, bottom_percentile=25
                 )
 
     def test_string_typed_adr_column_does_not_raise(self, analyzer):
@@ -180,7 +180,7 @@ class TestLoadPropertyDataAirdnaFilter:
             with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.correlation_analyzer import CorrelationAnalyzer
 
-                return CorrelationAnalyzer(zipcode="97067")
+                return CorrelationAnalyzer(zone_name="97067")
 
     def test_excludes_rows_without_airdna_data(self, analyzer, tmp_path):
         """Properties with has_airdna_data=False should be excluded."""

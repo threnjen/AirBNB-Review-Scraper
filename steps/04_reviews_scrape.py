@@ -15,24 +15,24 @@ STAGE = "reviews_scrape"
 
 def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     """Scrape reviews for each listing, with retry and per-file caching."""
-    zipcode = config.get("zipcode", "97067")
+    zone_name = config.get("search_zone_name")
     num_listings = config.get("num_listings_to_search", 3)
 
-    action = pipeline_cache.should_run_stage(STAGE, zipcode)
+    action = pipeline_cache.should_run_stage(STAGE, zone_name)
 
     if action == "skip":
         logger.info("Skipping reviews scraping — cached outputs are fresh.")
         return
 
     if action == "clear_and_run":
-        pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
+        pipeline_cache.clear_stage_for_zone(STAGE, zone_name)
 
     search_results = load_search_results(config, pipeline_cache)
     scrape_reviews(
-        zipcode=zipcode,
+        zone_name=zone_name,
         search_results=search_results,
         num_listings=num_listings,
         pipeline_cache=pipeline_cache,
     )
     pipeline_cache.notify_stage_ran(STAGE)
-    logger.info(f"Reviews scraping for zipcode {zipcode} completed.")
+    logger.info(f"Reviews scraping for zone {zone_name} completed.")

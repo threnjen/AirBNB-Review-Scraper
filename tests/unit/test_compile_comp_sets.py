@@ -1,5 +1,5 @@
 """Tests for compile_airdna_data() in steps/03_airdna_data.py — merging per-listing
-JSON files into a single master comp_set_{zipcode}.json file."""
+JSON files into a single master comp_set_{zone_name}.json file."""
 
 import json
 import os
@@ -12,7 +12,7 @@ import pytest
 _step_module = import_module("steps.03_airdna_data")
 compile_airdna_data = _step_module.compile_airdna_data
 
-ZIPCODE = "97067"
+ZONE_NAME = "97067"
 
 
 class TestCompileCompSets:
@@ -33,9 +33,9 @@ class TestCompileCompSets:
         }
         (airdna_data_dir / "listing_111.json").write_text(json.dumps(data))
 
-        compile_airdna_data(ZIPCODE, output_dir=str(airdna_data_dir))
+        compile_airdna_data(ZONE_NAME, output_dir=str(airdna_data_dir))
 
-        master_path = airdna_data_dir / f"comp_set_{ZIPCODE}.json"
+        master_path = airdna_data_dir / f"comp_set_{ZONE_NAME}.json"
         assert master_path.exists()
         result = json.loads(master_path.read_text())
         assert len(result) == 2
@@ -53,9 +53,9 @@ class TestCompileCompSets:
         (airdna_data_dir / "listing_111.json").write_text(json.dumps(data_a))
         (airdna_data_dir / "listing_222.json").write_text(json.dumps(data_b))
 
-        compile_airdna_data(ZIPCODE, output_dir=str(airdna_data_dir))
+        compile_airdna_data(ZONE_NAME, output_dir=str(airdna_data_dir))
 
-        result = json.loads((airdna_data_dir / f"comp_set_{ZIPCODE}.json").read_text())
+        result = json.loads((airdna_data_dir / f"comp_set_{ZONE_NAME}.json").read_text())
         assert len(result) == 2
         assert "listing_1" in result
         assert "listing_2" in result
@@ -72,30 +72,30 @@ class TestCompileCompSets:
         (airdna_data_dir / "listing_111.json").write_text(json.dumps(data_a))
         (airdna_data_dir / "listing_222.json").write_text(json.dumps(data_b))
 
-        compile_airdna_data(ZIPCODE, output_dir=str(airdna_data_dir))
+        compile_airdna_data(ZONE_NAME, output_dir=str(airdna_data_dir))
 
-        result = json.loads((airdna_data_dir / f"comp_set_{ZIPCODE}.json").read_text())
+        result = json.loads((airdna_data_dir / f"comp_set_{ZONE_NAME}.json").read_text())
         assert result["listing_1"]["ADR"] == 100.0
 
     def test_no_compset_files_produces_empty_master(self, airdna_data_dir):
         """If no listing files exist, the master file is an empty dict."""
-        compile_airdna_data(ZIPCODE, output_dir=str(airdna_data_dir))
+        compile_airdna_data(ZONE_NAME, output_dir=str(airdna_data_dir))
 
-        result = json.loads((airdna_data_dir / f"comp_set_{ZIPCODE}.json").read_text())
+        result = json.loads((airdna_data_dir / f"comp_set_{ZONE_NAME}.json").read_text())
         assert result == {}
 
     def test_master_file_does_not_include_itself(self, airdna_data_dir):
-        """The master comp_set_{zipcode}.json should not be read as a listing input."""
+        """The master comp_set_{zone_name}.json should not be read as a listing input."""
         data = {"listing_1": {"ADR": 100.0}}
         (airdna_data_dir / "listing_111.json").write_text(json.dumps(data))
         # Pre-existing master file from a previous run
-        (airdna_data_dir / f"comp_set_{ZIPCODE}.json").write_text(
+        (airdna_data_dir / f"comp_set_{ZONE_NAME}.json").write_text(
             json.dumps({"old_listing": {"ADR": 50.0}})
         )
 
-        compile_airdna_data(ZIPCODE, output_dir=str(airdna_data_dir))
+        compile_airdna_data(ZONE_NAME, output_dir=str(airdna_data_dir))
 
-        result = json.loads((airdna_data_dir / f"comp_set_{ZIPCODE}.json").read_text())
+        result = json.loads((airdna_data_dir / f"comp_set_{ZONE_NAME}.json").read_text())
         assert "old_listing" not in result
         assert "listing_1" in result
 
@@ -117,9 +117,9 @@ class TestCompileCompSets:
         }
         (airdna_data_dir / "listing_111.json").write_text(json.dumps(data))
 
-        compile_airdna_data(ZIPCODE, output_dir=str(airdna_data_dir))
+        compile_airdna_data(ZONE_NAME, output_dir=str(airdna_data_dir))
 
-        result = json.loads((airdna_data_dir / f"comp_set_{ZIPCODE}.json").read_text())
+        result = json.loads((airdna_data_dir / f"comp_set_{ZONE_NAME}.json").read_text())
         listing = result["listing_1"]
         assert listing["ADR"] == 969.19
         assert listing["Occupancy"] == 42

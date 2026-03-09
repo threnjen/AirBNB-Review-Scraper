@@ -6,8 +6,8 @@ Tests here cover behaviors NOT already in test_pipeline_cache_mtime.py:
   - config loading / fallback
   - force_refresh flag overrides on is_file_fresh
   - clear_stage (full-directory wipe)
-  - clear_stage_for_zipcode with listing-ID derivation
-  - _get_listing_ids_for_zipcode
+  - clear_stage_for_zone with listing-ID derivation
+  - _get_listing_ids_for_zone
   - cache-disabled behaviour
 """
 
@@ -384,8 +384,8 @@ class TestPipelineCacheManager:
             )
 
 
-class TestZipcodeScopedCache:
-    """Tests for zipcode-scoped cache clearing and related helpers."""
+class TestZoneScopedCache:
+    """Tests for zone-scoped cache clearing and related helpers."""
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
@@ -438,9 +438,9 @@ class TestZipcodeScopedCache:
 
         assert manager.should_run_stage("reviews_scrape", "97067") == "resume"
 
-    # --- clear_stage_for_zipcode ---
+    # --- clear_stage_for_zone ---
 
-    def test_clear_stage_for_zipcode_handles_missing_directory(
+    def test_clear_stage_for_zone_handles_missing_directory(
         self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that clearing with a missing output directory does not raise."""
@@ -453,9 +453,9 @@ class TestZipcodeScopedCache:
                 "reviews_scrape": missing_dir,
             },
         )
-        cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
+        cache_manager.clear_stage_for_zone("reviews_scrape", "97067")
 
-    def test_clear_stage_for_zipcode_details_uses_listing_ids(
+    def test_clear_stage_for_zone_details_uses_listing_ids(
         self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that details stage clears files by listing ID from search results."""
@@ -484,14 +484,14 @@ class TestZipcodeScopedCache:
             },
         )
 
-        cache_manager.clear_stage_for_zipcode("details_scrape", "97067")
+        cache_manager.clear_stage_for_zone("details_scrape", "97067")
 
         remaining = sorted(f.name for f in details_dir.iterdir())
         assert remaining == ["property_details_999.json"]
 
-    # --- _get_listing_ids_for_zipcode ---
+    # --- _get_listing_ids_for_zone ---
 
-    def test_get_listing_ids_for_zipcode_reads_search_results(
+    def test_get_listing_ids_for_zone_reads_search_results(
         self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that listing IDs are correctly extracted from search results."""
@@ -514,10 +514,10 @@ class TestZipcodeScopedCache:
             },
         )
 
-        ids = cache_manager._get_listing_ids_for_zipcode("97067")
+        ids = cache_manager._get_listing_ids_for_zone("97067")
         assert sorted(ids) == ["111", "222", "333"]
 
-    def test_get_listing_ids_for_zipcode_missing_file_returns_empty(
+    def test_get_listing_ids_for_zone_missing_file_returns_empty(
         self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that missing search results file returns empty list."""
@@ -532,7 +532,7 @@ class TestZipcodeScopedCache:
             },
         )
 
-        ids = cache_manager._get_listing_ids_for_zipcode("99999")
+        ids = cache_manager._get_listing_ids_for_zone("99999")
         assert ids == []
 
     # --- clear_stage backward compat ---

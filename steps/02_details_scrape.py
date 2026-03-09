@@ -15,17 +15,17 @@ STAGE = "details_scrape"
 
 def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     """Scrape property detail pages for each listing found in search results."""
-    zipcode = config.get("zipcode", "97067")
+    zone_name = config.get("search_zone_name")
     num_listings = config.get("num_listings_to_search", 3)
 
-    action = pipeline_cache.should_run_stage(STAGE, zipcode)
+    action = pipeline_cache.should_run_stage(STAGE, zone_name)
 
     if action == "skip":
         logger.info("Skipping details scraping — cached outputs are fresh.")
         return
 
     if action == "clear_and_run":
-        pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
+        pipeline_cache.clear_stage_for_zone(STAGE, zone_name)
 
     search_results = load_search_results(config, pipeline_cache)
     scrape_details(
@@ -34,4 +34,4 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         pipeline_cache=pipeline_cache,
     )
     pipeline_cache.notify_stage_ran(STAGE)
-    logger.info(f"Details scraping for zipcode {zipcode} completed.")
+    logger.info(f"Details scraping for zone {zone_name} completed.")

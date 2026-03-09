@@ -20,7 +20,9 @@ class TestPropertyAggregator:
                     PropertyAggregator,
                 )
 
-                return PropertyAggregator(zipcode="97067", num_listings_to_summarize=5)
+                return PropertyAggregator(
+                    zone_name="97067", num_listings_to_summarize=5
+                )
 
     def test_get_listing_id_mean_rating_valid_reviews(self, aggregator, sample_reviews):
         """Test mean rating calculation with valid reviews."""
@@ -84,7 +86,7 @@ class TestPropertyAggregator:
 
     def test_prompt_replacement_all_placeholders(self, aggregator):
         """Test that all placeholders are replaced."""
-        prompt = "Zipcode: {ZIP_CODE_HERE}, ISO: {ISO_CODE_HERE}, Rating: {RATING_AVERAGE_HERE}, Overall: {OVERALL_MEAN}"
+        prompt = "Zipcode: {SEARCH_ZONE_HERE}, ISO: {ISO_CODE_HERE}, Rating: {RATING_AVERAGE_HERE}, Overall: {OVERALL_MEAN}"
 
         result = aggregator.prompt_replacement(
             current_prompt=prompt,
@@ -101,7 +103,7 @@ class TestPropertyAggregator:
 
     def test_prompt_replacement_preserves_other_text(self, aggregator):
         """Test that non-placeholder text is preserved."""
-        prompt = "This is a prompt with {ZIP_CODE_HERE} embedded."
+        prompt = "This is a prompt with {SEARCH_ZONE_HERE} embedded."
 
         result = aggregator.prompt_replacement(prompt, "4.0", "4.0", iso_code="us")
 
@@ -174,7 +176,7 @@ class TestPropertyAggregator:
                 agg = PropertyAggregator()
 
                 assert agg.review_thresh_to_include_prop == 5
-                assert agg.zipcode == "00501"
+                assert agg.zone_name == "00501"
                 assert agg.overall_mean == 0.0
 
 
@@ -191,7 +193,9 @@ class TestPropertyAggregatorFiltering:
                     PropertyAggregator,
                 )
 
-                return PropertyAggregator(zipcode="97067", num_listings_to_summarize=5)
+                return PropertyAggregator(
+                    zone_name="97067", num_listings_to_summarize=5
+                )
 
     def test_filter_out_processed_reviews(self, aggregator):
         """Test filtering out already processed reviews."""

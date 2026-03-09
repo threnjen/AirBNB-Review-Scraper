@@ -2,7 +2,7 @@
 Unit tests for mtime-based PipelineCacheManager.
 
 Tests the filesystem-driven cache: expected_outputs, _is_file_fresh_by_mtime,
-is_stage_fresh, get_missing_outputs, should_run_stage, clear_stage_for_zipcode.
+is_stage_fresh, get_missing_outputs, should_run_stage, clear_stage_for_zone.
 No metadata file, no _completed flags — freshness is purely mtime-based.
 """
 
@@ -101,7 +101,7 @@ class TestExpectedOutputs:
         assert "outputs/02_details_scrape/property_details_111.json" in result
         assert "outputs/02_details_scrape/property_details_333.json" in result
 
-    def test_build_details_returns_five_zipcode_files(self, cache_manager):
+    def test_build_details_returns_five_zone_files(self, cache_manager):
         result = cache_manager.expected_outputs("details_results", "97067")
         assert len(result) == 5
         assert (
@@ -134,9 +134,9 @@ class TestExpectedOutputs:
         )
 
         result = cache_manager.expected_outputs("listing_summaries", "97067")
-        assert "outputs/05_listing_summaries/listing_summary_97067_111.json" in result
-        assert "outputs/05_listing_summaries/listing_summary_97067_222.json" in result
-        # Should NOT include other zipcode's listings
+        assert "outputs/05_listing_summaries/listing_summary_111.json" in result
+        assert "outputs/05_listing_summaries/listing_summary_222.json" in result
+        # Should NOT include other zone's listings
         assert not any("999" in r for r in result)
 
     def test_area_summary_returns_one_file(self, cache_manager):
@@ -551,8 +551,8 @@ class TestShouldRunStageMtime:
         assert manager.should_run_stage("reviews_scrape", "97067") == "resume"
 
 
-class TestClearStageForZipcodeMtime:
-    """Tests for rewritten clear_stage_for_zipcode using expected_outputs."""
+class TestClearStageForZoneMtime:
+    """Tests for rewritten clear_stage_for_zone using expected_outputs."""
 
     @pytest.fixture
     def cache_manager(self, tmp_path):
@@ -565,10 +565,10 @@ class TestClearStageForZipcodeMtime:
 
             return PipelineCacheManager()
 
-    def test_deletes_only_expected_zipcode_files(
+    def test_deletes_only_expected_zone_files(
         self, cache_manager, tmp_path, monkeypatch
     ):
-        """Only files in expected_outputs for the zipcode are deleted."""
+        """Only files in expected_outputs for the zone are deleted."""
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         reviews_dir.mkdir(parents=True)
         search_dir = tmp_path / "outputs" / "01_search_results"
@@ -592,15 +592,15 @@ class TestClearStageForZipcodeMtime:
             },
         )
 
-        cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
+        cache_manager.clear_stage_for_zone("reviews_scrape", "97067")
 
         remaining = sorted(f.name for f in reviews_dir.iterdir())
         assert remaining == [
             "reviews_90210_999.json",
         ]
 
-    def test_preserves_other_zipcode_files(self, cache_manager, tmp_path, monkeypatch):
-        """Files for other zipcodes are never touched."""
+    def test_preserves_other_zone_files(self, cache_manager, tmp_path, monkeypatch):
+        """Files for other zones are never touched."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
@@ -619,7 +619,7 @@ class TestClearStageForZipcodeMtime:
             },
         )
 
-        cache_manager.clear_stage_for_zipcode("search_results", "97067")
+        cache_manager.clear_stage_for_zone("search_results", "97067")
 
         assert os.path.exists(search_output_90210)
         assert not os.path.exists(str(search_dir / "search_results_97067.json"))
@@ -635,7 +635,7 @@ class TestClearStageForZipcodeMtime:
             },
         )
         # Should not raise
-        cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
+        cache_manager.clear_stage_for_zone("reviews_scrape", "97067")
 
     def test_details_stage_deletes_by_listing_id(
         self, cache_manager, tmp_path, monkeypatch
@@ -663,7 +663,7 @@ class TestClearStageForZipcodeMtime:
             },
         )
 
-        cache_manager.clear_stage_for_zipcode("details_scrape", "97067")
+        cache_manager.clear_stage_for_zone("details_scrape", "97067")
 
         remaining = sorted(f.name for f in details_dir.iterdir())
         assert remaining == ["property_details_999.json"]
@@ -690,7 +690,7 @@ class TestClearStageForZipcodeMtime:
             },
         )
 
-        cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
+        cache_manager.clear_stage_for_zone("reviews_scrape", "97067")
 
         assert reviews_dir.exists()
         assert reviews_dir.is_dir()

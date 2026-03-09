@@ -171,7 +171,7 @@ def mock_summary_files_dir(tmp_path, sample_property_summary):
     summary_dir = tmp_path / "outputs" / "05_listing_summaries"
     summary_dir.mkdir(parents=True)
 
-    # Create sample summary files for zipcode 97067
+    # Create sample summary files for zone 97067
     summaries = [
         (
             "listing_summary_97067_12345678.json",

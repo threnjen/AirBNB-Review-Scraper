@@ -98,17 +98,17 @@ class PipelineCacheManager(BaseModel):
     # Expected-output enumeration
     # ------------------------------------------------------------------
 
-    def expected_outputs(self, stage_name: str, zipcode: str) -> list[str]:
-        """Return the list of file paths a stage should produce for *zipcode*.
+    def expected_outputs(self, stage_name: str, zone_name: str) -> list[str]:
+        """Return the list of file paths a stage should produce for *zone_name*.
 
-        Fixed-count stages derive paths from *zipcode* alone.  Listing-dynamic
+        Fixed-count stages derive paths from *zone_name* alone.  Listing-dynamic
         stages (``airdna_data``, ``reviews_scrape``, ``details_scrape``,
         ``listing_summaries``) read the search-results file to enumerate
         listing IDs.
 
         Args:
             stage_name: Pipeline stage identifier.
-            zipcode: Active zipcode.
+            zone_name: Active search zone name.
 
         Returns:
             List of expected output file paths.  Empty if the stage is unknown
@@ -118,10 +118,10 @@ class PipelineCacheManager(BaseModel):
             search_dir = self.STAGE_OUTPUT_DIRS.get(
                 "search_results", "outputs/01_search_results"
             )
-            return [os.path.join(search_dir, f"search_results_{zipcode}.json")]
+            return [os.path.join(search_dir, f"search_results_{zone_name}.json")]
 
         if stage_name == "airdna_data":
-            listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+            listing_ids = self._get_listing_ids_for_zone(zone_name)
             if not listing_ids:
                 return []
             comp_dir = self.STAGE_OUTPUT_DIRS.get(
@@ -130,22 +130,23 @@ class PipelineCacheManager(BaseModel):
             files = [
                 os.path.join(comp_dir, f"listing_{lid}.json") for lid in listing_ids
             ]
-            files.append(os.path.join(comp_dir, f"comp_set_{zipcode}.json"))
+            files.append(os.path.join(comp_dir, f"comp_set_{zone_name}.json"))
             return files
 
         if stage_name == "reviews_scrape":
-            listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+            listing_ids = self._get_listing_ids_for_zone(zone_name)
             if not listing_ids:
                 return []
             reviews_dir = self.STAGE_OUTPUT_DIRS.get(
                 "reviews_scrape", "outputs/04_reviews_scrape"
             )
             return [
-                os.path.join(reviews_dir, f"reviews_{lid}.json") for lid in listing_ids
+                os.path.join(reviews_dir, f"reviews_{zone_name}_{lid}.json")
+                for lid in listing_ids
             ]
 
         if stage_name == "details_scrape":
-            listing_ids = self._get_listing_ids_for_zipcode(zipcode)
+            listing_ids = self._get_listing_ids_for_zone(zone_name)
             if not listing_ids:
                 return []
             details_dir = self.STAGE_OUTPUT_DIRS.get(
@@ -157,14 +158,14 @@ class PipelineCacheManager(BaseModel):
             ]
 
         if stage_name == "listing_summaries":
-            listing_ids = self._get_review_listing_ids_for_zipcode(zipcode)
+            listing_ids = self._get_review_listing_ids_for_zone(zone_name)
             if not listing_ids:
                 return []
             summaries_dir = self.STAGE_OUTPUT_DIRS.get(
                 "listing_summaries", "outputs/05_listing_summaries"
             )
             return [
-                os.path.join(summaries_dir, f"listing_summary_{zipcode}_{lid}.json")
+                os.path.join(summaries_dir, f"listing_summary_{lid}.json")
                 for lid in listing_ids
             ]
 
@@ -173,18 +174,18 @@ class PipelineCacheManager(BaseModel):
                 "details_results", "outputs/06_details_results"
             )
             return [
-                os.path.join(dr_dir, f"property_amenities_matrix_{zipcode}.csv"),
+                os.path.join(dr_dir, f"property_amenities_matrix_{zone_name}.csv"),
                 os.path.join(
-                    dr_dir, f"property_amenities_matrix_cleaned_{zipcode}.csv"
+                    dr_dir, f"property_amenities_matrix_cleaned_{zone_name}.csv"
                 ),
-                os.path.join(dr_dir, f"house_rules_details_{zipcode}.json"),
-                os.path.join(dr_dir, f"property_descriptions_{zipcode}.json"),
-                os.path.join(dr_dir, f"neighborhood_highlights_{zipcode}.json"),
+                os.path.join(dr_dir, f"house_rules_details_{zone_name}.json"),
+                os.path.join(dr_dir, f"property_descriptions_{zone_name}.json"),
+                os.path.join(dr_dir, f"neighborhood_highlights_{zone_name}.json"),
             ]
 
         if stage_name == "area_summary":
             return [
-                f"reports/area_summary_{zipcode}.md",
+                f"reports/area_summary_{zone_name}.md",
             ]
 
         if stage_name == "correlation_results":
@@ -194,9 +195,9 @@ class PipelineCacheManager(BaseModel):
             files: list[str] = []
             for metric in self.correlation_metrics:
                 files.append(
-                    os.path.join(cr_dir, f"correlation_stats_{metric}_{zipcode}.json")
+                    os.path.join(cr_dir, f"correlation_stats_{metric}_{zone_name}.json")
                 )
-                files.append(f"reports/correlation_insights_{metric}_{zipcode}.md")
+                files.append(f"reports/correlation_insights_{metric}_{zone_name}.md")
             return files
 
         if stage_name == "description_analysis":
@@ -204,8 +205,8 @@ class PipelineCacheManager(BaseModel):
                 "description_analysis", "outputs/09_description_analysis"
             )
             return [
-                os.path.join(da_dir, f"description_quality_stats_{zipcode}.json"),
-                f"reports/description_quality_{zipcode}.md",
+                os.path.join(da_dir, f"description_quality_stats_{zone_name}.json"),
+                f"reports/description_quality_{zone_name}.md",
             ]
 
         return []
@@ -252,7 +253,7 @@ class PipelineCacheManager(BaseModel):
 
         return self._is_file_fresh_by_mtime(file_path)
 
-    def is_stage_fresh(self, stage_name: str, zipcode: str | None = None) -> bool:
+    def is_stage_fresh(self, stage_name: str, zone_name: str | None = None) -> bool:
         """Check if an entire pipeline stage can be skipped.
 
         A stage is fresh if:
@@ -262,7 +263,7 @@ class PipelineCacheManager(BaseModel):
 
         Args:
             stage_name: Pipeline stage identifier (e.g. "airdna_data").
-            zipcode: Zipcode to scope the freshness check.
+            zone_name: Search zone name to scope the freshness check.
 
         Returns:
             True if the entire stage can be skipped.
@@ -274,10 +275,10 @@ class PipelineCacheManager(BaseModel):
             logger.info(f"Force refresh enabled for stage '{stage_name}'")
             return False
 
-        if zipcode is None:
+        if zone_name is None:
             return False
 
-        expected = self.expected_outputs(stage_name, zipcode)
+        expected = self.expected_outputs(stage_name, zone_name)
         if not expected:
             return False
 
@@ -287,17 +288,17 @@ class PipelineCacheManager(BaseModel):
 
         return True
 
-    def get_missing_outputs(self, stage_name: str, zipcode: str) -> list[str]:
+    def get_missing_outputs(self, stage_name: str, zone_name: str) -> list[str]:
         """Return expected output files that are missing or stale.
 
         Args:
             stage_name: Pipeline stage identifier.
-            zipcode: Active zipcode.
+            zone_name: Active search zone name.
 
         Returns:
             List of file paths that need to be (re)generated.
         """
-        expected = self.expected_outputs(stage_name, zipcode)
+        expected = self.expected_outputs(stage_name, zone_name)
         return [f for f in expected if not self._is_file_fresh_by_mtime(f)]
 
     # ------------------------------------------------------------------
@@ -308,13 +309,13 @@ class PipelineCacheManager(BaseModel):
         """Remove all files in a stage's output directory.
 
         .. deprecated::
-            Use :meth:`clear_stage_for_zipcode` for zipcode-scoped clearing.
+            Use :meth:`clear_stage_for_zone` for zone-scoped clearing.
 
         Args:
             stage_name: Pipeline stage identifier to clear.
         """
         warnings.warn(
-            "clear_stage is deprecated, use clear_stage_for_zipcode",
+            "clear_stage is deprecated, use clear_stage_for_zone",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -325,18 +326,18 @@ class PipelineCacheManager(BaseModel):
                 f"Wiped output directory '{output_dir}' for stage '{stage_name}'"
             )
 
-    def clear_stage_for_zipcode(self, stage_name: str, zipcode: str) -> None:
-        """Remove only the expected output files for *zipcode* within a stage.
+    def clear_stage_for_zone(self, stage_name: str, zone_name: str) -> None:
+        """Remove only the expected output files for *zone_name* within a stage.
 
         Uses :meth:`expected_outputs` to determine exactly which files belong
-        to the zipcode, then deletes only those.  Files for other zipcodes are
+        to the zone, then deletes only those.  Files for other zones are
         never touched.
 
         Args:
             stage_name: Pipeline stage identifier to clear.
-            zipcode: Zipcode whose outputs should be removed.
+            zone_name: Search zone whose outputs should be removed.
         """
-        expected = self.expected_outputs(stage_name, zipcode)
+        expected = self.expected_outputs(stage_name, zone_name)
         removed = 0
         for file_path in expected:
             if os.path.exists(file_path):
@@ -344,18 +345,18 @@ class PipelineCacheManager(BaseModel):
                 removed += 1
         if removed:
             logger.info(
-                f"Cleared {removed} files for zipcode {zipcode} in stage '{stage_name}'"
+                f"Cleared {removed} files for zone {zone_name} in stage '{stage_name}'"
             )
 
     # ------------------------------------------------------------------
     # Listing-ID helpers
     # ------------------------------------------------------------------
 
-    def _get_listing_ids_for_zipcode(self, zipcode: str) -> list[str]:
-        """Derive listing IDs from the search results file for a zipcode.
+    def _get_listing_ids_for_zone(self, zone_name: str) -> list[str]:
+        """Derive listing IDs from the search results file for a zone.
 
         Args:
-            zipcode: Zipcode whose search results are read.
+            zone_name: Search zone whose search results are read.
 
         Returns:
             List of listing ID strings.  Empty list if the file is missing.
@@ -363,7 +364,7 @@ class PipelineCacheManager(BaseModel):
         search_dir = self.STAGE_OUTPUT_DIRS.get(
             "search_results", "outputs/01_search_results"
         )
-        search_path = os.path.join(search_dir, f"search_results_{zipcode}.json")
+        search_path = os.path.join(search_dir, f"search_results_{zone_name}.json")
         if not os.path.isfile(search_path):
             logger.warning(
                 f"Search results file not found at {search_path} — "
@@ -379,17 +380,17 @@ class PipelineCacheManager(BaseModel):
                 if r.get("room_id") or r.get("id")
             ]
         except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Failed to read search results for {zipcode}: {e}")
+            logger.warning(f"Failed to read search results for {zone_name}: {e}")
             return []
 
-    def _get_review_listing_ids_for_zipcode(self, zipcode: str) -> list[str]:
-        """Derive listing IDs from review files on disk for a zipcode.
+    def _get_review_listing_ids_for_zone(self, zone_name: str) -> list[str]:
+        """Derive listing IDs from review files on disk for a zone.
 
         Scans the reviews output directory for files matching
-        ``reviews_*.json`` and extracts listing IDs from filenames.
+        ``reviews_{zone_name}_*.json`` and extracts listing IDs from filenames.
 
         Args:
-            zipcode: Zipcode to scope by.
+            zone_name: Search zone to scope by.
 
         Returns:
             List of listing ID strings.  Empty if no review files found.
@@ -397,11 +398,11 @@ class PipelineCacheManager(BaseModel):
         reviews_dir = self.STAGE_OUTPUT_DIRS.get(
             "reviews_scrape", "outputs/04_reviews_scrape"
         )
-        pattern = os.path.join(reviews_dir, f"reviews_*.json")
+        pattern = os.path.join(reviews_dir, f"reviews_{zone_name}_*.json")
         listing_ids = []
         for filepath in glob.glob(pattern):
             filename = os.path.basename(filepath)
-            # reviews_{listing_id}.json
+            # reviews_{zone_name}_{listing_id}.json
             parts = filename.replace(".json", "").split("_", 2)
             if len(parts) >= 3:
                 listing_ids.append(parts[2])
@@ -411,7 +412,7 @@ class PipelineCacheManager(BaseModel):
     # Stage decision
     # ------------------------------------------------------------------
 
-    def should_run_stage(self, stage_name: str, zipcode: str) -> str:
+    def should_run_stage(self, stage_name: str, zone_name: str) -> str:
         """Determine what action a stage should take.
 
         Returns one of:
@@ -419,11 +420,11 @@ class PipelineCacheManager(BaseModel):
         - ``"resume"``: Stage is incomplete but no force-refresh — resume
           without wiping existing outputs.
         - ``"clear_and_run"``: Force-refresh is active — wipe outputs for
-          this zipcode, then run from scratch.
+          this zone, then run from scratch.
 
         Args:
             stage_name: Pipeline stage identifier.
-            zipcode: Active zipcode.
+            zone_name: Active search zone name.
 
         Returns:
             Action string: ``"skip"``, ``"resume"``, or ``"clear_and_run"``.
@@ -431,7 +432,7 @@ class PipelineCacheManager(BaseModel):
         if self.force_refresh_flags.get(stage_name, False):
             return "clear_and_run"
 
-        if self.is_stage_fresh(stage_name, zipcode):
+        if self.is_stage_fresh(stage_name, zone_name):
             return "skip"
 
         return "resume"

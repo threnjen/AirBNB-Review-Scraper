@@ -17,7 +17,7 @@ STAGE = "airdna_data"
 OUTPUT_DIR = "outputs/03_airdna_data"
 
 
-def compile_airdna_data(zipcode: str, output_dir: str = OUTPUT_DIR) -> None:
+def compile_airdna_data(zone_name: str, output_dir: str = OUTPUT_DIR) -> None:
     """Merge per-listing JSON files into a single master comp set file."""
     merged = {}
     duplicates_skipped = 0
@@ -32,7 +32,7 @@ def compile_airdna_data(zipcode: str, output_dir: str = OUTPUT_DIR) -> None:
             else:
                 merged[listing_id] = details
 
-    master_path = os.path.join(output_dir, f"comp_set_{zipcode}.json")
+    master_path = os.path.join(output_dir, f"comp_set_{zone_name}.json")
     with open(master_path, "w", encoding="utf-8") as f:
         json.dump(merged, f, indent=4)
 
@@ -44,11 +44,11 @@ def compile_airdna_data(zipcode: str, output_dir: str = OUTPUT_DIR) -> None:
 
 def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     """Scrape AirDNA rentalizer data and compile into comp set."""
-    zipcode = config.get("zipcode", "97067")
+    zone_name = config.get("search_zone_name")
     cdp_url = config.get("airdna_cdp_url", "http://localhost:9222")
     inspect_mode = config.get("airdna_inspect_mode", False)
 
-    action = pipeline_cache.should_run_stage(STAGE, zipcode)
+    action = pipeline_cache.should_run_stage(STAGE, zone_name)
 
     if action == "skip":
         logger.info("Skipping AirDNA scraping — cached outputs are fresh.")
@@ -59,7 +59,7 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     listing_ids = [i for i in listing_ids if i]
 
     if action == "clear_and_run":
-        pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
+        pipeline_cache.clear_stage_for_zone(STAGE, zone_name)
 
     airdna_scraper = AirDNAScraper(
         cdp_url=cdp_url,
@@ -68,6 +68,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         pipeline_cache=pipeline_cache,
     )
     airdna_scraper.run()
-    compile_airdna_data(zipcode)
+    compile_airdna_data(zone_name)
     pipeline_cache.notify_stage_ran(STAGE)
     logger.info("AirDNA per-listing scraping completed.")

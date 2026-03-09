@@ -17,11 +17,11 @@ from scraper.reviews_scraper import (
     scrape_reviews,
 )
 
-ZIPCODE = "97067"
+ZONE_NAME = "97067"
 LISTING_ID = "123456789"
 SEARCH_RESULTS = [{"room_id": LISTING_ID}]
 OUTPUT_DIR = "outputs/04_reviews_scrape"
-OUTPUT_PATH = f"{OUTPUT_DIR}/reviews_{LISTING_ID}.json"
+OUTPUT_PATH = f"{OUTPUT_DIR}/reviews_{ZONE_NAME}_{LISTING_ID}.json"
 
 
 def _make_search_results(n: int) -> list[dict]:
@@ -30,7 +30,7 @@ def _make_search_results(n: int) -> list[dict]:
 
 
 def _output_path_for(listing_id: str) -> str:
-    return f"{OUTPUT_DIR}/reviews_{listing_id}.json"
+    return f"{OUTPUT_DIR}/reviews_{ZONE_NAME}_{listing_id}.json"
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +50,7 @@ class TestSkipEmptyReviews:
     @patch("scraper.reviews_scraper.pyairbnb.get_reviews", return_value=[])
     def test_no_file_written_for_zero_reviews(self, mock_get, mock_sleep):
         """When pyairbnb returns an empty list, no file is created."""
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         assert not os.path.exists(OUTPUT_PATH)
 
@@ -61,7 +61,7 @@ class TestSkipEmptyReviews:
     )
     def test_file_written_when_reviews_exist(self, mock_get, mock_sleep):
         """When pyairbnb returns reviews, the file is created."""
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         assert os.path.exists(OUTPUT_PATH)
         with open(OUTPUT_PATH) as f:
@@ -83,7 +83,7 @@ class TestRetryOnFailure:
 
         # Disable pass-level retry so we only test per-request retry.
         with patch("scraper.reviews_scraper.FAILURE_THRESHOLD", 1.0):
-            scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+            scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         assert mock_get.call_count == 3
         assert not os.path.exists(OUTPUT_PATH)
@@ -97,7 +97,7 @@ class TestRetryOnFailure:
             [{"comments": "Nice place", "rating": 4}],
         ]
 
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         assert mock_get.call_count == 2
         assert os.path.exists(OUTPUT_PATH)
@@ -114,7 +114,7 @@ class TestRetryOnFailure:
         mock_get.side_effect = Exception("persistent error")
 
         with patch("scraper.reviews_scraper.FAILURE_THRESHOLD", 1.0):
-            scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+            scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         # Collect the sleep calls made for retry backoff (2s, 4s).
         backoff_calls = [
@@ -134,7 +134,7 @@ class TestInterRequestDelay:
     )
     def test_sleep_range_is_3_to_6(self, mock_get, mock_sleep, mock_uniform):
         """random.uniform is called with (3, 6) for inter-request delay."""
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         mock_uniform.assert_called_with(3, 6)
 
@@ -188,7 +188,7 @@ class TestPassLevelRetry:
 
         original = mod.FAILURE_THRESHOLD
         try:
-            scrape_reviews(ZIPCODE, results, num_listings=5)
+            scrape_reviews(ZONE_NAME, results, num_listings=5)
         finally:
             mod.FAILURE_THRESHOLD = original
 
@@ -215,7 +215,7 @@ class TestPipelineCacheIntegration:
         cache = MagicMock()
         cache.is_file_fresh.return_value = True  # simulate fresh cached file
 
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1, pipeline_cache=cache)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1, pipeline_cache=cache)
 
         cache.is_file_fresh.assert_called_with("reviews_scrape", OUTPUT_PATH)
         # Listing was cached — pyairbnb.get_reviews should NOT be called
@@ -233,7 +233,7 @@ class TestPipelineCacheIntegration:
         cache = MagicMock()
         cache.is_file_fresh.return_value = False
 
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1, pipeline_cache=cache)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1, pipeline_cache=cache)
 
         mock_get.assert_called_once()
 
@@ -245,7 +245,7 @@ class TestPipelineCacheIntegration:
     def test_no_cache_falls_back_to_os_path_exists(self, mock_get, mock_sleep):
         """Without pipeline_cache, falls back to os.path.exists."""
         # No file on disk → listing should be scraped
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1, pipeline_cache=None)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1, pipeline_cache=None)
 
         mock_get.assert_called_once()
 
@@ -265,7 +265,7 @@ class TestPipelineCacheIntegration:
 
         mock_get.side_effect = side_effect
 
-        scrape_reviews(ZIPCODE, results, num_listings=10)
+        scrape_reviews(ZONE_NAME, results, num_listings=10)
 
         # No PASS_RETRY_WAIT_SECONDS sleep should have occurred
         cooldown_calls = [
@@ -297,7 +297,7 @@ class TestPipelineCacheIntegration:
 
         mock_get.side_effect = side_effect
 
-        scrape_reviews(ZIPCODE, results, num_listings=3)
+        scrape_reviews(ZONE_NAME, results, num_listings=3)
 
         # All 3 listings should be resolved
         for lid in ("1", "2", "3"):
@@ -315,7 +315,7 @@ class TestCacheSkip:
         with open(OUTPUT_PATH, "w") as f:
             json.dump({LISTING_ID: [{"review": "Old", "rating": 5}]}, f)
 
-        scrape_reviews(ZIPCODE, SEARCH_RESULTS, num_listings=1)
+        scrape_reviews(ZONE_NAME, SEARCH_RESULTS, num_listings=1)
 
         mock_get.assert_not_called()
 
@@ -332,7 +332,7 @@ class TestCacheSkip:
 
         mock_get.return_value = [{"comments": "Nice", "rating": 5}]
 
-        scrape_reviews(ZIPCODE, results, num_listings=3)
+        scrape_reviews(ZONE_NAME, results, num_listings=3)
 
         assert mock_get.call_count == 2
 
@@ -359,7 +359,7 @@ class TestProgressCounter:
         import logging
 
         with caplog.at_level(logging.INFO, logger="scraper.reviews_scraper"):
-            scrape_reviews(ZIPCODE, results, num_listings=5)
+            scrape_reviews(ZONE_NAME, results, num_listings=5)
 
         log_text = caplog.text
         assert "5 listings in the area" in log_text
@@ -383,7 +383,7 @@ class TestProgressCounter:
         import logging
 
         with caplog.at_level(logging.INFO, logger="scraper.reviews_scraper"):
-            scrape_reviews(ZIPCODE, results, num_listings=5)
+            scrape_reviews(ZONE_NAME, results, num_listings=5)
 
         log_text = caplog.text
         # Counter should show overall progress: resolved_at_pass_start(3) + scrape_index
