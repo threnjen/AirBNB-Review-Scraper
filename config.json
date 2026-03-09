@@ -1,32 +1,31 @@
 {
-    "pipeline_cache_enabled": true,
     "pipeline_cache_ttl_days": 90,
     "search_results": true,
-    "force_refresh_search_results": false,
     "details_scrape": true,
-    "force_refresh_details_scrape": false,
-    "comp_sets": true,
-    "force_refresh_comp_sets": false,
+    "airdna_data": true,
     "reviews_scrape": true,
-    "force_refresh_reviews_scrape": false,
     "details_results": true,
-    "force_refresh_details_results": false,
+    "listing_summaries": true,
+    "area_summary": true,
+    "correlation_results": true,
+    "description_analysis": true,
     "min_days_available": 100,
     "airdna_cdp_url": "http://localhost:9222",
     "airdna_inspect_mode": false,
-    "listing_summaries": true,
-    "force_refresh_listing_summaries": false,
-    "area_summary": true,
-    "force_refresh_area_summary": false,
-    "correlation_results": true,
-    "force_refresh_correlation_results": false,
     "correlation_metrics": [
         "adr",
         "occupancy"
     ],
     "correlation_top_percentile": 25,
     "correlation_bottom_percentile": 25,
-    "description_analysis": true,
+    "force_refresh_search_results": false,
+    "force_refresh_details_scrape": false,
+    "force_refresh_airdna_data": false,
+    "force_refresh_reviews_scrape": false,
+    "force_refresh_details_results": false,
+    "force_refresh_listing_summaries": false,
+    "force_refresh_area_summary": false,
+    "force_refresh_correlation_results": false,
     "force_refresh_description_analysis": false,
     "zipcodes": [
         "97011",
@@ -34,6 +33,8 @@
         "97049",
         "97028"
     ],
+    "dest_lat": 45.3131819,
+    "dest_long": -121.8263023,
     "iso_code": "us",
     "num_listings_to_summarize": 100000,
     "num_listings_to_search": 100000,
@@ -46,5 +47,6 @@
         "max_tokens": 16000,
         "chunk_token_limit": 120000,
         "enable_cost_tracking": true
-    }
+    },
+    "pipeline_cache_enabled": true
 }

@@ -17,7 +17,7 @@ AirBNB-Review-Scraper/
 │   ├── __init__.py             # Shared step helper: load_search_results()
 │   ├── 01_search_results.py
 │   ├── 02_details_scrape.py
-│   ├── 03_comp_sets.py
+│   ├── 03_airdna_data.py
 │   ├── 04_reviews_scrape.py
 │   ├── 05_details_results.py
 │   ├── 06_listing_summaries.py
@@ -55,7 +55,7 @@ AirBNB-Review-Scraper/
 ├── outputs/                    # Pipeline stage outputs (gitignored data files)
 │   ├── 01_search_results/      # search_results_{zipcode}.json
 │   ├── 02_details_scrape/      # property_details_{id}.json (per listing)
-│   ├── 03_comp_sets/           # listing_{id}.json + comp_set_{zipcode}.json
+│   ├── 03_airdna_data/           # listing_{id}.json + comp_set_{zipcode}.json
 │   ├── 04_reviews_scrape/      # reviews_{zipcode}_{id}.json (per listing)
 │   ├── 05_details_results/     # property_amenities_matrix_{zipcode}.csv, descriptions JSON, etc.
 │   ├── 06_listing_summaries/   # listing_summary_{zipcode}_{id}.json (per listing)

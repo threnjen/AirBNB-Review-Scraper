@@ -50,13 +50,13 @@ class TestExpectedOutputs:
             },
         )
 
-        result = cache_manager.expected_outputs("comp_sets", "97067")
-        assert "outputs/03_comp_sets/comp_set_97067.json" in result
-        assert "outputs/03_comp_sets/listing_111.json" in result
-        assert "outputs/03_comp_sets/listing_222.json" in result
+        result = cache_manager.expected_outputs("airdna_data", "97067")
+        assert "outputs/03_airdna_data/comp_set_97067.json" in result
+        assert "outputs/03_airdna_data/listing_111.json" in result
+        assert "outputs/03_airdna_data/listing_222.json" in result
 
     def test_airdna_missing_search_results_returns_empty(self, cache_manager):
-        result = cache_manager.expected_outputs("comp_sets", "99999")
+        result = cache_manager.expected_outputs("airdna_data", "99999")
         assert result == []
 
     def test_reviews_returns_per_listing_files(
@@ -357,7 +357,7 @@ class TestIsStageFreshMtime:
 
     def test_empty_expected_outputs_returns_false(self, cache_manager):
         """Stage with no expected outputs (e.g. missing search results) is not fresh."""
-        assert cache_manager.is_stage_fresh("comp_sets", "99999") is False
+        assert cache_manager.is_stage_fresh("airdna_data", "99999") is False
 
     def test_force_refresh_overrides_freshness(self, tmp_path, monkeypatch):
         with patch("utils.pipeline_cache_manager.load_config") as mock_load:

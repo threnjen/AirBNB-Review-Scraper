@@ -57,7 +57,7 @@
 - Local filesystem only — all pipeline outputs are JSON files written to `outputs/` subdirectories:
   - `outputs/01_search_results/` — Airbnb search results per zipcode
   - `outputs/02_details_scrape/` — Per-listing property details JSON
-  - `outputs/03_comp_sets/` — AirDNA metrics per listing + merged comp set
+  - `outputs/03_airdna_data/` — AirDNA metrics per listing + merged comp set
   - `outputs/04_reviews_scrape/` — Per-listing review arrays JSON
   - `outputs/05_details_results/` — Processed amenity matrices (CSV) and description/rules JSON
   - `outputs/06_listing_summaries/` — Per-listing OpenAI review summaries JSON

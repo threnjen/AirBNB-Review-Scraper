@@ -28,7 +28,7 @@ class TestPipelineCacheManager:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
-                "force_refresh_comp_sets": False,
+                "force_refresh_airdna_data": False,
                 "force_refresh_search_results": False,
                 "force_refresh_reviews_scrape": False,
                 "force_refresh_details_scrape": False,
@@ -211,7 +211,7 @@ class TestPipelineCacheManager:
         assert cache_manager.force_refresh_flags.get("details_results") is False
         assert cache_manager.force_refresh_flags.get("reviews_scrape") is False
 
-        assert cache_manager.force_refresh_flags.get("comp_sets") is False
+        assert cache_manager.force_refresh_flags.get("airdna_data") is False
         assert cache_manager.force_refresh_flags.get("listing_summaries") is False
         assert cache_manager.force_refresh_flags.get("area_summary") is True
         assert cache_manager.force_refresh_flags.get("correlation_results") is True
@@ -235,7 +235,7 @@ class TestPipelineCacheManager:
             "details_scrape",
             "details_results",
             "reviews_scrape",
-            "comp_sets",
+            "airdna_data",
             "listing_summaries",
         ]:
             assert cache_manager.force_refresh_flags.get(stage) is False, (
@@ -279,7 +279,7 @@ class TestPipelineCacheManager:
         assert cache_manager.force_refresh_flags.get("details_scrape") is False
         assert cache_manager.force_refresh_flags.get("details_results") is False
         assert cache_manager.force_refresh_flags.get("reviews_scrape") is False
-        assert cache_manager.force_refresh_flags.get("comp_sets") is False
+        assert cache_manager.force_refresh_flags.get("airdna_data") is False
         assert cache_manager.force_refresh_flags.get("listing_summaries") is False
         assert cache_manager.force_refresh_flags.get("area_summary") is True
         assert cache_manager.force_refresh_flags.get("correlation_results") is True
@@ -293,7 +293,7 @@ class TestPipelineCacheManager:
             "details_scrape",
             "details_results",
             "reviews_scrape",
-            "comp_sets",
+            "airdna_data",
             "listing_summaries",
         ]:
             assert cache_manager.force_refresh_flags.get(stage) is False
@@ -359,7 +359,7 @@ class TestPipelineCacheManager:
         assert manager.force_refresh_flags["reviews_scrape"] is True
 
         # Non-analysis downstream stages are NOT cascaded
-        assert manager.force_refresh_flags["comp_sets"] is False
+        assert manager.force_refresh_flags["airdna_data"] is False
         assert manager.force_refresh_flags["listing_summaries"] is False
 
         # Analysis stages ARE cascaded
@@ -394,7 +394,7 @@ class TestZipcodeScopedCache:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
                 "pipeline_cache_ttl_days": 7,
-                "force_refresh_comp_sets": False,
+                "force_refresh_airdna_data": False,
                 "force_refresh_search_results": False,
                 "force_refresh_reviews_scrape": False,
                 "force_refresh_details_scrape": False,

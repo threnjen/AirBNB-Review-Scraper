@@ -12,11 +12,11 @@
 - Impact: Every run re-checks disk for existing files via `os.path.exists` rather than the TTL-aware `pipeline_cache.is_file_fresh`, so stale-file detection for reviews ignores the TTL window entirely.
 - Fix approach: Add a `pipeline_cache.is_file_fresh("reviews_scrape", output_path)` guard inside the per-listing loop, mirroring the pattern in `scraper/details_scraper.py` lines 28-33.
 
-**`compile_comp_sets` duplicated between `main.py` and `steps/03_comp_sets.py`:**
-- Issue: An identical `compile_comp_sets` function exists in both `main.py` (lines 52-71) and `steps/03_comp_sets.py`. The comment in `main.py` acknowledges this: `# ----- kept for test_compile_comp_sets -----`.
-- Files: `main.py`, `steps/03_comp_sets.py`
-- Impact: Two divergent copies will drift. Changes to the step version won't reach the `main.py` version tested by `tests/unit/test_compile_comp_sets.py`.
-- Fix approach: Update `test_compile_comp_sets.py` to import from `steps.03_comp_sets`, then remove the copy from `main.py`.
+**`compile_airdna_data` duplicated between `main.py` and `steps/03_airdna_data.py`:**
+- Issue: An identical `compile_airdna_data` function exists in both `main.py` (lines 52-71) and `steps/03_airdna_data.py`. The comment in `main.py` acknowledges this: `# ----- kept for test_compile_airdna_data -----`.
+- Files: `main.py`, `steps/03_airdna_data.py`
+- Impact: Two divergent copies will drift. Changes to the step version won't reach the `main.py` version tested by `tests/unit/test_compile_airdna_data.py`.
+- Fix approach: Update `test_compile_airdna_data.py` to import from `steps.03_airdna_data`, then remove the copy from `main.py`.
 
 **`LY_Revenue` field always hardcoded to `0.0`:**
 - Issue: `AirDNAScraper.scrape_listing` always sets `"LY_Revenue": 0.0` (lines 377, 351 in `scraper/airdna_scraper.py`). Last-year revenue is never extracted from the AirDNA page.
@@ -191,7 +191,7 @@
 
 **`playwright` CDP connection depends on a user-managed Chrome session:**
 - Risk: AirDNA scraping depends on the user manually launching Chrome with `--remote-debugging-port=9222` and being authenticated. Session expiry, Chrome updates, or AirDNA UI redesigns will break the scraper silently (empty metrics returned, not an exception).
-- Impact: Step 03 (`comp_sets`) produces zero-value data silently for all affected listings.
+- Impact: Step 03 (`airdna_data`) produces zero-value data silently for all affected listings.
 - Migration plan: Add an authenticated session pre-check before the scraping loop begins; abort and log an error rather than silently recording zeros.
 
 ---

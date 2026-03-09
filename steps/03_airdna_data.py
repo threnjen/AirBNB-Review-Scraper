@@ -13,11 +13,11 @@ from utils.pipeline_cache_manager import PipelineCacheManager
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
-STAGE = "comp_sets"
-OUTPUT_DIR = "outputs/03_comp_sets"
+STAGE = "airdna_data"
+OUTPUT_DIR = "outputs/03_airdna_data"
 
 
-def compile_comp_sets(zipcode: str, output_dir: str = OUTPUT_DIR) -> None:
+def compile_airdna_data(zipcode: str, output_dir: str = OUTPUT_DIR) -> None:
     """Merge per-listing JSON files into a single master comp set file."""
     merged = {}
     duplicates_skipped = 0
@@ -68,6 +68,6 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         pipeline_cache=pipeline_cache,
     )
     airdna_scraper.run()
-    compile_comp_sets(zipcode)
+    compile_airdna_data(zipcode)
     pipeline_cache.notify_stage_ran(STAGE)
     logger.info("AirDNA per-listing scraping completed.")

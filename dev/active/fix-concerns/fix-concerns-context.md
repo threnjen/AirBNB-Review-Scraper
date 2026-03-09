@@ -31,7 +31,7 @@ A 9-stage sequential ETL pipeline that scrapes Airbnb/AirDNA listing data, proce
 ### Orchestrator
 | File | Concerns | Steps |
 |------|----------|-------|
-| `main.py` | Duplicated `compile_comp_sets` | 4.2 |
+| `main.py` | Duplicated `compile_airdna_data` | 4.2 |
 
 ### Tests
 | File | Covers Steps |
@@ -44,7 +44,7 @@ A 9-stage sequential ETL pipeline that scrapes Airbnb/AirDNA listing data, proce
 | `tests/unit/test_cost_tracker.py` | 2.2 |
 | `tests/unit/test_area_review_aggregator.py` | 3.1 |
 | `tests/unit/test_pipeline_cache_manager.py` | 3.3, 3.4, 3.5 |
-| `tests/unit/test_compile_comp_sets.py` | 4.2 |
+| `tests/unit/test_compile_airdna_data.py` | 4.2 |
 
 ## Existing Patterns to Follow
 
@@ -81,7 +81,7 @@ Check `os.path.isdir(...)` before calling `os.listdir(...)`. Replicate in `area_
 ## Dependencies Between Steps
 
 - Steps 1.1 and 1.2 should be done together (same function, same refactor)
-- Step 4.2 (remove dup `compile_comp_sets`) requires updating test import first
+- Step 4.2 (remove dup `compile_airdna_data`) requires updating test import first
 - Step 2.3 (config path anchoring) is cross-cutting; all other steps should land first
 - Step 3.2 requires reading `prompts/prompt.json` to determine structural markers
 - Steps 4.4 and 4.5 touch the same file; combine into one commit

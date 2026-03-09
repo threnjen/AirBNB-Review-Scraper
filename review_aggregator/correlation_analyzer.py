@@ -139,7 +139,7 @@ class CorrelationAnalyzer(BaseModel):
         if column not in df.columns:
             logger.warning(
                 f"Column '{column}' not found in data. "
-                f"Run with comp_sets: true to generate AirDNA financial data."
+                f"Run with airdna_data: true to generate AirDNA financial data."
             )
             return pd.DataFrame(), pd.DataFrame(), 0.0, 0.0
 

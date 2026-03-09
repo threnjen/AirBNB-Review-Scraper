@@ -48,7 +48,7 @@ tests/
 │   ├── __init__.py
 │   ├── test_area_review_aggregator.py
 │   ├── test_airdna_scraper.py
-│   ├── test_compile_comp_sets.py
+│   ├── test_compile_airdna_data.py
 │   ├── test_correlation_analyzer.py
 │   ├── test_cost_tracker.py
 │   ├── test_description_analyzer.py     # TDD: tests written before implementation

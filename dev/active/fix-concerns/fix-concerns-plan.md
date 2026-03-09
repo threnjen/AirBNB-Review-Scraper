@@ -111,7 +111,7 @@ Address all 24 concerns across 5 categories in 5 phases, prioritized by severity
 **Goal**: Remove duplication, wire up unused parameters, hoist repeated I/O out of loops.
 **Success Criteria**:
 - `reviews_scraper` uses `pipeline_cache.is_file_fresh()` for cache decisions
-- Single `compile_comp_sets` definition lives in `steps/03_comp_sets.py`; test imports from there
+- Single `compile_airdna_data` definition lives in `steps/03_airdna_data.py`; test imports from there
 - `config.json` and `prompts/prompt.json` loaded once per run, not per-listing
 - `LY_Revenue` field is documented as unsupported
 
@@ -122,10 +122,10 @@ Address all 24 concerns across 5 categories in 5 phases, prioritized by severity
 - **Change**: Replace `os.path.exists(output_path)` with `pipeline_cache.is_file_fresh("reviews_scrape", output_path)` when `pipeline_cache` is provided. Fall back to `os.path.exists` when None.
 - **Test**: Add test verifying `is_file_fresh` called when cache is provided.
 
-### 4.2 — Remove duplicated `compile_comp_sets` from `main.py`
-- **Files**: `main.py` lines 48–71; `tests/unit/test_compile_comp_sets.py` line 18
-- **Change**: Update test to import from `steps.03_comp_sets` (that version takes `zipcode: str`, not `self`). Adjust test fixture. Then delete the method + comment from `main.py`.
-- **Test**: Re-run `tests/unit/test_compile_comp_sets.py`.
+### 4.2 — Remove duplicated `compile_airdna_data` from `main.py`
+- **Files**: `main.py` lines 48–71; `tests/unit/test_compile_airdna_data.py` line 18
+- **Change**: Update test to import from `steps.03_airdna_data` (that version takes `zipcode: str`, not `self`). Adjust test fixture. Then delete the method + comment from `main.py`.
+- **Test**: Re-run `tests/unit/test_compile_airdna_data.py`.
 
 ### 4.3 — Document `LY_Revenue` field as unsupported
 - **File**: `scraper/airdna_scraper.py` lines 360, 376

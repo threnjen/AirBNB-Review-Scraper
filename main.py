@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 PIPELINE_STEPS = [
     ("steps.01_search_results", "search_results"),
     ("steps.02_details_scrape", "details_scrape"),
-    ("steps.03_comp_sets", "comp_sets"),
+    ("steps.03_airdna_data", "airdna_data"),
     ("steps.04_reviews_scrape", "reviews_scrape"),
     ("steps.05_details_results", "details_results"),
     ("steps.06_listing_summaries", "listing_summaries"),
@@ -32,8 +32,8 @@ class AirBnbReviewAggregator:
     # --- public properties (kept for backwards compat / tests) ---
 
     @property
-    def zipcode(self) -> str:
-        return self.config.get("zipcode", "97067")
+    def zipcodes(self) -> list:
+        return self.config.get("zipcodes", [])
 
     @property
     def iso_code(self) -> str:

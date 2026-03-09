@@ -135,7 +135,7 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 |-----|------|-------------|
 | `search_results` | bool | Search for Airbnb listings by zipcode |
 | `details_scrape` | bool | Scrape property details (amenities, rules) |
-| `comp_sets` | bool | Scrape AirDNA comp sets for property metrics |
+| `airdna_data` | bool | Scrape AirDNA comp sets for property metrics |
 | `reviews_scrape` | bool | Scrape reviews for listings in the zipcode |
 | `details_results` | bool | Transform scraped details + AirDNA financials into structured datasets |
 | `listing_summaries` | bool | Generate AI summaries for each property |
@@ -143,9 +143,9 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 | `correlation_results` | bool | Run correlation analysis of amenities/capacity vs. ADR and Occupancy |
 | `description_analysis` | bool | Run description quality scoring and regression analysis |
 
-**Stage dependencies:** Stages run in order and depend on upstream outputs. Stages 1–5 produce the raw data; stages 6–9 consume it. For example, `listing_summaries` (6) requires `search_results` (1) and `reviews_scrape` (4); `correlation_results` (8) and `description_analysis` (9) require `details_results` (5) and `comp_sets` (3). If you enable a downstream stage without having run its upstream stages first, the pipeline will fail or produce empty results.
+**Stage dependencies:** Stages run in order and depend on upstream outputs. Stages 1–5 produce the raw data; stages 6–9 consume it. For example, `listing_summaries` (6) requires `search_results` (1) and `reviews_scrape` (4); `correlation_results` (8) and `description_analysis` (9) require `details_results` (5) and `airdna_data` (3). If you enable a downstream stage without having run its upstream stages first, the pipeline will fail or produce empty results.
 
-**AirDNA data required for stages 8–9:** The `correlation_results` and `description_analysis` stages silently filter out properties without AirDNA financial data. If you skip the `comp_sets` stage, these analysis stages will have no properties to analyze. Run `comp_sets` first to populate AirDNA metrics.
+**AirDNA data required for stages 8–9:** The `correlation_results` and `description_analysis` stages silently filter out properties without AirDNA financial data. If you skip the `airdna_data` stage, these analysis stages will have no properties to analyze. Run `airdna_data` first to populate AirDNA metrics.
 
 **Entire-home filter:** The `details_results` stage only includes listings with room type "Entire home/apt". Shared rooms, private rooms, and hotel rooms are silently excluded. All downstream analysis operates on entire-home listings only.
 
@@ -201,7 +201,7 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 | `force_refresh_details_scrape` | bool | `false` | Force re-scrape all property details |
 | `force_refresh_details_results` | bool | `false` | Force rebuild details fileset |
 | `force_refresh_reviews_scrape` | bool | `false` | Force re-scrape all reviews |
-| `force_refresh_comp_sets` | bool | `false` | Force re-run AirDNA scraping even if cached |
+| `force_refresh_airdna_data` | bool | `false` | Force re-run AirDNA scraping even if cached |
 | `force_refresh_listing_summaries` | bool | `false` | Force regenerate property summaries |
 | `force_refresh_area_summary` | bool | `false` | Force regenerate area summary + data extraction |
 | `force_refresh_correlation_results` | bool | `false` | Force re-run correlation analysis |
@@ -249,7 +249,7 @@ Enrich each discovered listing with financial metrics (ADR, Occupancy, Revenue, 
 
 **Run:**
 ```bash
-# Set config.json: "comp_sets": true
+# Set config.json: "airdna_data": true
 pipenv run python main.py
 # Or:
 make scrape-airdna
@@ -257,7 +257,7 @@ make scrape-airdna
 
 The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}` for each listing and extracts header metrics (Bedrooms, Bathrooms, Max Guests, Rating, Review Count) and KPI cards (Revenue, Days Available, Annual Revenue, Occupancy, ADR). All listings are saved regardless of Days Available; filtering by `min_days_available` (default: 100) is applied later when the cleaned amenities matrix is built in the `details_results` stage.
 
-**Output:** `listing_{id}.json` — one file per listing in `outputs/03_comp_sets/`:
+**Output:** `listing_{id}.json` — one file per listing in `outputs/03_airdna_data/`:
 ```json
 {
     "1050769200886027711": {"ADR": 487.5, "Occupancy": 32, "Revenue": 51700.0, "Days_Available": 333, "Bedrooms": 4, "Bathrooms": 3, "Max_Guests": 15, "Rating": 4.7, "Review_Count": 287, "LY_Revenue": 0.0}
@@ -295,7 +295,7 @@ Enable all stages in `config.json`:
   "details_scrape": true,
   "details_results": true,
   "reviews_scrape": true,
-  "comp_sets": true,
+  "airdna_data": true,
   "listing_summaries": true,
   "area_summary": true,
   "correlation_results": true,
@@ -329,7 +329,7 @@ Zip Code + config.json
 ┌───────────────────────────────────────┐
 │  3. Comp Sets (AirDNA)                │
 │     Playwright/CDP → Chrome → AirDNA  │
-│     → outputs/03_comp_sets/           │
+│     → outputs/03_airdna_data/           │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
@@ -378,7 +378,7 @@ Zip Code + config.json
 |-----------|---------|
 | `outputs/01_search_results/` | Search results by zipcode |
 | `outputs/02_details_scrape/` | Property details (amenities, rules, descriptions) |
-| `outputs/03_comp_sets/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
+| `outputs/03_airdna_data/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
 | `outputs/04_reviews_scrape/` | Raw review JSON per listing |
 | `outputs/05_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
 | `outputs/06_listing_summaries/` | AI-generated summary per property |
@@ -397,7 +397,7 @@ main.py                          # Entry point — config-driven pipeline orches
 │   ├── __init__.py              # Shared helper (load_search_results)
 │   ├── 01_search_results.py     # Listing discovery by zipcode
 │   ├── 02_details_scrape.py     # Scrape property details
-│   ├── 03_comp_sets.py          # AirDNA per-listing lookup + master comp set
+│   ├── 03_airdna_data.py          # AirDNA per-listing lookup + master comp set
 │   ├── 04_reviews_scrape.py     # Scrape reviews per listing
 │   ├── 05_details_results.py    # Transform details + AirDNA → structured data
 │   ├── 06_listing_summaries.py  # Per-property AI summaries
@@ -470,7 +470,7 @@ make coverage
 |---------|-------|----------|
 | AirDNA scraper can't connect | Chrome not running with `--remote-debugging-port` or regular Chrome already open | Quit Chrome fully (Cmd+Q), then `make chrome-debug` |
 | AirDNA returns empty results | Rate limiting or session expired | Wait 3 minutes and retry; re-login to AirDNA in the debug Chrome window |
-| Correlation/description analysis produces empty results | Missing AirDNA data or too few properties | Ensure `comp_sets` stage ran first; check that the zip code has enough entire-home listings (4+ for correlation, 161+ for full OLS regression) |
+| Correlation/description analysis produces empty results | Missing AirDNA data or too few properties | Ensure `airdna_data` stage ran first; check that the zip code has enough entire-home listings (4+ for correlation, 161+ for full OLS regression) |
 | OpenAI API errors | Insufficient credits or rate limits | Check your OpenAI balance; the pipeline retries 3x with exponential backoff automatically |
 | Search returns fewer listings than expected | `pyairbnb` caps at ~280 listings per geographic bounding box | This is a library limitation; choose smaller/more specific zip codes if needed |
 | `make chrome-debug` hangs | Chrome debug port already in use | Quit all Chrome processes and retry |

@@ -416,7 +416,7 @@ class TestPipelineCacheIntegration:
         cache.cascade_force_refresh("reviews_scrape")
 
         # Non-analysis downstream stages are NOT cascaded
-        assert cache.force_refresh_flags["comp_sets"] is False
+        assert cache.force_refresh_flags["airdna_data"] is False
         assert cache.force_refresh_flags["listing_summaries"] is False
 
         # Analysis stages ARE cascaded and therefore stale
@@ -424,3 +424,111 @@ class TestPipelineCacheIntegration:
         assert cache.force_refresh_flags["area_summary"] is True
         assert cache.force_refresh_flags["correlation_results"] is True
         assert cache.force_refresh_flags["description_analysis"] is True
+
+
+class TestMultiZipcodeOrchestration:
+    """Integration tests for multi-zipcode two-phase pipeline execution."""
+
+    def test_scraping_completes_before_processing(self):
+        """All scraping steps for all zipcodes run before any processing step."""
+        call_log = []
+
+        def make_mock_module(module_name):
+            mock_mod = MagicMock()
+
+            def mock_run(config, pipeline_cache):
+                call_log.append((module_name, config.get("zipcode")))
+
+            mock_mod.run = mock_run
+            return mock_mod
+
+        mock_config = {
+            "zipcodes": ["97011", "97067"],
+            "search_results": True,
+            "details_scrape": True,
+            "airdna_data": True,
+            "reviews_scrape": True,
+            "listing_summaries": True,
+            "details_results": True,
+            "area_summary": True,
+            "correlation_results": True,
+            "description_analysis": True,
+            "pipeline_cache_enabled": False,
+        }
+
+        with patch("main.load_config", return_value=mock_config):
+            with patch(
+                "main.importlib.import_module", side_effect=make_mock_module
+            ):
+                from main import AirBnbReviewAggregator
+
+                agg = AirBnbReviewAggregator()
+                agg.run_tasks_from_config()
+
+        # Identify scraping vs processing calls
+        from main import SCRAPING_STEPS, PROCESSING_STEPS
+
+        scraping_modules = {mod for mod, _ in SCRAPING_STEPS}
+        processing_modules = {mod for mod, _ in PROCESSING_STEPS}
+
+        scraping_indices = [
+            i for i, (mod, _) in enumerate(call_log) if mod in scraping_modules
+        ]
+        processing_indices = [
+            i for i, (mod, _) in enumerate(call_log) if mod in processing_modules
+        ]
+
+        assert scraping_indices, "Expected scraping calls"
+        assert processing_indices, "Expected processing calls"
+        assert max(scraping_indices) < min(processing_indices), (
+            f"Last scraping call (index {max(scraping_indices)}) must precede "
+            f"first processing call (index {min(processing_indices)}). "
+            f"Call log: {call_log}"
+        )
+
+    def test_zipcode_injected_correctly_per_step(self):
+        """Each step receives the correct zipcode in config."""
+        call_log = []
+
+        def make_mock_module(module_name):
+            mock_mod = MagicMock()
+
+            def mock_run(config, pipeline_cache):
+                call_log.append((module_name, config.get("zipcode")))
+
+            mock_mod.run = mock_run
+            return mock_mod
+
+        mock_config = {
+            "zipcodes": ["97011", "97067"],
+            "search_results": True,
+            "details_scrape": False,
+            "airdna_data": False,
+            "reviews_scrape": False,
+            "listing_summaries": False,
+            "details_results": True,
+            "area_summary": False,
+            "correlation_results": False,
+            "description_analysis": False,
+            "pipeline_cache_enabled": False,
+        }
+
+        with patch("main.load_config", return_value=mock_config):
+            with patch(
+                "main.importlib.import_module", side_effect=make_mock_module
+            ):
+                from main import AirBnbReviewAggregator
+
+                agg = AirBnbReviewAggregator()
+                agg.run_tasks_from_config()
+
+        from main import SCRAPING_STEPS
+
+        search_module = SCRAPING_STEPS[0][0]
+
+        # search_results should run once per zipcode, each with correct zipcode
+        search_calls = [(mod, zc) for mod, zc in call_log if mod == search_module]
+        assert search_calls == [
+            (search_module, "97011"),
+            (search_module, "97067"),
+        ]

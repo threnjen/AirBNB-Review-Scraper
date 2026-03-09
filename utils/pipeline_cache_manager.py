@@ -30,7 +30,7 @@ class PipelineCacheManager(BaseModel):
     STAGE_ORDER: ClassVar[list[str]] = [
         "search_results",
         "details_scrape",
-        "comp_sets",
+        "airdna_data",
         "reviews_scrape",
         "details_results",
         "listing_summaries",
@@ -48,7 +48,7 @@ class PipelineCacheManager(BaseModel):
     STAGE_OUTPUT_DIRS: ClassVar[dict[str, str]] = {
         "search_results": "outputs/01_search_results",
         "details_scrape": "outputs/02_details_scrape",
-        "comp_sets": "outputs/03_comp_sets",
+        "airdna_data": "outputs/03_airdna_data",
         "reviews_scrape": "outputs/04_reviews_scrape",
         "details_results": "outputs/05_details_results",
         "listing_summaries": "outputs/06_listing_summaries",
@@ -78,7 +78,7 @@ class PipelineCacheManager(BaseModel):
                 "details_scrape": config.get("force_refresh_details_scrape", False),
                 "details_results": config.get("force_refresh_details_results", False),
                 "reviews_scrape": config.get("force_refresh_reviews_scrape", False),
-                "comp_sets": config.get("force_refresh_comp_sets", False),
+                "airdna_data": config.get("force_refresh_airdna_data", False),
                 "listing_summaries": config.get(
                     "force_refresh_listing_summaries", False
                 ),
@@ -102,7 +102,7 @@ class PipelineCacheManager(BaseModel):
         """Return the list of file paths a stage should produce for *zipcode*.
 
         Fixed-count stages derive paths from *zipcode* alone.  Listing-dynamic
-        stages (``comp_sets``, ``reviews_scrape``, ``details_scrape``,
+        stages (``airdna_data``, ``reviews_scrape``, ``details_scrape``,
         ``listing_summaries``) read the search-results file to enumerate
         listing IDs.
 
@@ -120,11 +120,13 @@ class PipelineCacheManager(BaseModel):
             )
             return [os.path.join(search_dir, f"search_results_{zipcode}.json")]
 
-        if stage_name == "comp_sets":
+        if stage_name == "airdna_data":
             listing_ids = self._get_listing_ids_for_zipcode(zipcode)
             if not listing_ids:
                 return []
-            comp_dir = self.STAGE_OUTPUT_DIRS.get("comp_sets", "outputs/03_comp_sets")
+            comp_dir = self.STAGE_OUTPUT_DIRS.get(
+                "airdna_data", "outputs/03_airdna_data"
+            )
             files = [
                 os.path.join(comp_dir, f"listing_{lid}.json") for lid in listing_ids
             ]
@@ -260,7 +262,7 @@ class PipelineCacheManager(BaseModel):
         3. All expected output files exist on disk with mtime within TTL
 
         Args:
-            stage_name: Pipeline stage identifier (e.g. "comp_sets").
+            stage_name: Pipeline stage identifier (e.g. "airdna_data").
             zipcode: Zipcode to scope the freshness check.
 
         Returns:

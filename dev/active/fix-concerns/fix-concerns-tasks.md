@@ -40,8 +40,8 @@
 ## Stage 4: Tech Debt Cleanup
 - [x] 4.1 — Write test: `pipeline_cache.is_file_fresh` called when cache provided in `reviews_scraper`
 - [x] 4.1 — Replace `os.path.exists` with `pipeline_cache.is_file_fresh` (fallback to `os.path.exists` when None)
-- [x] 4.2 — Update `test_compile_comp_sets.py` to import from `steps.03_comp_sets`; adjust fixture for `zipcode` param
-- [x] 4.2 — Delete `compile_comp_sets` method + comment from `main.py`
+- [x] 4.2 — Update `test_compile_airdna_data.py` to import from `steps.03_airdna_data`; adjust fixture for `zipcode` param
+- [x] 4.2 — Delete `compile_airdna_data` method + comment from `main.py`
 - [x] 4.3 — Add comment to `LY_Revenue: 0.0` lines in `airdna_scraper.py`
 - [x] 4.4 — Hoist `load_json_file("config.json")` out of `prompt_replacement` loop in `property_review_aggregator.py`
 - [x] 4.4 — Hoist `load_json_file("config.json")` out of `task_chain` loop in `area_review_aggregator.py`

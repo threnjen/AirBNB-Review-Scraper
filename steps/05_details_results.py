@@ -27,7 +27,7 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     if action == "clear_and_run":
         pipeline_cache.clear_stage_for_zipcode(STAGE, zipcode)
 
-    comp_set_filepath = f"outputs/03_comp_sets/comp_set_{zipcode}.json"
+    comp_set_filepath = f"outputs/03_airdna_data/comp_set_{zipcode}.json"
     fileset_builder = DetailsFilesetBuilder(
         use_categoricals=use_categoricals,
         comp_set_filepath=comp_set_filepath,
