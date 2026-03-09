@@ -48,10 +48,15 @@ class AreaAggregator(BaseModel):
     def task_chain(self):
         """Generate area-level summary from existing property summaries."""
 
+        summary_dir = "outputs/06_listing_summaries/"
+        if not os.path.isdir(summary_dir):
+            logger.info(f"Summary directory '{summary_dir}' does not exist; exiting.")
+            return
+
         # Load all property summaries from the output directory
         summary_files = [
             x
-            for x in os.listdir("outputs/06_listing_summaries/")
+            for x in os.listdir(summary_dir)
             if x.startswith(f"listing_summary_{self.zipcode}_")
         ]
 

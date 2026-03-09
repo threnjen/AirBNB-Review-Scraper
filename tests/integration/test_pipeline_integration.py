@@ -316,17 +316,23 @@ class TestPipelineCacheIntegration:
 
             return PipelineCacheManager()
 
-    def test_stage_fresh_when_all_outputs_exist(self, pipeline_cache, tmp_path):
+    def test_stage_fresh_when_all_outputs_exist(
+        self, pipeline_cache, tmp_path, monkeypatch
+    ):
         """Test that a stage with all expected outputs on disk is fresh."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_file = search_dir / "search_results_97067.json"
         search_file.write_text('[{"room_id": "111"}]')
 
-        pipeline_cache.STAGE_OUTPUT_DIRS = {
-            **pipeline_cache.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(pipeline_cache),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **pipeline_cache.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         assert pipeline_cache.is_stage_fresh("search_results", "97067") is True
 
@@ -362,7 +368,7 @@ class TestPipelineCacheIntegration:
 
         assert pipeline_cache.is_file_fresh("details_scrape", output_file) is False
 
-    def test_force_refresh_wipes_output_directory(self, tmp_path):
+    def test_force_refresh_wipes_output_directory(self, tmp_path, monkeypatch):
         """Test that clear_stage wipes the output directory when force_refresh is set."""
         output_dir = tmp_path / "outputs" / "04_reviews_scrape"
         output_dir.mkdir(parents=True)
@@ -384,7 +390,9 @@ class TestPipelineCacheIntegration:
         # Simulate what main.py does: check freshness, then clear_stage
         assert cache.is_stage_fresh("reviews_scrape") is False
 
-        cache.STAGE_OUTPUT_DIRS = {"reviews_scrape": str(output_dir)}
+        monkeypatch.setattr(
+            type(cache), "STAGE_OUTPUT_DIRS", {"reviews_scrape": str(output_dir)}
+        )
         cache.clear_stage("reviews_scrape")
 
         # Stale file should be gone, directory should remain

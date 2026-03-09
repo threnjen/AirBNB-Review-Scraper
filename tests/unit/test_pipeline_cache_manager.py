@@ -129,12 +129,6 @@ class TestPipelineCacheManager:
         )
         assert disabled_cache_manager.is_stage_fresh("reviews_scrape") is False
 
-    def test_get_cache_stats_disabled(self, disabled_cache_manager):
-        """Test that get_cache_stats reports disabled."""
-        stats = disabled_cache_manager.get_cache_stats()
-
-        assert stats["enabled"] is False
-
     # --- config loading ---
 
     def test_config_load_failure_uses_defaults(self, tmp_path):
@@ -150,37 +144,61 @@ class TestPipelineCacheManager:
 
     # --- clear_stage (full directory wipe) ---
 
-    def test_clear_stage_wipes_output_directory(self, cache_manager, tmp_path):
+    def test_clear_stage_wipes_output_directory(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Test that clear_stage wipes the output directory contents."""
         output_dir = tmp_path / "outputs" / "04_reviews_scrape"
         output_dir.mkdir(parents=True)
         (output_dir / "reviews_97067_123.json").write_text("{}")
         (output_dir / "reviews_97067_456.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {"reviews_scrape": str(output_dir)}
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {"reviews_scrape": str(output_dir)},
+        )
         cache_manager.clear_stage("reviews_scrape")
 
         assert output_dir.exists()
         assert list(output_dir.iterdir()) == []
 
-    def test_clear_stage_preserves_directory_itself(self, cache_manager, tmp_path):
+    def test_clear_stage_preserves_directory_itself(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Test that clear_stage keeps the directory after wiping contents."""
         output_dir = tmp_path / "outputs" / "05_details_results"
         output_dir.mkdir(parents=True)
         (output_dir / "data.csv").write_text("a,b")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {"details_results": str(output_dir)}
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {"details_results": str(output_dir)},
+        )
         cache_manager.clear_stage("details_results")
 
         assert output_dir.exists()
         assert output_dir.is_dir()
 
-    def test_clear_stage_handles_missing_directory(self, cache_manager, tmp_path):
+    def test_clear_stage_handles_missing_directory(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Test that clear_stage does not raise when output dir does not exist."""
         missing_dir = str(tmp_path / "outputs" / "nonexistent")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {"reviews_scrape": missing_dir}
+        monkeypatch.setattr(
+            type(cache_manager), "STAGE_OUTPUT_DIRS", {"reviews_scrape": missing_dir}
+        )
         cache_manager.clear_stage("reviews_scrape")
+
+    def test_clear_stage_emits_deprecation_warning(self, cache_manager, monkeypatch):
+        """Test that clear_stage emits a DeprecationWarning."""
+        monkeypatch.setattr(
+            type(cache_manager), "STAGE_OUTPUT_DIRS", {"reviews_scrape": "/tmp/fake"}
+        )
+        with pytest.warns(DeprecationWarning, match="clear_stage is deprecated"):
+            cache_manager.clear_stage("reviews_scrape")
 
     # --- cascade_force_refresh ---
 
@@ -423,18 +441,22 @@ class TestZipcodeScopedCache:
     # --- clear_stage_for_zipcode ---
 
     def test_clear_stage_for_zipcode_handles_missing_directory(
-        self, cache_manager, tmp_path
+        self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that clearing with a missing output directory does not raise."""
         missing_dir = str(tmp_path / "outputs" / "nonexistent")
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "reviews_scrape": missing_dir,
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "reviews_scrape": missing_dir,
+            },
+        )
         cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
 
     def test_clear_stage_for_zipcode_details_uses_listing_ids(
-        self, cache_manager, tmp_path
+        self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that details stage clears files by listing ID from search results."""
         search_dir = tmp_path / "outputs" / "01_search_results"
@@ -452,11 +474,15 @@ class TestZipcodeScopedCache:
         (details_dir / "property_details_222.json").write_text("{}")
         (details_dir / "property_details_999.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "details_scrape": str(details_dir),
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "details_scrape": str(details_dir),
+                "search_results": str(search_dir),
+            },
+        )
 
         cache_manager.clear_stage_for_zipcode("details_scrape", "97067")
 
@@ -466,7 +492,7 @@ class TestZipcodeScopedCache:
     # --- _get_listing_ids_for_zipcode ---
 
     def test_get_listing_ids_for_zipcode_reads_search_results(
-        self, cache_manager, tmp_path
+        self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that listing IDs are correctly extracted from search results."""
         search_dir = tmp_path / "outputs" / "01_search_results"
@@ -479,38 +505,52 @@ class TestZipcodeScopedCache:
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         ids = cache_manager._get_listing_ids_for_zipcode("97067")
         assert sorted(ids) == ["111", "222", "333"]
 
     def test_get_listing_ids_for_zipcode_missing_file_returns_empty(
-        self, cache_manager, tmp_path
+        self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that missing search results file returns empty list."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         ids = cache_manager._get_listing_ids_for_zipcode("99999")
         assert ids == []
 
     # --- clear_stage backward compat ---
 
-    def test_clear_stage_still_wipes_full_directory(self, cache_manager, tmp_path):
+    def test_clear_stage_still_wipes_full_directory(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Test that the deprecated clear_stage still does a full wipe."""
         output_dir = tmp_path / "outputs" / "04_reviews_scrape"
         output_dir.mkdir(parents=True)
         (output_dir / "reviews_97067_123.json").write_text("{}")
         (output_dir / "reviews_90210_456.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {"reviews_scrape": str(output_dir)}
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {"reviews_scrape": str(output_dir)},
+        )
         cache_manager.clear_stage("reviews_scrape")
 
         assert output_dir.exists()

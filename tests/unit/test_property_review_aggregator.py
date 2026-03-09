@@ -86,9 +86,7 @@ class TestPropertyAggregator:
         """Test that all placeholders are replaced."""
         prompt = "Zipcode: {ZIP_CODE_HERE}, ISO: {ISO_CODE_HERE}, Rating: {RATING_AVERAGE_HERE}, Overall: {OVERALL_MEAN}"
 
-        with patch(
-            "review_aggregator.property_review_aggregator.load_config"
-        ) as mock:
+        with patch("review_aggregator.property_review_aggregator.load_config") as mock:
             mock.return_value = {"iso_code": "us"}
 
             result = aggregator.prompt_replacement(
@@ -105,9 +103,7 @@ class TestPropertyAggregator:
         """Test that non-placeholder text is preserved."""
         prompt = "This is a prompt with {ZIP_CODE_HERE} embedded."
 
-        with patch(
-            "review_aggregator.property_review_aggregator.load_config"
-        ) as mock:
+        with patch("review_aggregator.property_review_aggregator.load_config") as mock:
             mock.return_value = {"iso_code": "us"}
 
             result = aggregator.prompt_replacement(prompt, "4.0", "4.0")
@@ -172,9 +168,7 @@ class TestPropertyAggregator:
 
     def test_initialization_defaults(self):
         """Test that aggregator initializes with correct defaults."""
-        with patch(
-            "review_aggregator.openai_aggregator.load_config", return_value={}
-        ):
+        with patch("review_aggregator.openai_aggregator.load_config", return_value={}):
             with patch("utils.cost_tracker.load_config", return_value={}):
                 from review_aggregator.property_review_aggregator import (
                     PropertyAggregator,
@@ -230,21 +224,43 @@ class TestPropertyAggregatorFiltering:
     def test_get_unfinished_aggregated_reviews(self, aggregator):
         """Test identifying reviews with incomplete summaries."""
         summaries = {
-            "listing1": "Complete summary without issues",
-            "listing2": "Summary with ? question marks",
-            "listing3": "Another complete summary",
+            "listing1": "1. Description\n2. Positives\n3. Criticisms\n4. Amenities enjoyed\n5. Amenities wanted\nOverall summary here.",
+            "listing2": "1. Description\n2. Positives only so far",
+            "listing3": "1. Full\n2. Positives\n3. Negatives\n4. Good amenities\n5. Missing amenities\nSummary sentence.",
         }
 
         result = aggregator.get_unfinished_aggregated_reviews(summaries)
 
         assert "listing2" in result
+        assert "listing1" not in result
+        assert "listing3" not in result
         assert len(result) == 1
+
+    def test_get_unfinished_does_not_flag_question_marks(self, aggregator):
+        """Valid summary with '?' should NOT be flagged as incomplete."""
+        summaries = {
+            "listing1": "1. Is this a cabin? Yes.\n2. Positives\n3. Criticisms\n4. Amenities\n5. Missing\nSummary.",
+        }
+
+        result = aggregator.get_unfinished_aggregated_reviews(summaries)
+
+        assert len(result) == 0
+
+    def test_get_unfinished_flags_truncated_without_question_mark(self, aggregator):
+        """Truncated summary without '?' should be flagged as incomplete."""
+        summaries = {
+            "listing1": "1. Description of the listing\n2. Some positives",
+        }
+
+        result = aggregator.get_unfinished_aggregated_reviews(summaries)
+
+        assert "listing1" in result
 
     def test_get_unfinished_aggregated_reviews_none(self, aggregator):
         """Test when all summaries are complete."""
         summaries = {
-            "listing1": "Complete summary",
-            "listing2": "Another complete summary",
+            "listing1": "1. Desc\n2. Pos\n3. Neg\n4. Amenities\n5. Missing\nSummary.",
+            "listing2": "1. Desc\n2. Pos\n3. Neg\n4. Amenities\n5. Missing\nAnother summary.",
         }
 
         result = aggregator.get_unfinished_aggregated_reviews(summaries)

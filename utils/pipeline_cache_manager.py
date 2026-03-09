@@ -4,9 +4,10 @@ import logging
 import os
 import sys
 import time
+import warnings
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
@@ -26,7 +27,7 @@ class PipelineCacheManager(BaseModel):
     expected file exists on disk with an mtime within the configured TTL.
     """
 
-    STAGE_ORDER: list[str] = [
+    STAGE_ORDER: ClassVar[list[str]] = [
         "search_results",
         "details_scrape",
         "comp_sets",
@@ -38,13 +39,13 @@ class PipelineCacheManager(BaseModel):
         "description_analysis",
     ]
 
-    CASCADE_TARGET_STAGES: set[str] = {
+    CASCADE_TARGET_STAGES: ClassVar[set[str]] = {
         "area_summary",
         "correlation_results",
         "description_analysis",
     }
 
-    STAGE_OUTPUT_DIRS: dict[str, str] = {
+    STAGE_OUTPUT_DIRS: ClassVar[dict[str, str]] = {
         "search_results": "outputs/01_search_results",
         "details_scrape": "outputs/02_details_scrape",
         "comp_sets": "outputs/03_comp_sets",
@@ -311,6 +312,11 @@ class PipelineCacheManager(BaseModel):
         Args:
             stage_name: Pipeline stage identifier to clear.
         """
+        warnings.warn(
+            "clear_stage is deprecated, use clear_stage_for_zipcode",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         output_dir = self.STAGE_OUTPUT_DIRS.get(stage_name)
         if output_dir:
             LocalFileHandler().clear_directory(output_dir)
@@ -508,25 +514,3 @@ class PipelineCacheManager(BaseModel):
                 f"Stage '{stage_name}' ran — marking analysis stages for refresh: "
                 f"{', '.join(targets)}"
             )
-
-    # ------------------------------------------------------------------
-    # Stats
-    # ------------------------------------------------------------------
-
-    def get_cache_stats(self) -> dict:
-        """Get statistics about cached pipeline outputs.
-
-        Returns:
-            dict with 'enabled', 'ttl_hours', and per-stage counts
-            of fresh/stale/total expected files.
-        """
-        if not self.enable_cache:
-            return {"enabled": False}
-
-        stats: dict[str, Any] = {
-            "enabled": True,
-            "ttl_hours": self.ttl_hours,
-            "stages": {},
-        }
-
-        return stats

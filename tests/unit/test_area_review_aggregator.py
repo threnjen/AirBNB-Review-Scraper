@@ -53,12 +53,20 @@ class TestAreaAggregator:
         """Test that OpenAIAggregator is present."""
         assert aggregator.openai_aggregator is not None
 
-    def test_rag_chain_no_summary_files_returns_early(self, aggregator):
-        """Test task_chain returns early when no summary files exist."""
-        with patch("os.listdir", return_value=[]):
+    def test_rag_chain_missing_directory_returns_early(self, aggregator):
+        """Test task_chain returns early when listing summaries dir doesn't exist."""
+        with patch("os.path.isdir", return_value=False):
             result = aggregator.task_chain()
 
             assert result is None
+
+    def test_rag_chain_no_summary_files_returns_early(self, aggregator):
+        """Test task_chain returns early when no summary files exist."""
+        with patch("os.path.isdir", return_value=True):
+            with patch("os.listdir", return_value=[]):
+                result = aggregator.task_chain()
+
+                assert result is None
 
     def test_rag_chain_no_matching_zipcode_files(self, aggregator):
         """Test task_chain returns early when no files match zipcode."""

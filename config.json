@@ -28,7 +28,12 @@
     "correlation_bottom_percentile": 25,
     "description_analysis": false,
     "force_refresh_description_analysis": false,
-    "zipcode": "97011",
+    "zipcodes": [
+        "97011",
+        "97067",
+        "97049",
+        "97028"
+    ],
     "iso_code": "us",
     "num_listings_to_summarize": 100000,
     "num_listings_to_search": 100000,

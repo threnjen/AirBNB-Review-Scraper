@@ -33,16 +33,22 @@ class TestExpectedOutputs:
         result = cache_manager.expected_outputs("search_results", "97067")
         assert result == ["outputs/01_search_results/search_results_97067.json"]
 
-    def test_airdna_returns_listing_files_plus_comp_set(self, cache_manager, tmp_path):
+    def test_airdna_returns_listing_files_plus_comp_set(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [{"room_id": "111"}, {"room_id": "222"}]
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         result = cache_manager.expected_outputs("comp_sets", "97067")
         assert "outputs/03_comp_sets/comp_set_97067.json" in result
@@ -53,31 +59,43 @@ class TestExpectedOutputs:
         result = cache_manager.expected_outputs("comp_sets", "99999")
         assert result == []
 
-    def test_reviews_returns_per_listing_files(self, cache_manager, tmp_path):
+    def test_reviews_returns_per_listing_files(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [{"room_id": "111"}, {"room_id": "222"}]
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         result = cache_manager.expected_outputs("reviews_scrape", "97067")
         assert "outputs/04_reviews_scrape/reviews_97067_111.json" in result
         assert "outputs/04_reviews_scrape/reviews_97067_222.json" in result
 
-    def test_details_returns_per_listing_files(self, cache_manager, tmp_path):
+    def test_details_returns_per_listing_files(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [{"room_id": "111"}, {"id": "333"}]
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         result = cache_manager.expected_outputs("details_scrape", "97067")
         assert "outputs/02_details_scrape/property_details_111.json" in result
@@ -97,17 +115,23 @@ class TestExpectedOutputs:
         assert "outputs/05_details_results/property_descriptions_97067.json" in result
         assert "outputs/05_details_results/neighborhood_highlights_97067.json" in result
 
-    def test_aggregate_reviews_returns_per_listing_files(self, cache_manager, tmp_path):
+    def test_aggregate_reviews_returns_per_listing_files(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         # listing_summaries derives from review files on disk
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         reviews_dir.mkdir(parents=True)
         (reviews_dir / "reviews_97067_111.json").write_text('{"111": []}')
         (reviews_dir / "reviews_97067_222.json").write_text('{"222": []}')
         (reviews_dir / "reviews_90210_999.json").write_text('{"999": []}')
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "reviews_scrape": str(reviews_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "reviews_scrape": str(reviews_dir),
+            },
+        )
 
         result = cache_manager.expected_outputs("listing_summaries", "97067")
         assert "outputs/06_listing_summaries/listing_summary_97067_111.json" in result
@@ -258,44 +282,58 @@ class TestIsStageFreshMtime:
 
             return PipelineCacheManager()
 
-    def test_all_expected_files_present_and_fresh(self, cache_manager, tmp_path):
+    def test_all_expected_files_present_and_fresh(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Stage is fresh when all expected outputs exist with recent mtime."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump([{"room_id": "111"}], f)
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         assert cache_manager.is_stage_fresh("search_results", "97067") is True
 
-    def test_some_expected_files_missing(self, cache_manager, tmp_path):
+    def test_some_expected_files_missing(self, cache_manager, tmp_path, monkeypatch):
         """Stage is not fresh when some expected outputs are missing."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [{"room_id": "111"}, {"room_id": "222"}]
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         # Create only one of two expected review files
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         reviews_dir.mkdir(parents=True)
         (reviews_dir / "reviews_97067_111.json").write_text("{}")
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "reviews_scrape": str(reviews_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "reviews_scrape": str(reviews_dir),
+            },
+        )
 
         assert cache_manager.is_stage_fresh("reviews_scrape", "97067") is False
 
-    def test_all_expected_files_stale(self, cache_manager, tmp_path):
+    def test_all_expected_files_stale(self, cache_manager, tmp_path, monkeypatch):
         """Stage is not fresh when files exist but mtime is beyond TTL."""
         search_output = str(
             tmp_path / "outputs" / "01_search_results" / "search_results_97067.json"
@@ -306,10 +344,14 @@ class TestIsStageFreshMtime:
         old_time = time.time() - (10 * 24 * 3600)
         os.utime(search_output, (old_time, old_time))
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(os.path.dirname(search_output)),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(os.path.dirname(search_output)),
+            },
+        )
 
         assert cache_manager.is_stage_fresh("search_results", "97067") is False
 
@@ -317,7 +359,7 @@ class TestIsStageFreshMtime:
         """Stage with no expected outputs (e.g. missing search results) is not fresh."""
         assert cache_manager.is_stage_fresh("comp_sets", "99999") is False
 
-    def test_force_refresh_overrides_freshness(self, tmp_path):
+    def test_force_refresh_overrides_freshness(self, tmp_path, monkeypatch):
         with patch("utils.pipeline_cache_manager.load_config") as mock_load:
             mock_load.return_value = {
                 "pipeline_cache_enabled": True,
@@ -332,10 +374,14 @@ class TestIsStageFreshMtime:
         search_dir.mkdir(parents=True)
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump([{"room_id": "111"}], f)
-        manager.STAGE_OUTPUT_DIRS = {
-            **manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         assert manager.is_stage_fresh("search_results", "97067") is False
 
@@ -363,20 +409,24 @@ class TestGetMissingOutputs:
 
             return PipelineCacheManager()
 
-    def test_all_present_returns_empty(self, cache_manager, tmp_path):
+    def test_all_present_returns_empty(self, cache_manager, tmp_path, monkeypatch):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump([{"room_id": "111"}], f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         missing = cache_manager.get_missing_outputs("search_results", "97067")
         assert missing == []
 
-    def test_some_missing_returns_those(self, cache_manager, tmp_path):
+    def test_some_missing_returns_those(self, cache_manager, tmp_path, monkeypatch):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [{"room_id": "111"}, {"room_id": "222"}]
@@ -388,17 +438,23 @@ class TestGetMissingOutputs:
         reviews_dir.mkdir(parents=True)
         (reviews_dir / "reviews_97067_111.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-            "reviews_scrape": str(reviews_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+                "reviews_scrape": str(reviews_dir),
+            },
+        )
 
         missing = cache_manager.get_missing_outputs("reviews_scrape", "97067")
         assert any("reviews_97067_222" in m for m in missing)
         assert not any("reviews_97067_111" in m for m in missing)
 
-    def test_stale_files_included_in_missing(self, cache_manager, tmp_path):
+    def test_stale_files_included_in_missing(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_output = str(search_dir / "search_results_97067.json")
@@ -406,25 +462,33 @@ class TestGetMissingOutputs:
             json.dump([{"room_id": "111"}], f)
         old_time = time.time() - (10 * 24 * 3600)
         os.utime(search_output, (old_time, old_time))
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         missing = cache_manager.get_missing_outputs("search_results", "97067")
         assert len(missing) == 1
         assert "search_results_97067" in missing[0]
 
-    def test_all_missing_returns_all(self, cache_manager, tmp_path):
+    def test_all_missing_returns_all(self, cache_manager, tmp_path, monkeypatch):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         search_results = [{"room_id": "111"}, {"room_id": "222"}]
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         # Don't create any review files
         missing = cache_manager.get_missing_outputs("reviews_scrape", "97067")
@@ -445,15 +509,19 @@ class TestShouldRunStageMtime:
 
             return PipelineCacheManager()
 
-    def test_skip_when_all_fresh(self, cache_manager, tmp_path):
+    def test_skip_when_all_fresh(self, cache_manager, tmp_path, monkeypatch):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump([{"room_id": "111"}], f)
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         assert cache_manager.should_run_stage("search_results", "97067") == "skip"
 
@@ -497,7 +565,9 @@ class TestClearStageForZipcodeMtime:
 
             return PipelineCacheManager()
 
-    def test_deletes_only_expected_zipcode_files(self, cache_manager, tmp_path):
+    def test_deletes_only_expected_zipcode_files(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Only files in expected_outputs for the zipcode are deleted."""
         reviews_dir = tmp_path / "outputs" / "04_reviews_scrape"
         reviews_dir.mkdir(parents=True)
@@ -512,11 +582,15 @@ class TestClearStageForZipcodeMtime:
         (reviews_dir / "reviews_97067_222.json").write_text("{}")
         (reviews_dir / "reviews_90210_999.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-            "reviews_scrape": str(reviews_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+                "reviews_scrape": str(reviews_dir),
+            },
+        )
 
         cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
 
@@ -525,7 +599,7 @@ class TestClearStageForZipcodeMtime:
             "reviews_90210_999.json",
         ]
 
-    def test_preserves_other_zipcode_files(self, cache_manager, tmp_path):
+    def test_preserves_other_zipcode_files(self, cache_manager, tmp_path, monkeypatch):
         """Files for other zipcodes are never touched."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
@@ -536,26 +610,36 @@ class TestClearStageForZipcodeMtime:
         with open(search_output_90210, "w") as f:
             json.dump([{"room_id": "999"}], f)
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+            },
+        )
 
         cache_manager.clear_stage_for_zipcode("search_results", "97067")
 
         assert os.path.exists(search_output_90210)
         assert not os.path.exists(str(search_dir / "search_results_97067.json"))
 
-    def test_handles_missing_directory(self, cache_manager, tmp_path):
+    def test_handles_missing_directory(self, cache_manager, tmp_path, monkeypatch):
         missing_dir = str(tmp_path / "outputs" / "nonexistent")
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "reviews_scrape": missing_dir,
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "reviews_scrape": missing_dir,
+            },
+        )
         # Should not raise
         cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
 
-    def test_details_stage_deletes_by_listing_id(self, cache_manager, tmp_path):
+    def test_details_stage_deletes_by_listing_id(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         """Details stage clears files by listing ID from search results."""
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
@@ -569,18 +653,24 @@ class TestClearStageForZipcodeMtime:
         (details_dir / "property_details_222.json").write_text("{}")
         (details_dir / "property_details_999.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-            "details_scrape": str(details_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+                "details_scrape": str(details_dir),
+            },
+        )
 
         cache_manager.clear_stage_for_zipcode("details_scrape", "97067")
 
         remaining = sorted(f.name for f in details_dir.iterdir())
         assert remaining == ["property_details_999.json"]
 
-    def test_preserves_directory_after_clearing(self, cache_manager, tmp_path):
+    def test_preserves_directory_after_clearing(
+        self, cache_manager, tmp_path, monkeypatch
+    ):
         search_dir = tmp_path / "outputs" / "01_search_results"
         search_dir.mkdir(parents=True)
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
@@ -590,11 +680,15 @@ class TestClearStageForZipcodeMtime:
         reviews_dir.mkdir(parents=True)
         (reviews_dir / "reviews_97067_111.json").write_text("{}")
 
-        cache_manager.STAGE_OUTPUT_DIRS = {
-            **cache_manager.STAGE_OUTPUT_DIRS,
-            "search_results": str(search_dir),
-            "reviews_scrape": str(reviews_dir),
-        }
+        monkeypatch.setattr(
+            type(cache_manager),
+            "STAGE_OUTPUT_DIRS",
+            {
+                **cache_manager.STAGE_OUTPUT_DIRS,
+                "search_results": str(search_dir),
+                "reviews_scrape": str(reviews_dir),
+            },
+        )
 
         cache_manager.clear_stage_for_zipcode("reviews_scrape", "97067")
 

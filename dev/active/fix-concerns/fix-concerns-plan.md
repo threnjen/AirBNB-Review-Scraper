@@ -80,9 +80,7 @@ Address all 24 concerns across 5 categories in 5 phases, prioritized by severity
 - `clear_stage` emits `DeprecationWarning`
 - `get_cache_stats` either populated or removed
 
-**Status**: Not Started
-
-### 3.1 — Add `os.path.isdir` guard to `area_review_aggregator`
+**Status**: Complete
 - **File**: `review_aggregator/area_review_aggregator.py` lines 53–54
 - **Change**: Guard `os.listdir` with `if not os.path.isdir(...): return []`.
 - **Test**: Add test for missing directory → graceful empty result.

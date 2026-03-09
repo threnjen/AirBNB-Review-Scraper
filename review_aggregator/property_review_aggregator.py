@@ -160,10 +160,13 @@ class PropertyAggregator(BaseModel):
 
         return unprocessed_reviews
 
+    # Numbered section headers expected in a complete LLM summary.
+    _EXPECTED_SECTIONS = ("1.", "2.", "3.", "4.", "5.")
+
     def get_unfinished_aggregated_reviews(self, generated_summaries) -> list[str]:
         incomplete_keys = []
         for key, value in generated_summaries.items():
-            if "?" in value:
+            if not all(marker in value for marker in self._EXPECTED_SECTIONS):
                 incomplete_keys.append(key)
 
         logger.info(f"Listings needing more processing: {len(incomplete_keys)}")

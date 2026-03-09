@@ -24,18 +24,18 @@
 - [x] Run full test suite: `pipenv run pytest` — 336 passed
 
 ## Stage 3: Fragile Area Guards
-- [ ] 3.1 — Write failing test: missing `outputs/06_listing_summaries/` dir → expect empty list
-- [ ] 3.1 — Add `os.path.isdir` guard in `area_review_aggregator.py`
-- [ ] 3.2 — Read `prompts/prompt.json` to identify structural markers for complete summaries
-- [ ] 3.2 — Write failing tests: valid summary with "?", truncated summary without "?"
-- [ ] 3.2 — Replace `"?" in value` with structural check in `get_unfinished_aggregated_reviews`
-- [ ] 3.3 — Change `STAGE_ORDER`, `CASCADE_TARGET_STAGES`, `STAGE_OUTPUT_DIRS` to `ClassVar` in `pipeline_cache_manager.py`
-- [ ] 3.4 — Add `warnings.warn(...)` to `clear_stage` in `pipeline_cache_manager.py`
-- [ ] 3.4 — Write test asserting `DeprecationWarning` emitted
-- [ ] 3.4 — Verify no production callers of `clear_stage` remain
-- [ ] 3.5 — Grep for `get_cache_stats` callers; decide: populate or remove
-- [ ] 3.5 — Implement decision (populate stats dict or delete method)
-- [ ] Run full test suite: `pipenv run pytest`
+- [x] 3.1 — Write failing test: missing `outputs/06_listing_summaries/` dir → expect empty list
+- [x] 3.1 — Add `os.path.isdir` guard in `area_review_aggregator.py`
+- [x] 3.2 — Read `prompts/prompt.json` to identify structural markers for complete summaries
+- [x] 3.2 — Write failing tests: valid summary with "?", truncated summary without "?"
+- [x] 3.2 — Replace `"?" in value` with structural check in `get_unfinished_aggregated_reviews`
+- [x] 3.3 — Change `STAGE_ORDER`, `CASCADE_TARGET_STAGES`, `STAGE_OUTPUT_DIRS` to `ClassVar` in `pipeline_cache_manager.py`
+- [x] 3.4 — Add `warnings.warn(...)` to `clear_stage` in `pipeline_cache_manager.py`
+- [x] 3.4 — Write test asserting `DeprecationWarning` emitted
+- [x] 3.4 — Verify no production callers of `clear_stage` remain
+- [x] 3.5 — Grep for `get_cache_stats` callers; decide: populate or remove
+- [x] 3.5 — Removed `get_cache_stats` stub and its test (no production callers)
+- [x] Run full test suite: `pipenv run pytest` — 339 passed
 
 ## Stage 4: Tech Debt Cleanup
 - [ ] 4.1 — Write test: `pipeline_cache.is_file_fresh` called when cache provided in `reviews_scraper`
