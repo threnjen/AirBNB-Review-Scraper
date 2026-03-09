@@ -54,11 +54,13 @@ class AirDNAScraper:
         listing_ids: list[str],
         inspect_mode: bool = False,
         pipeline_cache=None,
+        zone_name: str = "",
     ) -> None:
         self.cdp_url = cdp_url
         self.listing_ids = listing_ids
         self.inspect_mode = inspect_mode
         self.pipeline_cache = pipeline_cache
+        self.zone_name = zone_name
 
     def _build_rentalizer_url(self, listing_id: str) -> str:
         """Build the AirDNA rentalizer URL for a single listing.
@@ -387,15 +389,18 @@ class AirDNAScraper:
         self,
         listing_id: str,
         data: dict,
-        output_dir: str = "outputs/03_airdna_data",
+        output_dir: str | None = None,
     ) -> None:
         """Save scraped data for a single listing to a JSON file.
 
         Args:
             listing_id: The Airbnb listing ID (used in filename).
             data: Dict of metric values for this listing.
-            output_dir: Directory to write the output file to.
+            output_dir: Directory to write the output file to. Defaults to
+                ``outputs/03_airdna_data/{zone_name}``.
         """
+        if output_dir is None:
+            output_dir = os.path.join("outputs", "03_airdna_data", self.zone_name)
         os.makedirs(output_dir, exist_ok=True)
         filename = f"listing_{listing_id}.json"
         filepath = os.path.join(output_dir, filename)
@@ -423,7 +428,7 @@ class AirDNAScraper:
             True if the listing should be skipped.
         """
         output_path = os.path.join(
-            "outputs", "03_airdna_data", f"listing_{listing_id}.json"
+            "outputs", "03_airdna_data", self.zone_name, f"listing_{listing_id}.json"
         )
         if self.pipeline_cache and self.pipeline_cache.is_file_fresh(
             "airdna_data", output_path

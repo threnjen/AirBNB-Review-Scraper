@@ -17,8 +17,10 @@ STAGE = "airdna_data"
 OUTPUT_DIR = "outputs/03_airdna_data"
 
 
-def compile_airdna_data(zone_name: str, output_dir: str = OUTPUT_DIR) -> None:
+def compile_airdna_data(zone_name: str, output_dir: str | None = None) -> None:
     """Merge per-listing JSON files into a single master comp set file."""
+    if output_dir is None:
+        output_dir = os.path.join(OUTPUT_DIR, zone_name)
     merged = {}
     duplicates_skipped = 0
     pattern = os.path.join(output_dir, "listing_*.json")
@@ -66,6 +68,7 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
         listing_ids=listing_ids,
         inspect_mode=inspect_mode,
         pipeline_cache=pipeline_cache,
+        zone_name=zone_name,
     )
     airdna_scraper.run()
     compile_airdna_data(zone_name)

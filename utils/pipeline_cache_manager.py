@@ -128,9 +128,12 @@ class PipelineCacheManager(BaseModel):
                 "airdna_data", "outputs/03_airdna_data"
             )
             files = [
-                os.path.join(comp_dir, f"listing_{lid}.json") for lid in listing_ids
+                os.path.join(comp_dir, zone_name, f"listing_{lid}.json")
+                for lid in listing_ids
             ]
-            files.append(os.path.join(comp_dir, f"comp_set_{zone_name}.json"))
+            files.append(
+                os.path.join(comp_dir, zone_name, f"comp_set_{zone_name}.json")
+            )
             return files
 
         if stage_name == "reviews_scrape":

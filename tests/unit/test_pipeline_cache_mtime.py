@@ -51,9 +51,9 @@ class TestExpectedOutputs:
         )
 
         result = cache_manager.expected_outputs("airdna_data", "97067")
-        assert "outputs/03_airdna_data/comp_set_97067.json" in result
-        assert "outputs/03_airdna_data/listing_111.json" in result
-        assert "outputs/03_airdna_data/listing_222.json" in result
+        assert "outputs/03_airdna_data/97067/comp_set_97067.json" in result
+        assert "outputs/03_airdna_data/97067/listing_111.json" in result
+        assert "outputs/03_airdna_data/97067/listing_222.json" in result
 
     def test_airdna_missing_search_results_returns_empty(self, cache_manager):
         result = cache_manager.expected_outputs("airdna_data", "99999")

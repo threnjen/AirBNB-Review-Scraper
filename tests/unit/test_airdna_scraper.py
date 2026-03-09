@@ -304,6 +304,7 @@ class TestAirDNAScraperIsCached:
         return AirDNAScraper(
             cdp_url="http://localhost:9222",
             listing_ids=["17134562"],
+            zone_name="mt_hood",
         )
 
     def test_uncached_listing_without_pipeline_cache(self, scraper, tmp_path):
@@ -325,7 +326,7 @@ class TestAirDNAScraperIsCached:
 
     def test_cached_listing_via_file_on_disk(self, scraper, tmp_path, monkeypatch):
         """Listing is cached when the output file exists on disk."""
-        output_dir = tmp_path / "outputs" / "03_airdna_data"
+        output_dir = tmp_path / "outputs" / "03_airdna_data" / "mt_hood"
         output_dir.mkdir(parents=True)
         (output_dir / "listing_17134562.json").write_text("{}")
         monkeypatch.chdir(tmp_path)
