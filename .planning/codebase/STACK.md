@@ -45,7 +45,7 @@
 - tiktoken 0.12.0 - Token counting for OpenAI requests; used by `review_aggregator/openai_aggregator.py` and `utils/cost_tracker.py`
 
 **Infrastructure:**
-- pandas 3.0.1 - Data processing in `steps/05_details_results.py` and analysis steps
+- pandas 3.0.1 - Data processing in `steps/06_details_results.py` and analysis steps
 - numpy 2.4.2 - Numerical operations
 - pgeocode 0.5.0 - Postal code to lat/lon lookup; used in `scraper/location_calculator.py` to compute bounding boxes for Airbnb search
 - pydantic 2.12.5 - Validation/modeling for `CostTracker`, `OpenAIAggregator`, `PipelineCacheManager`

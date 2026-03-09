@@ -156,7 +156,7 @@
 
 **`area_review_aggregator.py` — `os.listdir` on hardcoded path without existence guard:**
 - Files: `review_aggregator/area_review_aggregator.py` lines 53-54
-- Why fragile: Calls `os.listdir("outputs/06_listing_summaries/")` directly. If the directory does not exist (stage 06 never ran), this raises `FileNotFoundError` rather than returning gracefully.
+- Why fragile: Calls `os.listdir("outputs/05_listing_summaries/")` directly. If the directory does not exist (stage 06 never ran), this raises `FileNotFoundError` rather than returning gracefully.
 - Safe modification: Add an `os.path.isdir` guard before `os.listdir`, matching the pattern in `scraper/details_fileset_build.py:194-199`.
 - Test coverage: `tests/unit/test_area_review_aggregator.py` exists.
 

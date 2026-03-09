@@ -24,7 +24,7 @@ EXCLUDED_COLUMNS = {"property_id", "ADR", "Days_Avail", "has_airdna_data"}
 DEFAULT_CSV_PATH = (
     Path(__file__).parent.parent
     / "outputs"
-    / "05_details_results"
+    / "06_details_results"
     / "property_amenities_matrix_cleaned_97067.csv"
 )
 DEFAULT_MODEL_DIR = Path(__file__).parent / "model"

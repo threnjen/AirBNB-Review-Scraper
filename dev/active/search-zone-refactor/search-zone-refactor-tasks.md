@@ -36,8 +36,8 @@ Checklist of work items per phase. Mark items `[x]` as they are completed.
 - [ ] `steps/02_details_scrape.py` — cache key uses `search_zone_name`
 - [ ] `steps/03_airdna_data.py` — `comp_set_{zone}.json`, cache key
 - [ ] `steps/04_reviews_scrape.py` — passes zone name to `scrape_reviews()`
-- [ ] `steps/05_details_results.py` — matrix files use zone name
-- [ ] `steps/06_listing_summaries.py` — passes zone name to `PropertyAggregator`
+- [ ] `steps/06_details_results.py` — matrix files use zone name
+- [ ] `steps/05_listing_summaries.py` — passes zone name to `PropertyAggregator`
 - [ ] `steps/07_area_summary.py` — passes zone name to `AreaAggregator`
 - [ ] `steps/08_correlation_results.py` — passes zone name to `CorrelationAnalyzer`
 - [ ] `steps/09_description_analysis.py` — passes zone name to `DescriptionAnalyzer`
@@ -86,8 +86,8 @@ Checklist of work items per phase. Mark items `[x]` as they are completed.
 
 ## Phase 5: Reorder Pipeline Steps — Scraping Before Processing
 
-- [ ] Rename `steps/06_listing_summaries.py` → `steps/05_listing_summaries.py`
-- [ ] Rename `steps/05_details_results.py` → `steps/06_details_results.py`
+- [ ] Rename `steps/05_listing_summaries.py` → `steps/05_listing_summaries.py`
+- [ ] Rename `steps/06_details_results.py` → `steps/06_details_results.py`
 - [ ] Update `main.py` `PIPELINE_STEPS` order
 - [ ] Update `utils/pipeline_cache_manager.py` `STAGE_ORDER`
 - [ ] Update `utils/pipeline_cache_manager.py` `STAGE_OUTPUT_DIRS` (if numbering changes in dir names)

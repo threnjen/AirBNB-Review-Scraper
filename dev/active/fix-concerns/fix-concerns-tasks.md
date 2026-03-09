@@ -24,7 +24,7 @@
 - [x] Run full test suite: `pipenv run pytest` — 336 passed
 
 ## Stage 3: Fragile Area Guards
-- [x] 3.1 — Write failing test: missing `outputs/06_listing_summaries/` dir → expect empty list
+- [x] 3.1 — Write failing test: missing `outputs/05_listing_summaries/` dir → expect empty list
 - [x] 3.1 — Add `os.path.isdir` guard in `area_review_aggregator.py`
 - [x] 3.2 — Read `prompts/prompt.json` to identify structural markers for complete summaries
 - [x] 3.2 — Write failing tests: valid summary with "?", truncated summary without "?"

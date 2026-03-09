@@ -21,7 +21,7 @@ ZIPCODE = "97067"
 LISTING_ID = "123456789"
 SEARCH_RESULTS = [{"room_id": LISTING_ID}]
 OUTPUT_DIR = "outputs/04_reviews_scrape"
-OUTPUT_PATH = f"{OUTPUT_DIR}/reviews_{ZIPCODE}_{LISTING_ID}.json"
+OUTPUT_PATH = f"{OUTPUT_DIR}/reviews_{LISTING_ID}.json"
 
 
 def _make_search_results(n: int) -> list[dict]:
@@ -30,7 +30,7 @@ def _make_search_results(n: int) -> list[dict]:
 
 
 def _output_path_for(listing_id: str) -> str:
-    return f"{OUTPUT_DIR}/reviews_{ZIPCODE}_{listing_id}.json"
+    return f"{OUTPUT_DIR}/reviews_{listing_id}.json"
 
 
 @pytest.fixture(autouse=True)

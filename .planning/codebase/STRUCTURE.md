@@ -19,8 +19,8 @@ AirBNB-Review-Scraper/
 │   ├── 02_details_scrape.py
 │   ├── 03_airdna_data.py
 │   ├── 04_reviews_scrape.py
-│   ├── 05_details_results.py
-│   ├── 06_listing_summaries.py
+│   ├── 06_details_results.py
+│   ├── 05_listing_summaries.py
 │   ├── 07_area_summary.py
 │   ├── 08_correlation_results.py
 │   └── 09_description_analysis.py
@@ -56,9 +56,9 @@ AirBNB-Review-Scraper/
 │   ├── 01_search_results/      # search_results_{zipcode}.json
 │   ├── 02_details_scrape/      # property_details_{id}.json (per listing)
 │   ├── 03_airdna_data/           # listing_{id}.json + comp_set_{zipcode}.json
-│   ├── 04_reviews_scrape/      # reviews_{zipcode}_{id}.json (per listing)
-│   ├── 05_details_results/     # property_amenities_matrix_{zipcode}.csv, descriptions JSON, etc.
-│   ├── 06_listing_summaries/   # listing_summary_{zipcode}_{id}.json (per listing)
+│   ├── 04_reviews_scrape/      # reviews_{id}.json (per listing)
+│   ├── 06_details_results/     # property_amenities_matrix_{zipcode}.csv, descriptions JSON, etc.
+│   ├── 05_listing_summaries/   # listing_summary_{zipcode}_{id}.json (per listing)
 │   ├── 07_area_summary/        # (reserved; report written to reports/)
 │   ├── 08_correlation_results/ # correlation_stats_{metric}_{zipcode}.json
 │   └── 09_description_analysis/ # description_quality_stats_{zipcode}.json
@@ -150,7 +150,7 @@ AirBNB-Review-Scraper/
 
 **Output files:** `{type}_{zipcode}_{id}.json` or `{type}_{metric}_{zipcode}.json`
 - Search results: `search_results_{zipcode}.json`
-- Reviews: `reviews_{zipcode}_{listing_id}.json`
+- Reviews: `reviews_{listing_id}.json`
 - Listing summaries: `listing_summary_{zipcode}_{listing_id}.json`
 - Correlation stats: `correlation_stats_{metric}_{zipcode}.json`
 - Reports: `area_summary_{zipcode}.md`, `correlation_insights_{metric}_{zipcode}.md`

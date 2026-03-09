@@ -29,7 +29,7 @@
   - Auth: `OPENAI_API_KEY` environment variable (set in `.env`, loaded automatically by OpenAI SDK)
   - Model: `gpt-4.1-mini` (configurable via `config.json` under `openai.model`)
   - Usage: `review_aggregator/openai_aggregator.py` — `OpenAIAggregator` class
-    - Per-listing review summarization: `steps/06_listing_summaries.py`
+    - Per-listing review summarization: `steps/05_listing_summaries.py`
     - Area-level summary generation: `review_aggregator/area_review_aggregator.py`
     - Description quality analysis: `review_aggregator/description_analyzer.py`
   - Chunking: Automatically chunks reviews exceeding `chunk_token_limit` (default 120,000 tokens) and merges results
@@ -59,8 +59,8 @@
   - `outputs/02_details_scrape/` — Per-listing property details JSON
   - `outputs/03_airdna_data/` — AirDNA metrics per listing + merged comp set
   - `outputs/04_reviews_scrape/` — Per-listing review arrays JSON
-  - `outputs/05_details_results/` — Processed amenity matrices (CSV) and description/rules JSON
-  - `outputs/06_listing_summaries/` — Per-listing OpenAI review summaries JSON
+  - `outputs/06_details_results/` — Processed amenity matrices (CSV) and description/rules JSON
+  - `outputs/05_listing_summaries/` — Per-listing OpenAI review summaries JSON
   - `outputs/08_correlation_results/` — Correlation stats JSON
   - `outputs/09_description_analysis/` — Description quality stats JSON
 - Reports written to `reports/` as Markdown files

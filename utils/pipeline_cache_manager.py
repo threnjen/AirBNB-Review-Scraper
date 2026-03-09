@@ -50,8 +50,8 @@ class PipelineCacheManager(BaseModel):
         "details_scrape": "outputs/02_details_scrape",
         "airdna_data": "outputs/03_airdna_data",
         "reviews_scrape": "outputs/04_reviews_scrape",
-        "details_results": "outputs/05_details_results",
-        "listing_summaries": "outputs/06_listing_summaries",
+        "details_results": "outputs/06_details_results",
+        "listing_summaries": "outputs/05_listing_summaries",
         "correlation_results": "outputs/08_correlation_results",
         "description_analysis": "outputs/09_description_analysis",
     }
@@ -141,8 +141,7 @@ class PipelineCacheManager(BaseModel):
                 "reviews_scrape", "outputs/04_reviews_scrape"
             )
             return [
-                os.path.join(reviews_dir, f"reviews_{zipcode}_{lid}.json")
-                for lid in listing_ids
+                os.path.join(reviews_dir, f"reviews_{lid}.json") for lid in listing_ids
             ]
 
         if stage_name == "details_scrape":
@@ -162,7 +161,7 @@ class PipelineCacheManager(BaseModel):
             if not listing_ids:
                 return []
             summaries_dir = self.STAGE_OUTPUT_DIRS.get(
-                "listing_summaries", "outputs/06_listing_summaries"
+                "listing_summaries", "outputs/05_listing_summaries"
             )
             return [
                 os.path.join(summaries_dir, f"listing_summary_{zipcode}_{lid}.json")
@@ -171,7 +170,7 @@ class PipelineCacheManager(BaseModel):
 
         if stage_name == "details_results":
             dr_dir = self.STAGE_OUTPUT_DIRS.get(
-                "details_results", "outputs/05_details_results"
+                "details_results", "outputs/06_details_results"
             )
             return [
                 os.path.join(dr_dir, f"property_amenities_matrix_{zipcode}.csv"),
@@ -387,7 +386,7 @@ class PipelineCacheManager(BaseModel):
         """Derive listing IDs from review files on disk for a zipcode.
 
         Scans the reviews output directory for files matching
-        ``reviews_{zipcode}_*.json`` and extracts listing IDs from filenames.
+        ``reviews_*.json`` and extracts listing IDs from filenames.
 
         Args:
             zipcode: Zipcode to scope by.
@@ -398,11 +397,11 @@ class PipelineCacheManager(BaseModel):
         reviews_dir = self.STAGE_OUTPUT_DIRS.get(
             "reviews_scrape", "outputs/04_reviews_scrape"
         )
-        pattern = os.path.join(reviews_dir, f"reviews_{zipcode}_*.json")
+        pattern = os.path.join(reviews_dir, f"reviews_*.json")
         listing_ids = []
         for filepath in glob.glob(pattern):
             filename = os.path.basename(filepath)
-            # reviews_{zipcode}_{listing_id}.json
+            # reviews_{listing_id}.json
             parts = filename.replace(".json", "").split("_", 2)
             if len(parts) >= 3:
                 listing_ids.append(parts[2])

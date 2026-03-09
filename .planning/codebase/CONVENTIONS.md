@@ -6,7 +6,7 @@
 
 **Files:**
 - Source modules: `snake_case.py` (e.g., `pipeline_cache_manager.py`, `area_review_aggregator.py`)
-- Step modules: numbered prefix + underscore + description (e.g., `01_search_results.py`, `06_listing_summaries.py`)
+- Step modules: numbered prefix + underscore + description (e.g., `01_search_results.py`, `05_listing_summaries.py`)
 - Test files: `test_` prefix mirroring source name (e.g., `test_pipeline_cache_manager.py`)
 - Output files at runtime: `{type}_{zipcode}_{listing_id}.json` (e.g., `reviews_97067_12345.json`)
 

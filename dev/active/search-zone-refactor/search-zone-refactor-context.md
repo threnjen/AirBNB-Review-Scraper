@@ -20,11 +20,11 @@ Key files, data findings, and architectural decisions for the zipcode → search
 - `steps/__init__.py` — `load_search_results()` reads `config["zipcode"]`, loads or runs search
 - `steps/02_details_scrape.py` — reads `config["zipcode"]` for cache key
 - `steps/03_airdna_data.py` — reads `config["zipcode"]` for `comp_set_{zipcode}.json` and cache key
-- `steps/04_reviews_scrape.py` — passes `zipcode` to `scrape_reviews()` for `reviews_{zipcode}_{id}.json`
+- `steps/04_reviews_scrape.py` — passes `zipcode` to `scrape_reviews()` for `reviews_{id}.json`
 
 ### Processing Steps
-- `steps/05_details_results.py` — `DetailsFilesetBuilder(zipcode=...)` builds amenities matrix
-- `steps/06_listing_summaries.py` — `PropertyAggregator(zipcode=...)` generates per-listing LLM summaries
+- `steps/06_details_results.py` — `DetailsFilesetBuilder(zipcode=...)` builds amenities matrix
+- `steps/05_listing_summaries.py` — `PropertyAggregator(zipcode=...)` generates per-listing LLM summaries
 - `steps/07_area_summary.py` — `AreaAggregator(zipcode=...)` generates area-level summary
 - `steps/08_correlation_results.py` — `CorrelationAnalyzer(zipcode=...)` runs correlation analysis
 - `steps/09_description_analysis.py` — `DescriptionAnalyzer(zipcode=...)` scores descriptions
@@ -37,7 +37,7 @@ Key files, data findings, and architectural decisions for the zipcode → search
 
 ### Data Processing
 - `scraper/details_fileset_build.py` — `DetailsFilesetBuilder`: builds amenities matrix CSV from property detail JSONs + AirDNA comp set; `build_fileset()`, `clean_amenities_df()`, `parse_basic_details()`, `parse_amenity_flags()`
-- `scraper/reviews_scraper.py` — `scrape_reviews(zipcode, ...)`: saves `reviews_{zipcode}_{id}.json`
+- `scraper/reviews_scraper.py` — `scrape_reviews(zipcode, ...)`: saves `reviews_{id}.json`
 
 ### Cache Manager
 - `utils/pipeline_cache_manager.py` — `PipelineCacheManager`: `STAGE_ORDER`, `STAGE_OUTPUT_DIRS`, `expected_outputs(stage, zipcode)`, `should_run_stage(stage, zipcode)`, `clear_stage_for_zipcode(stage, zipcode)`, `is_stage_fresh(stage, zipcode)`

@@ -168,7 +168,7 @@ def sample_property_summary():
 @pytest.fixture
 def mock_summary_files_dir(tmp_path, sample_property_summary):
     """Create a temp directory with sample property summary files."""
-    summary_dir = tmp_path / "outputs" / "06_listing_summaries"
+    summary_dir = tmp_path / "outputs" / "05_listing_summaries"
     summary_dir.mkdir(parents=True)
 
     # Create sample summary files for zipcode 97067

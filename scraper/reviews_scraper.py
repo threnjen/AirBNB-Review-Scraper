@@ -48,7 +48,7 @@ def scrape_reviews(
 
     # Pre-scan: identify listings with fresh cached review files on disk
     for id in ids_to_scrape:
-        output_path = f"outputs/04_reviews_scrape/reviews_{zipcode}_{id}.json"
+        output_path = f"outputs/04_reviews_scrape/reviews_{id}.json"
         if pipeline_cache and pipeline_cache.is_file_fresh(
             "reviews_scrape", output_path
         ):
@@ -81,7 +81,7 @@ def scrape_reviews(
             if id in resolved:
                 continue
 
-            output_path = f"outputs/04_reviews_scrape/reviews_{zipcode}_{id}.json"
+            output_path = f"outputs/04_reviews_scrape/reviews_{id}.json"
 
             room_url = f"https://www.airbnb.com/rooms/{id}"
             scrape_index += 1

@@ -74,7 +74,7 @@ Address all 24 concerns across 5 categories in 5 phases, prioritized by severity
 ## Stage 3: Fragile Area Guards
 **Goal**: Harden 5 fragile areas to prevent silent failures and misleading state.
 **Success Criteria**:
-- `area_review_aggregator` returns empty list when `outputs/06_listing_summaries/` doesn't exist
+- `area_review_aggregator` returns empty list when `outputs/05_listing_summaries/` doesn't exist
 - Incomplete LLM response detection uses structural check, not `"?"` substring
 - `STAGE_ORDER` etc. are `ClassVar` — Pydantic no longer treats them as instance fields
 - `clear_stage` emits `DeprecationWarning`
