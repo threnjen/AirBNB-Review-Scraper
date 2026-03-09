@@ -2,9 +2,99 @@
 Unit tests for scraper/location_calculator.py
 """
 
+import math
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+class TestBoundingBoxFromCenter:
+    """Tests for bounding_box_from_center function."""
+
+    def test_returns_four_bounds(self):
+        """Should return (ne_lat, sw_lat, ne_lon, sw_lon)."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        result = bounding_box_from_center(45.5155, -122.6789, 20.0)
+        assert len(result) == 4
+
+    def test_ne_lat_greater_than_sw_lat(self):
+        """NE latitude must be greater than SW latitude."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(
+            45.5155, -122.6789, 20.0
+        )
+        assert ne_lat > sw_lat
+
+    def test_ne_lon_greater_than_sw_lon(self):
+        """NE longitude must be greater than SW longitude."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(
+            45.5155, -122.6789, 20.0
+        )
+        assert ne_lon > sw_lon
+
+    def test_center_is_midpoint(self):
+        """Center lat/lon should be the midpoint of the returned bounds."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        lat, lon, radius = 45.5155, -122.6789, 25.0
+        ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(lat, lon, radius)
+
+        assert (ne_lat + sw_lat) / 2 == pytest.approx(lat, abs=1e-6)
+        assert (ne_lon + sw_lon) / 2 == pytest.approx(lon, abs=1e-6)
+
+    def test_lat_offset_uses_69_miles_per_degree(self):
+        """1 degree latitude == 69.0 miles, so offset = radius / 69.0."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        radius = 20.0
+        lat, lon = 45.5155, -122.6789
+        ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(lat, lon, radius)
+
+        expected_lat_offset = radius / 69.0
+        assert ne_lat == pytest.approx(lat + expected_lat_offset, abs=1e-6)
+        assert sw_lat == pytest.approx(lat - expected_lat_offset, abs=1e-6)
+
+    def test_lon_offset_accounts_for_latitude(self):
+        """Longitude degree width narrows at higher latitudes."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        radius = 20.0
+        lat, lon = 45.5155, -122.6789
+        ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(lat, lon, radius)
+
+        expected_lon_offset = radius / (69.0 * math.cos(math.radians(lat)))
+        assert ne_lon == pytest.approx(lon + expected_lon_offset, abs=1e-6)
+        assert sw_lon == pytest.approx(lon - expected_lon_offset, abs=1e-6)
+
+    def test_larger_radius_gives_larger_box(self):
+        """A larger radius should produce a larger bounding box."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        lat, lon = 45.5155, -122.6789
+        ne_lat_small, sw_lat_small, ne_lon_small, sw_lon_small = (
+            bounding_box_from_center(lat, lon, 10.0)
+        )
+        ne_lat_large, sw_lat_large, ne_lon_large, sw_lon_large = (
+            bounding_box_from_center(lat, lon, 50.0)
+        )
+
+        assert (ne_lat_large - sw_lat_large) > (ne_lat_small - sw_lat_small)
+        assert (ne_lon_large - sw_lon_large) > (ne_lon_small - sw_lon_small)
+
+    def test_equator_lon_offset_equals_lat_offset(self):
+        """At the equator cos(0) == 1, so lat and lon offsets are equal."""
+        from scraper.location_calculator import bounding_box_from_center
+
+        radius = 30.0
+        ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(0.0, 0.0, radius)
+
+        lat_half = ne_lat - 0.0
+        lon_half = ne_lon - 0.0
+        assert lat_half == pytest.approx(lon_half, abs=1e-6)
 
 
 class TestLocationer:

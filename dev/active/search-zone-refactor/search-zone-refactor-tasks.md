@@ -17,16 +17,16 @@ Checklist of work items per phase. Mark items `[x]` as they are completed.
 
 ## Phase 2: Refactor Airbnb Searcher — Lat/Lng Radius Search
 
-- [ ] Add `bounding_box_from_center(lat, lon, radius_miles)` to `scraper/location_calculator.py`
-- [ ] Write tests for `bounding_box_from_center` — correct degree offsets, edge cases
-- [ ] Refactor `scraper/airbnb_searcher.py`: new signature accepting `start_lat`, `start_long`, `search_radius_miles`, `search_zone_name`
-- [ ] Add post-search Euclidean distance filter (handle pyairbnb `"longitud"` typo key)
-- [ ] Write tests for post-search radius filtering
-- [ ] Update search result save path to `search_results_{search_zone_name}.json`
-- [ ] Update `steps/__init__.py` `load_search_results()` to use `search_zone_name`
-- [ ] Update `steps/01_search_results.py` to pass new config keys
-- [ ] Remove or deprecate `locationer()` function
-- [ ] Run full test suite — all tests pass
+- [x] Add `bounding_box_from_center(lat, lon, radius_miles)` to `scraper/location_calculator.py`
+- [x] Write tests for `bounding_box_from_center` — correct degree offsets, edge cases
+- [x] Refactor `scraper/airbnb_searcher.py`: new signature accepting `start_lat`, `start_long`, `search_radius_miles`, `search_zone_name`
+- [x] Add post-search Euclidean distance filter (handle pyairbnb `"longitud"` typo key)
+- [x] Write tests for post-search radius filtering
+- [x] Update search result save path to `search_results_{search_zone_name}.json`
+- [x] Update `steps/__init__.py` `load_search_results()` to use `search_zone_name`
+- [x] Update `steps/01_search_results.py` to pass new config keys
+- [x] Remove or deprecate `locationer()` function
+- [x] Run full test suite — all tests pass
 
 ---
 

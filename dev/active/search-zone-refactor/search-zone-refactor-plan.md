@@ -31,7 +31,7 @@ Replace the zipcode-based pipeline model with a lat/lng center + Euclidean mile 
 - Old `locationer()` function removed or deprecated
 - Tests for new radius calculation and post-search filtering
 
-**Status**: Not Started
+**Status**: Complete
 
 ---
 

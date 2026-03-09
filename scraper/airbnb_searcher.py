@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import os
 import random
 import sys
@@ -7,15 +8,61 @@ import time
 
 import pyairbnb
 
-import scraper.location_calculator as location_calculator
+from scraper.location_calculator import bounding_box_from_center
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
+_MILES_PER_LAT_DEGREE = 69.0
 
-def airbnb_searcher(zipcode: str, iso_code: str = "us"):
-    ne_lat, sw_lat, ne_lon, sw_lon = location_calculator.locationer(
-        postal_code=zipcode, iso_code=iso_code
+
+def filter_listings_by_radius(
+    listings: list, center_lat: float, center_lon: float, radius_miles: float
+) -> list:
+    """Remove listings outside the Euclidean radius from the search center.
+
+    Handles the pyairbnb typo key 'longitud' (missing final 'e').
+    Listings without valid coordinates are excluded.
+
+    Args:
+        listings: Raw search results from pyairbnb.
+        center_lat: Search center latitude.
+        center_lon: Search center longitude.
+        radius_miles: Maximum allowed distance from center in miles.
+
+    Returns:
+        Subset of listings within the radius.
+    """
+    within = []
+    for listing in listings:
+        coords = listing.get("coordinates") or {}
+        lat = coords.get("latitude")
+        lon = coords.get("longitud")  # pyairbnb typo: missing final 'e'
+        if lat is None or lon is None:
+            continue
+
+        lat_diff_miles = (lat - center_lat) * _MILES_PER_LAT_DEGREE
+        lon_diff_miles = (
+            (lon - center_lon)
+            * _MILES_PER_LAT_DEGREE
+            * math.cos(math.radians(center_lat))
+        )
+        distance = math.sqrt(lat_diff_miles**2 + lon_diff_miles**2)
+
+        if distance <= radius_miles:
+            within.append(listing)
+
+    return within
+
+
+def airbnb_searcher(
+    start_lat: float,
+    start_long: float,
+    search_radius_miles: float,
+    search_zone_name: str,
+):
+    ne_lat, sw_lat, ne_lon, sw_lon = bounding_box_from_center(
+        start_lat, start_long, search_radius_miles
     )
 
     def boxed_search(
@@ -37,7 +84,6 @@ def airbnb_searcher(zipcode: str, iso_code: str = "us"):
         return boxes
 
     logger.info(f"All of our boxes are {boxed_search(ne_lat, sw_lat, ne_lon, sw_lon)}")
-    logger.info(f"The first box is {boxed_search(ne_lat, sw_lat, ne_lon, sw_lon)[0]}")
 
     search_results = []
 
@@ -53,22 +99,21 @@ def airbnb_searcher(zipcode: str, iso_code: str = "us"):
             price_min=0,
             price_max=0,
         )
-        # logger.info(f"Searching with coordinates: NE({box[2]}, {box[3]}), SW({box[0]}, {box[1]})")
-        # logger.info(f"There are {len(box_search_results)} listings in this box")
         if len(box_search_results) >= 280:
             logger.info(f"Box {box} has hit the request cap, increase dimensions.")
         search_results.extend(box_search_results)
         time.sleep(random.uniform(1, 5))
 
-    # Save the search results as a JSON file
+    search_results = filter_listings_by_radius(
+        search_results, start_lat, start_long, search_radius_miles
+    )
+
     os.makedirs("outputs/01_search_results", exist_ok=True)
     with open(
-        f"outputs/01_search_results/search_results_{zipcode}.json",
+        f"outputs/01_search_results/search_results_{search_zone_name}.json",
         "w",
         encoding="utf-8",
     ) as f:
-        f.write(
-            json.dumps(search_results, ensure_ascii=False)
-        )  # Convert results to JSON and write to file
+        f.write(json.dumps(search_results, ensure_ascii=False))
 
     return search_results
