@@ -27,7 +27,7 @@
     "force_refresh_area_summary": false,
     "force_refresh_correlation_results": false,
     "force_refresh_description_analysis": false,
-    "search_zone_name": "mt_hood_corridor",
+    "search_zone_name": "mt_hood",
     "start_lat": 45.347161,
     "start_long": -121.9646838,
     "search_radius_miles": 15,

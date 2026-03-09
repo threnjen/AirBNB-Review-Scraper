@@ -153,7 +153,7 @@ class PipelineCacheManager(BaseModel):
                 "details_scrape", "outputs/02_details_scrape"
             )
             return [
-                os.path.join(details_dir, f"property_details_{lid}.json")
+                os.path.join(details_dir, zone_name, f"property_details_{lid}.json")
                 for lid in listing_ids
             ]
 

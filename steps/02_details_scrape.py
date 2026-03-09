@@ -31,6 +31,7 @@ def run(config: dict, pipeline_cache: PipelineCacheManager) -> None:
     scrape_details(
         search_results=search_results,
         num_listings=num_listings,
+        zone_name=zone_name,
         pipeline_cache=pipeline_cache,
     )
     pipeline_cache.notify_stage_ran(STAGE)

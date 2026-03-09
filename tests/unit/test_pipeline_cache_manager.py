@@ -470,9 +470,13 @@ class TestZoneScopedCache:
 
         details_dir = tmp_path / "outputs" / "02_details_scrape"
         details_dir.mkdir(parents=True)
-        (details_dir / "property_details_111.json").write_text("{}")
-        (details_dir / "property_details_222.json").write_text("{}")
-        (details_dir / "property_details_999.json").write_text("{}")
+        zone_dir = details_dir / "97067"
+        zone_dir.mkdir()
+        (zone_dir / "property_details_111.json").write_text("{}")
+        (zone_dir / "property_details_222.json").write_text("{}")
+        other_zone_dir = details_dir / "other_zone"
+        other_zone_dir.mkdir()
+        (other_zone_dir / "property_details_999.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),
@@ -486,8 +490,11 @@ class TestZoneScopedCache:
 
         cache_manager.clear_stage_for_zone("details_scrape", "97067")
 
-        remaining = sorted(f.name for f in details_dir.iterdir())
-        assert remaining == ["property_details_999.json"]
+        remaining = sorted(f.name for f in zone_dir.iterdir())
+        assert remaining == []
+        assert sorted(f.name for f in other_zone_dir.iterdir()) == [
+            "property_details_999.json"
+        ]
 
     # --- _get_listing_ids_for_zone ---
 

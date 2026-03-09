@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 logger = logging.getLogger(__name__)
 
 
-def scrape_details(search_results, num_listings, pipeline_cache=None):
+def scrape_details(search_results, num_listings, zone_name: str, pipeline_cache=None):
     property_ids = [listing["room_id"] for listing in search_results]
 
     # logger.info(property_ids)
@@ -23,7 +23,9 @@ def scrape_details(search_results, num_listings, pipeline_cache=None):
 
     # for id in property_ids[:num_listings if num_listings > 0 else None]:
     for room_id in property_ids[:num_listings]:
-        output_path = f"outputs/02_details_scrape/property_details_{room_id}.json"
+        output_path = (
+            f"outputs/02_details_scrape/{zone_name}/property_details_{room_id}.json"
+        )
 
         if pipeline_cache and pipeline_cache.is_file_fresh(
             "details_scrape", output_path
@@ -43,7 +45,7 @@ def scrape_details(search_results, num_listings, pipeline_cache=None):
             properties_scraped += 1
 
             # Save the details data to a JSON file
-            os.makedirs("outputs/02_details_scrape", exist_ok=True)
+            os.makedirs(f"outputs/02_details_scrape/{zone_name}", exist_ok=True)
             with open(
                 output_path,
                 "w",

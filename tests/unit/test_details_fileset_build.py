@@ -46,6 +46,7 @@ class TestDetailsFilesetBuilderCompSetPath:
         # Create a minimal property details file in the expected location
         details_dir = tmp_path / "details_scraped"
         details_dir.mkdir()
+        (details_dir / "00000").mkdir()
         property_details = {
             "room_type": "Entire home",
             "person_capacity": 8,
@@ -58,7 +59,7 @@ class TestDetailsFilesetBuilderCompSetPath:
             "house_rules": {},
             "highlights": [],
         }
-        (details_dir / "property_details_12345.json").write_text(
+        (details_dir / "00000" / "property_details_12345.json").write_text(
             json.dumps(property_details)
         )
 
@@ -90,7 +91,7 @@ class TestDetailsFilesetBuilderCompSetPath:
         )
 
         empty_details_dir = str(tmp_path / "empty_details")
-        os.makedirs(empty_details_dir, exist_ok=True)
+        os.makedirs(os.path.join(empty_details_dir, "00000"), exist_ok=True)
 
         with patch("scraper.details_fileset_build.logger") as mock_logger:
             with patch(
@@ -254,7 +255,8 @@ class TestHasAirdnaDataFlag:
 
         details_dir = tmp_path / "details_scraped"
         details_dir.mkdir()
-        (details_dir / "property_details_111.json").write_text(
+        (details_dir / "00000").mkdir()
+        (details_dir / "00000" / "property_details_111.json").write_text(
             json.dumps(
                 {
                     "room_type": "Entire home/apt",
@@ -294,7 +296,8 @@ class TestHasAirdnaDataFlag:
 
         details_dir = tmp_path / "details_scraped"
         details_dir.mkdir()
-        (details_dir / "property_details_222.json").write_text(
+        (details_dir / "00000").mkdir()
+        (details_dir / "00000" / "property_details_222.json").write_text(
             json.dumps(
                 {
                     "room_type": "Entire home/apt",

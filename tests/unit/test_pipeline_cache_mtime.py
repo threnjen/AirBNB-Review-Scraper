@@ -98,8 +98,8 @@ class TestExpectedOutputs:
         )
 
         result = cache_manager.expected_outputs("details_scrape", "97067")
-        assert "outputs/02_details_scrape/property_details_111.json" in result
-        assert "outputs/02_details_scrape/property_details_333.json" in result
+        assert "outputs/02_details_scrape/97067/property_details_111.json" in result
+        assert "outputs/02_details_scrape/97067/property_details_333.json" in result
 
     def test_build_details_returns_five_zone_files(self, cache_manager):
         result = cache_manager.expected_outputs("details_results", "97067")
@@ -647,11 +647,15 @@ class TestClearStageForZoneMtime:
         with open(str(search_dir / "search_results_97067.json"), "w") as f:
             json.dump(search_results, f)
 
-        details_dir = tmp_path / "outputs" / "02_details_scrape"
-        details_dir.mkdir(parents=True)
-        (details_dir / "property_details_111.json").write_text("{}")
-        (details_dir / "property_details_222.json").write_text("{}")
-        (details_dir / "property_details_999.json").write_text("{}")
+        details_base_dir = tmp_path / "outputs" / "02_details_scrape"
+        details_base_dir.mkdir(parents=True)
+        zone_dir = details_base_dir / "97067"
+        zone_dir.mkdir()
+        (zone_dir / "property_details_111.json").write_text("{}")
+        (zone_dir / "property_details_222.json").write_text("{}")
+        other_zone_dir = details_base_dir / "other_zone"
+        other_zone_dir.mkdir()
+        (other_zone_dir / "property_details_999.json").write_text("{}")
 
         monkeypatch.setattr(
             type(cache_manager),
@@ -659,14 +663,17 @@ class TestClearStageForZoneMtime:
             {
                 **cache_manager.STAGE_OUTPUT_DIRS,
                 "search_results": str(search_dir),
-                "details_scrape": str(details_dir),
+                "details_scrape": str(details_base_dir),
             },
         )
 
         cache_manager.clear_stage_for_zone("details_scrape", "97067")
 
-        remaining = sorted(f.name for f in details_dir.iterdir())
-        assert remaining == ["property_details_999.json"]
+        remaining = sorted(f.name for f in zone_dir.iterdir())
+        assert remaining == []
+        assert sorted(f.name for f in other_zone_dir.iterdir()) == [
+            "property_details_999.json"
+        ]
 
     def test_preserves_directory_after_clearing(
         self, cache_manager, tmp_path, monkeypatch

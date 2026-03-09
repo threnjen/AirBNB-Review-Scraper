@@ -228,16 +228,17 @@ class DetailsFilesetBuilder:
         logger.info("Building details fileset...")
 
         # Discover property IDs from files on disk
-        if not os.path.isdir(DETAILS_SCRAPED_DIR):
+        zone_dir = os.path.join(DETAILS_SCRAPED_DIR, self.zone_name)
+        if not os.path.isdir(zone_dir):
             logger.info(
-                f"No details directory found at {DETAILS_SCRAPED_DIR}. "
+                f"No details directory found at {zone_dir}. "
                 "Please run details scraping first."
             )
             return
 
         detail_files = [
             f
-            for f in os.listdir(DETAILS_SCRAPED_DIR)
+            for f in os.listdir(zone_dir)
             if f.startswith("property_details_") and f.endswith(".json")
         ]
 
@@ -274,7 +275,7 @@ class DetailsFilesetBuilder:
                 )
                 self.property_details[property_id]["has_airdna_data"] = True
 
-            file_path = os.path.join(DETAILS_SCRAPED_DIR, file_name)
+            file_path = os.path.join(zone_dir, file_name)
             with open(file_path, "r") as file:
                 property_details = json.load(file)
 
