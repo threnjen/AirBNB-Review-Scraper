@@ -2,121 +2,108 @@
 
 **Search Zone:** mt_hood
 
-**High Tier:** %63.00 (top 25%, n=226)
+**Size Adjustment:** OLS regression on capacity, bedrooms, beds, bathrooms (R² = 0.019)
 
-**Low Tier:** %38.50 (bottom 25%, n=215)
+**High Tier Residual:** +10.95 (top 25%, n=133)
+
+**Low Tier Residual:** -11.67 (bottom 25%, n=133)
 
 ---
 
-# AirBNB Property Analysis for Zipcode 'mt_hood'
+# Analysis of Mt_Hood Airbnb Properties: Drivers of Higher Size-Adjusted Occupancy
 
 ---
 
 ## 1. Key Differentiators
 
-The following features most strongly distinguish high-occupancy properties (top 25%) from low-occupancy ones (bottom 25%), based on percentage point differences:
+The following amenities show the largest positive differences in prevalence between high residual (top 25%) and low residual (bottom 25%) occupancy properties, indicating strong associations with higher-than-expected booking frequency beyond size:
 
-| Feature     | High Tier % | Low Tier % | Difference |
-|-------------|-------------|------------|------------|
-| Snowflake   | 64.2%       | 48.8%      | +15.3%     |
-| View Ocean  | 32.3%       | 18.1%      | +14.2%     |
-| Firepit     | 54.0%       | 40.9%      | +13.1%     |
-| Jacuzzi     | 53.1%       | 44.2%      | +8.9%      |
-| Hammock     | 13.7%       | 7.4%       | +6.3%      |
-| Superhost   | 11.9%       | 6.5%       | +5.4%      |
-| Beach       | 7.5%        | 2.8%       | +4.7%      |
+| Amenity    | Difference in Prevalence |
+|------------|-------------------------|
+| Snowflake (likely a unique/local amenity or feature) | +18.0% |
+| Ocean View | +18.0% |
+| Jacuzzi    | +15.8% |
+| Pets Allowed | +14.3% |
+| Firepit    | +14.3% |
+| Beach Access | +8.3% |
+| Sauna      | +6.0% |
 
-**Summary:**  
-High-occupancy properties are significantly more likely to offer scenic or luxury amenities such as snowflake (likely a unique local feature), ocean views, firepits, jacuzzis, and hammocks. The presence of a Superhost status and proximity to a beach also correlate positively with occupancy.
+**Insight:** Properties offering scenic views (ocean), luxury relaxation features (jacuzzi, sauna), outdoor social amenities (firepit, beach access), and pet-friendliness stand out as key drivers of occupancy beyond what size alone predicts.
 
 ---
 
 ## 2. Accessibility & Convenience Features
 
-Examining amenities related to convenience and work/living comfort:
+Amenities related to convenience and work/lifestyle needs show smaller but positive differences:
 
-| Amenity    | High Tier % | Low Tier % | Difference |
-|------------|-------------|------------|------------|
-| Workspace  | 62.8%       | 59.1%      | +3.8%      |
-| Dishwasher | 70.8%       | 76.7%      | -5.9%      |
-| Dryer      | 76.1%       | 79.1%      | -3.0%      |
-| Washer     | 78.3%       | 80.9%      | -2.6%      |
+| Amenity   | Difference in Prevalence |
+|-----------|-------------------------|
+| Workspace | +3.8% |
+| Grill     | +3.8% |
+| EV Charger| +3.0% |
+| Fireplace | +2.3% |
+| Video Game| +2.3% |
 
-**Insights:**  
-- Workspace availability is slightly higher (+3.8%) in high-occupancy properties, indicating that a dedicated work area may enhance booking appeal, possibly for remote workers or longer stays.  
-- Surprisingly, dishwasher, washer, and dryer prevalence is slightly lower in high-occupancy properties, suggesting these are not key drivers in this market or that other amenities outweigh their importance.
+**Insight:** While workspace availability and EV charging are somewhat more common in high-performing properties, these features have a modest impact compared to luxury and experiential amenities. Basic conveniences like grills and fireplaces are slightly more prevalent but less distinguishing.
 
 ---
 
 ## 3. Pet-Friendliness Impact
 
-| Amenity | High Tier % | Low Tier % | Difference |
-|---------|-------------|------------|------------|
-| Pets    | 46.0%       | 43.3%      | +2.8%      |
+- **Pets allowed prevalence:**  
+  - High residual tier: 53.4%  
+  - Low residual tier: 39.1%  
+  - **Difference:** +14.3%
 
-**Insight:**  
-Allowing pets shows a modest positive correlation (+2.8%) with higher occupancy, indicating pet-friendly properties may attract slightly more bookings but this is not a dominant factor in this market.
+**Insight:** Allowing pets correlates strongly with higher size-adjusted occupancy in the Mt_Hood market. Over half of the top-performing properties are pet-friendly, suggesting that pet accommodation is a significant competitive advantage.
 
 ---
 
-## 4. Capacity Sweet Spot
+## 4. Per-Person Ratios
 
-| Attribute | High Tier Avg | Low Tier Avg | Difference |
-|-----------|---------------|--------------|------------|
-| Capacity  | 5.98          | 7.42         | -1.43      |
-| Bedrooms  | 2.78          | 3.28         | -0.50      |
-| Beds      | 3.87          | 4.91         | -1.04      |
-| Bathrooms | 2.21          | 2.54         | -0.33      |
+*Note: Specific per-person ratios (beds-per-person, baths-per-person, bedrooms-per-person) were not provided in the data.*
 
-**Insight:**  
-High-occupancy properties tend to be smaller in capacity and size compared to low-occupancy ones:
-
-- Average capacity is about 6 guests in high-occupancy vs. 7.4 in low-occupancy (-1.43).  
-- Fewer bedrooms and beds also characterize high-occupancy listings.
-
-This suggests a **sweet spot** around medium-sized properties (~6 guests, ~3 bedrooms) maximizes bookings, possibly due to better affordability, easier management, or higher demand for mid-sized groups/families.
+**Inference based on available data:**  
+- The regression controlled for capacity, bedrooms, beds, and bathrooms, but the low R² (0.019) indicates size alone explains very little of occupancy variance.  
+- High residual properties emphasize luxury and experience over just capacity.  
+- Sample descriptions highlight large group accommodations with multiple bedrooms and amenities (e.g., 7-bedroom villa with pool and sauna), suggesting that comfort and amenity richness may matter more than simple per-person space ratios.
 
 ---
 
 ## 5. Availability Patterns
 
-| Attribute    | High Tier Avg | Low Tier Avg | Difference |
-|--------------|---------------|--------------|------------|
-| Dist To Poi* | 14.94         | 66.35        | -51.41     |
+- **Distance to Point of Interest (POI):**  
+  - High residual tier average: 15.07 miles  
+  - Low residual tier average: 9.93 miles  
+  - Difference: +5.14 miles
 
-\*Distance to Point of Interest (POI)
+**Insight:** High-performing properties tend to be located farther from central points of interest, possibly offering more secluded, premium experiences (e.g., private woodland, mountain views). This suggests that availability in less central but more scenic or exclusive locations may drive higher occupancy beyond size.
 
-**Insight:**  
-High-occupancy properties are located much closer to points of interest (average 14.9 units vs. 66.3 units in low tier), implying that **accessibility and proximity to attractions strongly drive bookings** in this market.
-
-While no direct data on days available is provided, it is reasonable to infer that properties closer to POIs may have higher demand and thus higher occupancy regardless of availability windows.
+*Note:* Data on days available was not provided, so direct analysis of availability patterns is limited.
 
 ---
 
 ## 6. Recommendations for Hosts
 
-Based on the data-driven insights specific to the mt_hood market, hosts aiming to increase booking frequency should consider:
+Based on the Mt_Hood market data, hosts aiming to increase booking frequency beyond what their property size predicts should consider:
 
-1. **Enhance Scenic and Luxury Amenities:**  
-   Add or highlight features such as ocean or mountain views, firepits, jacuzzis, and hammocks to attract more bookings.
+1. **Enhance Luxury & Experiential Amenities:**  
+   Invest in jacuzzis, saunas, and firepits to create a relaxing and memorable guest experience.
 
-2. **Achieve and Maintain Superhost Status:**  
-   Strive for excellent reviews and responsiveness to gain Superhost status, which correlates with +5.4% higher occupancy.
+2. **Capitalize on Scenic Features:**  
+   Highlight and if possible improve views (ocean or mountain) and proximity/access to natural features like beaches.
 
-3. **Optimize Property Size:**  
-   Target a medium capacity around 6 guests with approximately 3 bedrooms and 4 beds, balancing comfort and affordability.
+3. **Become Pet-Friendly:**  
+   Allow pets and provide pet-related amenities to tap into a significant market segment.
 
-4. **Improve Accessibility:**  
-   If possible, emphasize proximity to popular points of interest or clearly communicate ease of access to local attractions.
+4. **Offer Outdoor Social Spaces:**  
+   Include firepits, hammocks, and outdoor entertainment areas to encourage group gatherings.
 
-5. **Include Workspace Amenities:**  
-   Provide a dedicated workspace to appeal to remote workers and longer-stay guests, as this is slightly more common in high-occupancy listings.
-
-6. **Consider Pet-Friendly Policies:**  
-   Allow pets to capture a modest additional market segment, but prioritize other amenities first.
+5. **Promote Unique Local Features:**  
+   If applicable, leverage distinctive amenities or branding (e.g., “Snowflake”) that differentiate the property in listings.
 
 ---
 
 # Summary
 
-High-occupancy properties in mt_hood distinguish themselves through appealing scenic amenities, moderate size, and close proximity to attractions. Convenience features like workspace add value, while pet-friendliness offers a small boost. Hosts should focus on these factors to maximize booking frequency in this market.
+In the Mt_Hood Airbnb market, size-adjusted occupancy is most strongly influenced by luxury amenities (jacuzzi, sauna), pet-friendliness, scenic views, and outdoor social features rather than simple property size or basic conveniences. Properties that create unique, comfortable, and experience-rich stays outperform their peers, even if located farther from central points of interest. Hosts should prioritize these differentiators to boost bookings beyond what capacity alone would predict.
