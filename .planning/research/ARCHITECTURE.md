@@ -16,7 +16,7 @@
 ### Training Subsystem (`ml/`)
 
 - **Purpose:** Load CSV, select features, train XGBoost model with 5-fold CV, save model artifact + feature column list
-- **Input:** `outputs/06_details_results/property_amenities_matrix_cleaned_97067.csv`
+- **Input:** `outputs/07_details_results/property_amenities_matrix_cleaned_97067.csv`
 - **Output:** `ml/model/adr_model.joblib`, `ml/model/feature_columns.json`
 - **Runs:** Once (or re-run manually after data update)
 - **Dependencies:** pandas, numpy, xgboost, scikit-learn, joblib

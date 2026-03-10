@@ -90,7 +90,7 @@ class CorrelationAnalyzer(BaseModel):
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
         csv_path = (
-            f"outputs/06_details_results/property_amenities_matrix_{self.zone_name}.csv"
+            f"outputs/07_details_results/property_amenities_matrix_{self.zone_name}.csv"
         )
 
         if not os.path.exists(csv_path):
@@ -118,7 +118,7 @@ class CorrelationAnalyzer(BaseModel):
     def load_descriptions(self) -> dict[str, str]:
         """Load property descriptions for LLM context."""
         desc_path = (
-            f"outputs/06_details_results/property_descriptions_{self.zone_name}.json"
+            f"outputs/07_details_results/property_descriptions_{self.zone_name}.json"
         )
 
         if not os.path.exists(desc_path):

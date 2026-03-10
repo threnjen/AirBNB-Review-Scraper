@@ -59,7 +59,7 @@
   - `outputs/02_details_scrape/` — Per-listing property details JSON
   - `outputs/03_airdna_data/` — AirDNA metrics per listing + merged comp set
   - `outputs/04_reviews_scrape/` — Per-listing review arrays JSON
-  - `outputs/06_details_results/` — Processed amenity matrices (CSV) and description/rules JSON
+  - `outputs/07_details_results/` — Processed amenity matrices (CSV) and description/rules JSON
   - `outputs/05_listing_summaries/` — Per-listing OpenAI review summaries JSON
   - `outputs/08_correlation_results/` — Correlation stats JSON
   - `outputs/09_description_analysis/` — Description quality stats JSON

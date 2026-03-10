@@ -342,7 +342,7 @@ Zip Code + config.json
 │  5. Details Results                   │
 │     Raw details + AirDNA financials   │
 │     → amenity matrix, descriptions    │
-│     → outputs/06_details_results/     │
+│     → outputs/07_details_results/     │
 └───────────────────────────────────────┘
         ↓
 ┌───────────────────────────────────────┐
@@ -380,7 +380,7 @@ Zip Code + config.json
 | `outputs/02_details_scrape/` | Property details (amenities, rules, descriptions) |
 | `outputs/03_airdna_data/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
 | `outputs/04_reviews_scrape/` | Raw review JSON per listing |
-| `outputs/06_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
+| `outputs/07_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
 | `outputs/05_listing_summaries/` | AI-generated summary per property |
 | `outputs/08_correlation_results/` | Correlation statistics (JSON) for each metric |
 | `outputs/09_description_analysis/` | Description quality statistics (JSON) |
@@ -399,9 +399,9 @@ main.py                          # Entry point — config-driven pipeline orches
 │   ├── 02_details_scrape.py     # Scrape property details
 │   ├── 03_airdna_data.py          # AirDNA per-listing lookup + master comp set
 │   ├── 04_reviews_scrape.py     # Scrape reviews per listing
-│   ├── 06_details_results.py    # Transform details + AirDNA → structured data
+│   ├── 07_details_results.py    # Transform details + AirDNA → structured data
 │   ├── 05_listing_summaries.py  # Per-property AI summaries
-│   ├── 07_area_summary.py       # Area-level AI summary
+│   ├── 06_area_summary.py       # Area-level AI summary
 │   ├── 08_correlation_results.py # Percentile-based metric correlation
 │   └── 09_description_analysis.py # OLS regression + description scoring
 ├── scraper/

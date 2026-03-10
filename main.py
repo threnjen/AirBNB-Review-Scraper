@@ -18,8 +18,8 @@ SCRAPING_STEPS = [
 
 PROCESSING_STEPS = [
     ("steps.05_listing_summaries", "listing_summaries"),
-    ("steps.07_area_summary", "area_summary"),
-    ("steps.06_details_results", "details_results"),
+    ("steps.06_area_summary", "area_summary"),
+    ("steps.07_details_results", "details_results"),
     ("steps.08_correlation_results", "correlation_results"),
     ("steps.09_description_analysis", "description_analysis"),
 ]

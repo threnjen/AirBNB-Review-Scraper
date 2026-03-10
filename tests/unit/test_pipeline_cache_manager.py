@@ -167,7 +167,7 @@ class TestPipelineCacheManager:
         self, cache_manager, tmp_path, monkeypatch
     ):
         """Test that clear_stage keeps the directory after wiping contents."""
-        output_dir = tmp_path / "outputs" / "06_details_results"
+        output_dir = tmp_path / "outputs" / "07_details_results"
         output_dir.mkdir(parents=True)
         (output_dir / "data.csv").write_text("a,b")
 

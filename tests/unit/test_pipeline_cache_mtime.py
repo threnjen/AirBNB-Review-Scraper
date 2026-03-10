@@ -105,15 +105,15 @@ class TestExpectedOutputs:
         result = cache_manager.expected_outputs("details_results", "97067")
         assert len(result) == 5
         assert (
-            "outputs/06_details_results/property_amenities_matrix_97067.csv" in result
+            "outputs/07_details_results/property_amenities_matrix_97067.csv" in result
         )
         assert (
-            "outputs/06_details_results/property_amenities_matrix_cleaned_97067.csv"
+            "outputs/07_details_results/property_amenities_matrix_cleaned_97067.csv"
             in result
         )
-        assert "outputs/06_details_results/house_rules_details_97067.json" in result
-        assert "outputs/06_details_results/property_descriptions_97067.json" in result
-        assert "outputs/06_details_results/neighborhood_highlights_97067.json" in result
+        assert "outputs/07_details_results/house_rules_details_97067.json" in result
+        assert "outputs/07_details_results/property_descriptions_97067.json" in result
+        assert "outputs/07_details_results/neighborhood_highlights_97067.json" in result
 
     def test_aggregate_reviews_returns_per_listing_files(
         self, cache_manager, tmp_path, monkeypatch

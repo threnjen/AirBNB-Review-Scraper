@@ -50,7 +50,7 @@ class PipelineCacheManager(BaseModel):
         "details_scrape": "outputs/02_details_scrape",
         "airdna_data": "outputs/03_airdna_data",
         "reviews_scrape": "outputs/04_reviews_scrape",
-        "details_results": "outputs/06_details_results",
+        "details_results": "outputs/07_details_results",
         "listing_summaries": "outputs/05_listing_summaries",
         "correlation_results": "outputs/08_correlation_results",
         "description_analysis": "outputs/09_description_analysis",
@@ -174,7 +174,7 @@ class PipelineCacheManager(BaseModel):
 
         if stage_name == "details_results":
             dr_dir = self.STAGE_OUTPUT_DIRS.get(
-                "details_results", "outputs/06_details_results"
+                "details_results", "outputs/07_details_results"
             )
             return [
                 os.path.join(dr_dir, f"property_amenities_matrix_{zone_name}.csv"),

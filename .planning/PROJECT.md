@@ -13,7 +13,7 @@ Given a property's amenities and size, instantly predict what ADR it should comm
 ### Validated
 
 - ✓ Airbnb property data scraped and processed into amenities matrix — existing pipeline
-- ✓ ADR values captured per property in `outputs/06_details_results/property_amenities_matrix_cleaned_97067.csv` — existing
+- ✓ ADR values captured per property in `outputs/07_details_results/property_amenities_matrix_cleaned_97067.csv` — existing
 
 ### Active
 
@@ -33,7 +33,7 @@ Given a property's amenities and size, instantly predict what ADR it should comm
 
 ## Context
 
-- **Data source:** `outputs/06_details_results/property_amenities_matrix_cleaned_97067.csv`
+- **Data source:** `outputs/07_details_results/property_amenities_matrix_cleaned_97067.csv`
 - **Dataset:** 479 properties, 146 feature columns (4 numeric + 142 binary amenities), ADR as target
 - **Feature columns:** capacity, bedrooms, beds, bathrooms + 142 `SYSTEM_` binary amenity columns
 - **Excluded from features:** property_id (identifier), Days_Avail, has_airdna_data

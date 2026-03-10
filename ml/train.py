@@ -37,7 +37,7 @@ ZONE_NAME = config.get("search_zone_name", "00000")
 DEFAULT_CSV_PATH = (
     Path(__file__).parent.parent
     / "outputs"
-    / "06_details_results"
+    / "07_details_results"
     / f"property_amenities_matrix_cleaned_{ZONE_NAME}.csv"
 )
 DEFAULT_MODEL_DIR = Path(__file__).parent / "model"
