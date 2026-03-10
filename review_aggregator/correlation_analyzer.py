@@ -60,10 +60,6 @@ AMENITY_COLUMNS = [
     "SYSTEM_VIEW_OCEAN",
     "SYSTEM_HAMMOCK",
     "SYSTEM_BEACH",
-    "BEDS_PER_PERSON",
-    "BATHS_PER_PERSON",
-    "BEDROOMS_PER_PERSON",
-    "DIST_TO_POI",
 ]
 
 # Raw size features used for OLS residualization (regressed out before analysis)

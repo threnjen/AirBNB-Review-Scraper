@@ -7,13 +7,14 @@
     "listing_summaries": false,
     "area_summary": false,
     "details_results": false,
-    "correlation_results": false,
+    "correlation_results": true,
     "description_analysis": false,
     "min_days_available": 100,
     "airdna_cdp_url": "http://localhost:9222",
     "airdna_inspect_mode": false,
     "correlation_metrics": [
-        "adr"
+        "adr",
+        "occupancy"
     ],
     "correlation_top_percentile": 25,
     "correlation_bottom_percentile": 25,
