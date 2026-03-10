@@ -13,7 +13,12 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import KFold, RandomizedSearchCV, cross_val_score
+from sklearn.model_selection import (
+    KFold,
+    RandomizedSearchCV,
+    cross_val_score,
+    train_test_split,
+)
 from xgboost import XGBRegressor
 from utils.tiny_file_handler import load_config
 
@@ -51,12 +56,12 @@ def select_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
 
 
 PARAM_GRID = {
-    "n_estimators": [50, 100, 150, 200],
-    "max_depth": [2, 3, 4, 5],
-    "learning_rate": [0.01, 0.03, 0.05, 0.1],
+    "n_estimators": [100, 200, 300, 500],
+    "max_depth": [2, 3, 4],
+    "learning_rate": [0.01, 0.02, 0.03, 0.05],
     "reg_alpha": [1.0, 3.0, 5.0, 10.0],
-    "reg_lambda": [1.0, 5.0, 10.0],
-    "min_child_weight": [1, 3, 5, 10],
+    "reg_lambda": [5.0, 10.0, 20.0, 50.0],
+    "min_child_weight": [3, 5, 10, 20],
     "subsample": [0.6, 0.7, 0.8, 1.0],
     "colsample_bytree": [0.5, 0.6, 0.7, 1.0],
 }
@@ -100,16 +105,18 @@ def drop_correlated(X: pd.DataFrame, threshold: float = 0.9) -> pd.DataFrame:
 def train_model(
     X: pd.DataFrame, y: pd.Series, n_search_iter: int = 50
 ) -> tuple[XGBRegressor, dict]:
-    """Train an XGBRegressor via RandomizedSearchCV with 10-fold CV.
+    """Train an XGBRegressor via RandomizedSearchCV with 5-fold CV.
 
     The target is log-transformed during training. The returned model
     is fit on log(y) — callers must apply np.expm1() to predictions.
+    Uses early stopping to determine optimal n_estimators, then refits
+    on the full dataset.
     Returns the best fitted model and a metrics dict.
     """
     y_log = np.log1p(y)
 
     base_model = XGBRegressor(random_state=42)
-    kfold = KFold(n_splits=10, shuffle=True, random_state=42)
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
 
     search = RandomizedSearchCV(
         base_model,
@@ -123,8 +130,30 @@ def train_model(
     )
     search.fit(X, y_log)
 
-    model = search.best_estimator_
     best_params = search.best_params_
+
+    # Determine optimal n_estimators via early stopping on a held-out split
+    X_fit, X_es, y_fit, y_es = train_test_split(
+        X, y_log, test_size=0.15, random_state=42
+    )
+    es_model = XGBRegressor(
+        **best_params,
+        random_state=42,
+        early_stopping_rounds=10,
+        eval_metric="rmse",
+    )
+    es_model.fit(X_fit, y_fit, eval_set=[(X_es, y_es)], verbose=False)
+    optimal_n = es_model.best_iteration + 1
+    logger.info(
+        "Early stopping: %d → %d estimators",
+        best_params["n_estimators"],
+        optimal_n,
+    )
+
+    # Refit on full data with the early-stopped n_estimators
+    final_params = {**best_params, "n_estimators": optimal_n}
+    model = XGBRegressor(**final_params, random_state=42)
+    model.fit(X, y_log)
 
     # CV RMSE in log-space, then convert to dollar-space
     cv_log_rmse = np.sqrt(-search.best_score_)
@@ -211,21 +240,29 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
     X, y = select_features(df)
     logger.info("Features selected: %d columns", X.shape[1])
 
-    # Check for near-zero-variance amenities
-    # system_cols = [c for c in X.columns if c.startswith("SYSTEM_")]
-    # prevalence = X[system_cols].mean()
-    # low_variance = prevalence[prevalence < 0.05].index.tolist()
-    # if low_variance:
-    #     logger.info(
-    #         "Dropping %d low-variance amenities (<5%%): %s",
-    #         len(low_variance),
-    #         low_variance,
-    #     )
-    #     X = X.drop(columns=low_variance)
+    # Drop near-zero-variance and near-ubiquitous amenities
+    system_cols = [c for c in X.columns if c.startswith("SYSTEM_")]
+    prevalence = X[system_cols].mean()
+    low_variance = prevalence[prevalence < 0.05].index.tolist()
+    if low_variance:
+        logger.info(
+            "Dropping %d low-variance amenities (<5%%): %s",
+            len(low_variance),
+            low_variance,
+        )
+        X = X.drop(columns=low_variance)
+    high_prevalence = prevalence[prevalence > 0.95].index.tolist()
+    if high_prevalence:
+        logger.info(
+            "Dropping %d near-ubiquitous amenities (>95%%): %s",
+            len(high_prevalence),
+            high_prevalence,
+        )
+        X = X.drop(columns=[c for c in high_prevalence if c in X.columns])
 
     # Drop highly correlated amenity pairs
-    # X = drop_correlated(X, threshold=0.9)
-    # logger.info("Features after filtering: %d columns", X.shape[1])
+    X = drop_correlated(X, threshold=0.9)
+    logger.info("Features after filtering: %d columns", X.shape[1])
 
     model, metrics = train_model(X, y)
 
