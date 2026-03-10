@@ -60,6 +60,10 @@ AMENITY_COLUMNS = [
     "SYSTEM_VIEW_OCEAN",
     "SYSTEM_HAMMOCK",
     "SYSTEM_BEACH",
+    "BEDS_PER_PERSON",
+    "BATHS_PER_PERSON",
+    "BEDROOMS_PER_PERSON",
+    "DIST_TO_POI",
 ]
 
 # Raw size features used for OLS residualization (regressed out before analysis)
@@ -89,9 +93,7 @@ class CorrelationAnalyzer(BaseModel):
 
     def load_property_data(self) -> pd.DataFrame:
         """Load property data from amenities matrix CSV."""
-        csv_path = (
-            f"outputs/07_details_results/property_amenities_matrix_{self.zone_name}.csv"
-        )
+        csv_path = f"outputs/07_details_results/property_amenities_matrix_cleaned_{self.zone_name}.csv"
 
         if not os.path.exists(csv_path):
             logger.error(f"Property amenities matrix not found at {csv_path}")
@@ -537,10 +539,10 @@ class CorrelationAnalyzer(BaseModel):
 
             # Get sample descriptions
             high_descriptions = self.get_sample_descriptions(
-                high_tier, descriptions, max_samples=3
+                high_tier, descriptions, max_samples=5
             )
             low_descriptions = self.get_sample_descriptions(
-                low_tier, descriptions, max_samples=3
+                low_tier, descriptions, max_samples=5
             )
 
             # Build comparison text for prompt

@@ -243,14 +243,14 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
     # Drop near-zero-variance and near-ubiquitous amenities
     system_cols = [c for c in X.columns if c.startswith("SYSTEM_")]
     prevalence = X[system_cols].mean()
-    low_variance = prevalence[prevalence < 0.05].index.tolist()
-    if low_variance:
-        logger.info(
-            "Dropping %d low-variance amenities (<5%%): %s",
-            len(low_variance),
-            low_variance,
-        )
-        X = X.drop(columns=low_variance)
+    # low_variance = prevalence[prevalence < 0.05].index.tolist()
+    # if low_variance:
+    #     logger.info(
+    #         "Dropping %d low-variance amenities (<5%%): %s",
+    #         len(low_variance),
+    #         low_variance,
+    #     )
+    #     X = X.drop(columns=low_variance)
     high_prevalence = prevalence[prevalence > 0.95].index.tolist()
     if high_prevalence:
         logger.info(
