@@ -139,6 +139,11 @@ class DescriptionAnalyzer(BaseModel):
             if col != "ADR"
         ]
 
+        # Exclude raw size features — these are regressed out separately
+        # in the correlation analyzer; per-person ratios replace their role here
+        size_columns = {"capacity", "bedrooms", "beds", "bathrooms"}
+        features = [col for col in features if col not in size_columns]
+
         if not features:
             logger.warning("No numeric feature columns found for regression.")
             return pd.Series(dtype=float), 0.0, []

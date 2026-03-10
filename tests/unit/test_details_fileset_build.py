@@ -329,6 +329,62 @@ class TestHasAirdnaDataFlag:
         assert builder.property_details["222"].get("has_airdna_data") is not True
 
 
+class TestEngineeredPerPersonFeatures:
+    """Tests for BEDS_PER_PERSON, BATHS_PER_PERSON, BEDROOMS_PER_PERSON in clean_amenities_df."""
+
+    def test_computes_per_person_features(self):
+        """Per-person ratios are computed correctly from beds/bathrooms/bedrooms ÷ capacity."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0, 300.0],
+                "capacity": [4, 8],
+                "beds": [2, 6],
+                "bathrooms": [1.0, 3.0],
+                "bedrooms": [1, 4],
+            },
+            index=["p1", "p2"],
+        )
+        result = builder.clean_amenities_df(df)
+
+        assert result.loc["p1", "BEDS_PER_PERSON"] == 0.5
+        assert result.loc["p2", "BEDS_PER_PERSON"] == 0.75
+        assert result.loc["p1", "BATHS_PER_PERSON"] == 0.25
+        assert result.loc["p2", "BATHS_PER_PERSON"] == 0.38
+        assert result.loc["p1", "BEDROOMS_PER_PERSON"] == 0.25
+        assert result.loc["p2", "BEDROOMS_PER_PERSON"] == 0.5
+
+    def test_zero_capacity_produces_nan(self):
+        """Properties with capacity=0 should get NaN for per-person features."""
+        from scraper.details_fileset_build import DetailsFilesetBuilder
+
+        builder = DetailsFilesetBuilder(
+            use_categoricals=False,
+            comp_set_filepath="unused.json",
+            min_days_available=0,
+        )
+        df = pd.DataFrame(
+            {
+                "ADR": [200.0],
+                "capacity": [0],
+                "beds": [2],
+                "bathrooms": [1.0],
+                "bedrooms": [1],
+            },
+            index=["p1"],
+        )
+        result = builder.clean_amenities_df(df)
+
+        assert pd.isna(result.loc["p1", "BEDS_PER_PERSON"])
+        assert pd.isna(result.loc["p1", "BATHS_PER_PERSON"])
+        assert pd.isna(result.loc["p1", "BEDROOMS_PER_PERSON"])
+
+
 class TestParseBasicDetailsSubDetails:
     """parse_basic_details must not crash on short or empty sub_details arrays."""
 

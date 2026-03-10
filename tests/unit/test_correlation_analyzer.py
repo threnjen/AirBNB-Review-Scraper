@@ -248,3 +248,122 @@ class TestLoadPropertyDataAirdnaFilter:
         mock_logger.info.assert_any_call(
             "Filtered 2 properties without AirDNA data (1 remaining)"
         )
+
+
+class TestComputeMetricResiduals:
+    """Tests for compute_metric_residuals OLS regression."""
+
+    @pytest.fixture
+    def analyzer(self):
+        with patch("review_aggregator.openai_aggregator.load_config") as mock_load:
+            mock_load.return_value = {"openai": {"enable_cost_tracking": False}}
+            with patch("utils.cost_tracker.load_config", return_value={}):
+                from review_aggregator.correlation_analyzer import CorrelationAnalyzer
+
+                return CorrelationAnalyzer(zone_name="97067")
+
+    def test_residuals_sum_near_zero(self, analyzer):
+        """OLS residuals should sum to approximately zero."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 250, 200, 180, 150, 120, 400, 350],
+                "capacity": [8, 6, 4, 4, 2, 2, 10, 8],
+                "bedrooms": [4, 3, 2, 2, 1, 1, 5, 4],
+                "beds": [6, 5, 3, 3, 2, 1, 8, 6],
+                "bathrooms": [3, 2, 1, 1, 1, 1, 4, 3],
+            },
+            index=[f"p{i}" for i in range(8)],
+        )
+
+        residuals, r_squared = analyzer.compute_metric_residuals(df, "adr")
+
+        assert abs(residuals.sum()) < 1e-6
+
+    def test_r_squared_between_zero_and_one(self, analyzer):
+        """R-squared should be between 0 and 1."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 250, 200, 180, 150, 120, 400, 350],
+                "capacity": [8, 6, 4, 4, 2, 2, 10, 8],
+                "bedrooms": [4, 3, 2, 2, 1, 1, 5, 4],
+                "beds": [6, 5, 3, 3, 2, 1, 8, 6],
+                "bathrooms": [3, 2, 1, 1, 1, 1, 4, 3],
+            },
+            index=[f"p{i}" for i in range(8)],
+        )
+
+        residuals, r_squared = analyzer.compute_metric_residuals(df, "adr")
+
+        assert 0.0 <= r_squared <= 1.0
+
+    def test_returns_empty_for_unknown_metric(self, analyzer):
+        """Unknown metric should return empty series."""
+        df = pd.DataFrame({"ADR": [100]}, index=["p1"])
+
+        residuals, r_squared = analyzer.compute_metric_residuals(df, "unknown")
+
+        assert residuals.empty
+
+    def test_uses_only_size_features(self, analyzer):
+        """Residuals should only be computed from capacity, bedrooms, beds, bathrooms."""
+        df = pd.DataFrame(
+            {
+                "ADR": [200, 400, 600, 800, 1000, 1200],
+                "capacity": [2, 4, 6, 8, 10, 12],
+                "bedrooms": [1, 2, 3, 4, 5, 6],
+                "beds": [1, 2, 3, 4, 5, 6],
+                "bathrooms": [1, 2, 3, 4, 5, 6],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared = analyzer.compute_metric_residuals(df, "adr")
+
+        # Perfectly linear in size features → R² ≈ 1
+        assert r_squared > 0.99
+        assert all(abs(r) < 1e-6 for r in residuals)
+
+    def test_works_with_occupancy_metric(self, analyzer):
+        """Should work for occupancy metric too."""
+        df = pd.DataFrame(
+            {
+                "Occ_Rate_Based_on_Avail": [90, 80, 70, 60, 50, 40],
+                "capacity": [2, 4, 6, 8, 10, 12],
+                "bedrooms": [1, 2, 3, 4, 5, 6],
+                "beds": [1, 2, 3, 4, 5, 6],
+                "bathrooms": [1, 2, 3, 4, 5, 6],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared = analyzer.compute_metric_residuals(df, "occupancy")
+
+        assert len(residuals) == 6
+        assert abs(residuals.sum()) < 1e-6
+
+
+class TestNumericColumnsConstant:
+    """Tests for the updated NUMERIC_COLUMNS constant."""
+
+    def test_no_raw_size_features(self):
+        """NUMERIC_COLUMNS should not contain raw size features."""
+        from review_aggregator.correlation_analyzer import NUMERIC_COLUMNS
+
+        assert "capacity" not in NUMERIC_COLUMNS
+        assert "bedrooms" not in NUMERIC_COLUMNS
+        assert "beds" not in NUMERIC_COLUMNS
+        assert "bathrooms" not in NUMERIC_COLUMNS
+
+    def test_has_per_person_features(self):
+        """NUMERIC_COLUMNS should contain per-person engineered features."""
+        from review_aggregator.correlation_analyzer import NUMERIC_COLUMNS
+
+        assert "BEDS_PER_PERSON" in NUMERIC_COLUMNS
+        assert "BATHS_PER_PERSON" in NUMERIC_COLUMNS
+        assert "BEDROOMS_PER_PERSON" in NUMERIC_COLUMNS
+
+    def test_has_dist_to_poi(self):
+        """NUMERIC_COLUMNS should still contain DIST_TO_POI."""
+        from review_aggregator.correlation_analyzer import NUMERIC_COLUMNS
+
+        assert "DIST_TO_POI" in NUMERIC_COLUMNS

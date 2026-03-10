@@ -190,6 +190,18 @@ class DetailsFilesetBuilder:
         if "bedrooms" in df.columns:
             df["bedrooms"] = df["bedrooms"].astype(int)
 
+        # Engineered per-person features (normalize size metrics by capacity)
+        if "capacity" in df.columns:
+            cap = pd.to_numeric(df["capacity"], errors="coerce").replace(
+                0, float("nan")
+            )
+            if "beds" in df.columns:
+                df["BEDS_PER_PERSON"] = (df["beds"] / cap).round(2)
+            if "bathrooms" in df.columns:
+                df["BATHS_PER_PERSON"] = (df["bathrooms"] / cap).round(2)
+            if "bedrooms" in df.columns:
+                df["BEDROOMS_PER_PERSON"] = (df["bedrooms"] / cap).round(2)
+
         # Filter rows by min_days_available (ELT: raw matrix keeps all,
         # cleaned matrix applies business rules)
         if "Days_Avail" in df.columns:

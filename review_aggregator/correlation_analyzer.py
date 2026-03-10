@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -61,8 +62,16 @@ AMENITY_COLUMNS = [
     "SYSTEM_BEACH",
 ]
 
-# Numeric columns for average comparison
-NUMERIC_COLUMNS = ["capacity", "bedrooms", "beds", "bathrooms", "DIST_TO_POI"]
+# Raw size features used for OLS residualization (regressed out before analysis)
+SIZE_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms"]
+
+# Numeric columns for average comparison (post-residualization)
+NUMERIC_COLUMNS = [
+    "BEDS_PER_PERSON",
+    "BATHS_PER_PERSON",
+    "BEDROOMS_PER_PERSON",
+    "DIST_TO_POI",
+]
 
 
 class CorrelationAnalyzer(BaseModel):
@@ -120,6 +129,71 @@ class CorrelationAnalyzer(BaseModel):
         logger.info(f"Loaded {len(descriptions)} property descriptions")
         return descriptions
 
+    def compute_metric_residuals(
+        self, df: pd.DataFrame, metric: str
+    ) -> tuple[pd.Series, float]:
+        """
+        Fit OLS regression: metric ~ SIZE_FEATURES to remove property-size effect.
+
+        Returns:
+            (residual_series, r_squared)
+            Residual > 0 means property outperforms size prediction.
+            Residual < 0 means property underperforms size prediction.
+        """
+        config = METRIC_CONFIG.get(metric)
+        if not config:
+            return pd.Series(dtype=float), 0.0
+
+        column = config["column"]
+        if column not in df.columns:
+            return pd.Series(dtype=float), 0.0
+
+        work = df.copy()
+        work[column] = pd.to_numeric(work[column], errors="coerce")
+        valid = work[work[column].notna() & (work[column] > 0)].copy()
+
+        # Determine which size features are available
+        features = [col for col in SIZE_FEATURES if col in valid.columns]
+        if not features:
+            logger.warning("No size features found for OLS regression.")
+            return pd.Series(dtype=float), 0.0
+
+        for col in features:
+            valid[col] = pd.to_numeric(valid[col], errors="coerce")
+        valid = valid.dropna(subset=features)
+
+        if len(valid) < len(features) + 1:
+            logger.warning(f"Not enough properties ({len(valid)}) for size regression.")
+            return pd.Series(dtype=float), 0.0
+
+        y = valid[column].values
+        X = np.column_stack(
+            [np.ones(len(valid))] + [valid[col].values for col in features]
+        )
+
+        coeffs, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
+        predicted = X @ coeffs
+        residuals = y - predicted
+
+        ss_total = np.sum((y - np.mean(y)) ** 2)
+        ss_residual = np.sum(residuals**2)
+        r_squared = 1 - (ss_residual / ss_total) if ss_total > 0 else 0.0
+
+        residual_series = pd.Series(
+            residuals, index=valid.index, name=f"{column}_residual"
+        )
+
+        logger.info(
+            f"Size OLS for {metric}: R² = {r_squared:.3f} | "
+            f"Features: {', '.join(features)} | "
+            f"Coefficients: intercept={coeffs[0]:.1f}, "
+            + ", ".join(
+                f"{feat}={coeffs[i + 1]:.1f}" for i, feat in enumerate(features)
+            )
+        )
+
+        return residual_series, r_squared
+
     def segment_by_metric(
         self, df: pd.DataFrame, metric: str
     ) -> tuple[pd.DataFrame, pd.DataFrame, float, float]:
@@ -147,7 +221,8 @@ class CorrelationAnalyzer(BaseModel):
         df[column] = pd.to_numeric(df[column], errors="coerce")
 
         # Filter to properties with valid metric values
-        valid_df = df[df[column].notna() & (df[column] > 0)].copy()
+        # (residuals can be negative after size adjustment, so only filter NaN)
+        valid_df = df[df[column].notna()].copy()
 
         if len(valid_df) < 4:
             logger.warning(f"Not enough properties with valid {column} values")
@@ -296,6 +371,7 @@ class CorrelationAnalyzer(BaseModel):
         low_tier_descriptions: list[str],
         high_threshold: float,
         low_threshold: float,
+        r_squared: float = 0.0,
     ) -> str:
         """Generate LLM insights for a metric."""
         config = METRIC_CONFIG.get(metric)
@@ -325,6 +401,7 @@ class CorrelationAnalyzer(BaseModel):
         prompt = prompt.replace("{LOW_THRESHOLD}", low_str)
         prompt = prompt.replace("{TOP_PERCENTILE}", str(self.top_percentile))
         prompt = prompt.replace("{BOTTOM_PERCENTILE}", str(self.bottom_percentile))
+        prompt = prompt.replace("{R_SQUARED}", f"{r_squared:.3f}")
         prompt = prompt.replace("{FEATURE_COMPARISON}", feature_comparison_text)
         prompt = prompt.replace(
             "{HIGH_TIER_DESCRIPTIONS}",
@@ -354,6 +431,7 @@ class CorrelationAnalyzer(BaseModel):
         amenity_comparison: dict,
         numeric_comparison: dict,
         insights: str,
+        r_squared: float = 0.0,
     ):
         """Save JSON stats and Markdown insights for a metric."""
         # Ensure output directory exists
@@ -366,6 +444,11 @@ class CorrelationAnalyzer(BaseModel):
             "zone_name": self.zone_name,
             "metric": metric,
             "metric_column": config.get("column", ""),
+            "size_adjustment": {
+                "enabled": True,
+                "r_squared": round(r_squared, 4),
+                "features_regressed_out": SIZE_FEATURES,
+            },
             "high_tier_threshold": round(high_threshold, 2),
             "low_tier_threshold": round(low_threshold, 2),
             "high_tier_count": high_tier_count,
@@ -392,11 +475,15 @@ class CorrelationAnalyzer(BaseModel):
             f.write(f"# {config.get('display_name', metric)} Correlation Analysis\n\n")
             f.write(f"**Search Zone:** {self.zone_name}\n\n")
             f.write(
-                f"**High Tier:** {config.get('unit', '')}{high_threshold:.2f} "
+                f"**Size Adjustment:** OLS regression on {', '.join(SIZE_FEATURES)} "
+                f"(R² = {r_squared:.3f})\n\n"
+            )
+            f.write(
+                f"**High Tier Residual:** {high_threshold:+.2f} "
                 f"(top {self.top_percentile}%, n={high_tier_count})\n\n"
             )
             f.write(
-                f"**Low Tier:** {config.get('unit', '')}{low_threshold:.2f} "
+                f"**Low Tier Residual:** {low_threshold:+.2f} "
                 f"(bottom {self.bottom_percentile}%, n={low_tier_count})\n\n"
             )
             f.write("---\n\n")
@@ -424,9 +511,20 @@ class CorrelationAnalyzer(BaseModel):
             logger.info(f"Analyzing {METRIC_CONFIG[metric]['display_name']}")
             logger.info(f"{'=' * 50}")
 
-            # Segment properties
+            # Compute size-adjusted residuals via OLS
+            residuals, r_squared = self.compute_metric_residuals(df, metric)
+            if residuals.empty:
+                logger.warning(f"Could not compute residuals for {metric}")
+                continue
+
+            # Replace raw metric with residuals for segmentation
+            config = METRIC_CONFIG[metric]
+            analysis_df = df.loc[residuals.index].copy()
+            analysis_df[config["column"]] = residuals
+
+            # Segment properties by residual percentiles
             high_tier, low_tier, high_threshold, low_threshold = self.segment_by_metric(
-                df, metric
+                analysis_df, metric
             )
 
             if high_tier.empty or low_tier.empty:
@@ -458,6 +556,7 @@ class CorrelationAnalyzer(BaseModel):
                 low_tier_descriptions=low_descriptions,
                 high_threshold=high_threshold,
                 low_threshold=low_threshold,
+                r_squared=r_squared,
             )
 
             # Save results
@@ -470,6 +569,7 @@ class CorrelationAnalyzer(BaseModel):
                 amenity_comparison=amenity_comparison,
                 numeric_comparison=numeric_comparison,
                 insights=insights,
+                r_squared=r_squared,
             )
 
         # Log cost summary

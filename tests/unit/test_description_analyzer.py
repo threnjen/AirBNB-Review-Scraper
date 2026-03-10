@@ -121,15 +121,12 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
 
     def test_perfect_linear_data_has_near_zero_residuals(self, analyzer):
         """When ADR is exactly linear in features, residuals should be ~0."""
-        # ADR = 100*bedrooms + 50*capacity + 25*beds + 10*bathrooms
-        # Need rows > num_features + 1 for OLS
+        # ADR = 100*BEDS_PER_PERSON + 50*SYSTEM_POOL + 200
         df = pd.DataFrame(
             {
-                "ADR": [200, 400, 600, 800, 1000, 1200],
-                "capacity": [2, 4, 6, 8, 10, 12],
-                "bedrooms": [1, 2, 3, 4, 5, 6],
-                "beds": [1, 2, 3, 4, 5, 6],
-                "bathrooms": [1, 2, 3, 4, 5, 6],
+                "ADR": [250, 300, 350, 400, 450, 500],
+                "BEDS_PER_PERSON": [0.5, 1.0, 1.5, 2.0, 2.5, 3.0],
+                "SYSTEM_POOL": [0, 0, 0, 0, 0, 0],
             },
             index=["a", "b", "c", "d", "e", "f"],
         )
@@ -145,10 +142,8 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
         df = pd.DataFrame(
             {
                 "ADR": [350, 0, 250, float("nan"), 400, 500, 300, 450],
-                "capacity": [4, 6, 2, 10, 5, 7, 3, 6],
-                "bedrooms": [2, 3, 1, 5, 3, 4, 2, 3],
-                "beds": [3, 5, 2, 8, 4, 6, 3, 5],
-                "bathrooms": [1, 2, 1, 3, 2, 2, 1, 2],
+                "BEDS_PER_PERSON": [0.5, 0.6, 0.7, 0.8, 0.5, 0.6, 0.7, 0.8],
+                "SYSTEM_POOL": [1, 0, 1, 0, 1, 0, 1, 0],
             },
             index=["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
         )
@@ -160,7 +155,7 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
         assert "p4" not in residuals.index
 
     def test_discovers_all_numeric_columns(self, analyzer):
-        """Should use all numeric columns except ADR as regression features."""
+        """Should use all numeric columns except ADR and raw size features."""
         df = pd.DataFrame(
             {
                 "ADR": [300, 400, 500, 200, 350, 450],
@@ -174,19 +169,20 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
 
         residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
 
-        assert "capacity" in features
-        assert "bedrooms" in features
+        # Raw size features should be excluded
+        assert "capacity" not in features
+        assert "bedrooms" not in features
+        # Amenity flags should still be included
         assert "SYSTEM_POOL" in features
         assert "SYSTEM_PETS" in features
         assert "ADR" not in features
 
     def test_includes_zero_values_in_regression(self, analyzer):
-        """Zero values (e.g. 0 bedrooms, 0 for binary amenities) should be included."""
+        """Zero values (e.g. 0 for binary amenities) should be included."""
         df = pd.DataFrame(
             {
                 "ADR": [300, 400, 500, 200, 350, 450],
-                "capacity": [4, 6, 8, 3, 5, 7],
-                "bedrooms": [2, 0, 3, 1, 2, 3],
+                "BEDS_PER_PERSON": [0.5, 0.75, 1.0, 0.5, 0.6, 0.8],
                 "SYSTEM_POOL": [1, 0, 1, 0, 1, 0],
             },
             index=["a", "b", "c", "d", "e", "f"],
@@ -194,9 +190,33 @@ class TestComputeResiduals(TestDescriptionAnalyzer):
 
         residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
 
-        # Row "b" with 0 bedrooms should be included
+        # Row "b" with 0 SYSTEM_POOL should be included
         assert "b" in residuals.index
         assert len(residuals) == 6
+
+    def test_excludes_raw_size_features(self, analyzer):
+        """Raw size features (capacity, bedrooms, beds, bathrooms) must be excluded."""
+        df = pd.DataFrame(
+            {
+                "ADR": [300, 400, 500, 200, 350, 450],
+                "capacity": [4, 6, 8, 3, 5, 7],
+                "bedrooms": [2, 3, 3, 1, 2, 3],
+                "beds": [3, 5, 4, 2, 3, 5],
+                "bathrooms": [1, 2, 2, 1, 1, 2],
+                "BEDS_PER_PERSON": [0.75, 0.83, 0.5, 0.67, 0.6, 0.71],
+                "SYSTEM_POOL": [1, 0, 1, 0, 1, 0],
+            },
+            index=["a", "b", "c", "d", "e", "f"],
+        )
+
+        residuals, r_squared, features = analyzer.compute_size_adjusted_residuals(df)
+
+        assert "capacity" not in features
+        assert "bedrooms" not in features
+        assert "beds" not in features
+        assert "bathrooms" not in features
+        assert "BEDS_PER_PERSON" in features
+        assert "SYSTEM_POOL" in features
 
 
 class TestParseScoreResponse(TestDescriptionAnalyzer):
@@ -648,10 +668,8 @@ class TestComputeResidualsWithBadFeatures(TestDescriptionAnalyzer):
         df = pd.DataFrame(
             {
                 "ADR": [300, 400, 500, 200, 350, 450],
-                "capacity": [4, 6, 8, 3, 5, 7],
-                "bedrooms": [2, 3, float("nan"), 1, 2, 3],
-                "beds": [3, 5, 6, 2, 4, 5],
-                "bathrooms": [1, 2, 2, 1, 1, 2],
+                "BEDS_PER_PERSON": [0.5, 0.6, float("nan"), 0.4, 0.5, 0.7],
+                "SYSTEM_POOL": [1, 0, 1, 0, 1, 0],
             },
             index=["a", "b", "c", "d", "e", "f"],
         )
