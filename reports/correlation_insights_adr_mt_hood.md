@@ -10,110 +10,99 @@
 
 ---
 
-# Mt. Hood Airbnb Market Analysis: Drivers of Higher Size-Adjusted Nightly Rates (ADR)
+# Mt. Hood Airbnb Property Analysis: Drivers of Higher Size-Adjusted ADR
 
 ---
 
 ## 1. Key Differentiators
 
-Despite identical amenity prevalence (100% across all listed amenities), the following features distinguish properties earning **more than their size predicts**:
+The following features most strongly distinguish properties earning **more than predicted by size** (High Residual Tier) from those earning less (Low Residual Tier), based on percentage point differences in amenity prevalence:
 
-| Feature                      | High Residual Tier | Low Residual Tier | Difference           |
-|------------------------------|--------------------|-------------------|----------------------|
-| Distance to Point of Interest | 71.03 (units)       | 14.11 (units)     | **+56.92** (much farther) |
-| Beds Per Person              | 0.58               | 0.65              | **-0.07** (fewer beds per guest)  |
-| Baths Per Person             | 0.21               | 0.26              | **-0.05** (fewer baths per guest) |
-| Bedrooms Per Person          | 0.33               | 0.38              | **-0.04** (fewer bedrooms per guest) |
+| Feature       | Difference (High - Low) |
+|---------------|------------------------|
+| Jacuzzi       | +22.4%                 |
+| Ocean View    | +17.3%                 |
+| Firepit       | +9.2%                  |
+| Beach Access  | +9.2%                  |
+| Grill         | +7.7%                  |
+| Sauna         | +6.1%                  |
+| Mountain View | +4.6%                  |
 
-**Interpretation:**  
-- Overperforming properties tend to have **lower per-person space ratios** (beds, baths, bedrooms per guest), indicating more efficient or communal space usage rather than more private rooms per guest.  
-- Surprisingly, high residual properties are located **much farther from points of interest** (56.92 units farther on average), suggesting that premium pricing is driven by other factors beyond proximity.
+**Summary:** High-performing properties are significantly more likely to offer luxury or unique outdoor amenities (Jacuzzi, firepit, grill), scenic views (ocean, mountain), and exclusive access (beach).
 
 ---
 
 ## 2. Luxury Amenity Patterns
 
-- All properties in both tiers have **100% prevalence** of key luxury amenities such as:  
-  - Pets allowed  
-  - Jacuzzi / Hot tub  
-  - Pool  
-  - Fireplace  
-  - Wi-Fi  
-  - Workspace  
-  - Grill  
-  - Firepit  
-  - Washer & Dryer  
-  - Dishwasher  
-  - TV  
-  - Snowflake (likely heating or winter readiness)  
-  - Superhost status  
-  - Pool Table  
+Amenities correlating with a premium beyond size include:
 
-- **No difference in amenity prevalence** between high and low residual tiers.
+- **Hot Tubs / Jacuzzis:** Present in 60.7% of high residuals vs. 38.3% low residuals (+22.4%)
+- **Views:** Ocean views (33.7% vs. 16.3%, +17.3%) and mountain views (17.9% vs. 13.3%, +4.6%)
+- **Outdoor Living:** Firepits (53.1% vs. 43.9%, +9.2%), grills (79.1% vs. 71.4%, +7.7%), and beach access (12.2% vs. 3.1%, +9.2%)
+- **Saunas:** More common in high residuals (13.3% vs. 7.1%, +6.1%)
 
-**Implication:**  
-- Luxury amenities are **table stakes** in this market; they do not differentiate premium earners beyond size.  
-- Instead, **other qualitative factors** such as unique experiences, design, or branding likely drive the premium.
+**Notably, pools are more common in low residual properties** (24.5% vs. 12.2%, -12.2%), suggesting pools alone may not drive premium pricing in this market.
 
 ---
 
 ## 3. Per-Person Ratios
 
-| Ratio               | High Residual Tier | Low Residual Tier | Difference          |
-|---------------------|--------------------|-------------------|---------------------|
-| Beds Per Person     | 0.58               | 0.65              | -0.07 (lower)       |
-| Baths Per Person    | 0.21               | 0.26              | -0.05 (lower)       |
-| Bedrooms Per Person | 0.33               | 0.38              | -0.04 (lower)       |
+| Ratio               | High Residual | Low Residual | Difference (High - Low) |
+|---------------------|---------------|--------------|------------------------|
+| Beds per Person     | 0.58          | 0.65         | -0.07                  |
+| Baths per Person    | 0.21          | 0.26         | -0.05                  |
+| Bedrooms per Person | 0.33          | 0.38         | -0.04                  |
 
-**Insight:**  
-- High residual properties offer **fewer beds, baths, and bedrooms per guest**, suggesting a focus on **shared or communal spaces** rather than maximizing private sleeping/bathing areas.  
-- This may reflect a design philosophy prioritizing **group experiences and social interaction** over individual privacy.
+**Interpretation:**  
+High residual properties have **fewer beds, baths, and bedrooms per guest**, indicating a tendency toward:
+
+- More guests sharing beds and bedrooms
+- Possibly larger communal spaces or shared sleeping arrangements
+
+This suggests that **space allocation favors quality and shared experiences over maximizing private sleeping units per guest**.
 
 ---
 
 ## 4. Pet Policy Impact
 
-- **100% of properties in both tiers allow pets.**  
-- Therefore, **allowing pets does not correlate with higher or lower size-adjusted ADR** in this market.
+The dataset does not explicitly provide pet policy statistics. However, from the sample descriptions:
+
+- High residual properties like *Nagomi House* mention family-friendly touches but do not explicitly highlight pet policies.
+- Low residual properties do not emphasize pet policies either.
+
+**Conclusion:** There is no clear evidence that allowing pets correlates with higher or lower size-adjusted ADR in the Mt. Hood market based on the provided data.
 
 ---
 
 ## 5. Description Language Patterns
 
-### High Residual Properties Emphasize:
-- **Unique, experiential language:** “Spacious mountain getaway,” “rustic elegance meets modern luxury,” “enchanted retreat,” “featured on TV series,” “Japandi elegance.”  
-- **Large group appeal:** Frequent mention of capacity for 12-16 guests, multiple bedrooms, game rooms, and communal entertainment spaces.  
-- **Luxury and lifestyle amenities:** Chef’s kitchens, hot tubs, saunas, game rooms, pool tables, fireplaces, and outdoor firepits.  
-- **Scenic and tranquil settings:** Mountain views, private woodland, waterfront, serene outdoor spaces.  
-- **Branding and recognition:** References to media features and awards.
+**High Residual Properties:**
 
-### Low Residual Properties Emphasize:
-- **Historical or traditional charm:** “Step back in time,” “unique piece of Mt. Hood history,” “rustic charm.”  
-- **Practical descriptions:** Focus on acreage, privacy, and family-friendly features without highlighting luxury or unique experiences.  
-- **Proximity and convenience:** Mentions of central location and walkability to amenities.  
-- **Functional amenities:** Game rooms and large kitchens but less emphasis on luxury or branding.
+- Emphasize **luxury and unique experiences**: "chef’s kitchen," "private hot tub," "sauna," "game room," "stunning mountain views," "rustic elegance meets modern luxury."
+- Highlight **group-friendly features**: "accommodating up to 16 guests," "large groups," "multiple families," "family-friendly touches."
+- Focus on **outdoor amenities and natural surroundings**: "deck among evergreens," "outdoor space featuring a hot tub, gas grill, and firepit," "serene bedrooms," "private woodland."
+- Reference **media exposure or accolades**: "Featured on TV series," "Featured in the Oregonian and Travel Channel."
+
+**Low Residual Properties:**
+
+- More functional and historical descriptions: "Step back in time," "unique piece of Mt. Hood history," "great gathering space," "spacious mountain retreat."
+- Emphasize **location and practicality**: proximity to restaurants, ski areas, and trails.
+- Less emphasis on luxury amenities or exclusive experiences.
 
 ---
 
 ## 6. Recommendations for Hosts
 
-1. **Focus on Creating Unique, Experiential Stays**  
-   Use storytelling in your listing to emphasize luxury, scenic views, and unique design elements (e.g., rustic elegance, modern amenities, media features).
+To increase nightly rates beyond what property size predicts in Mt. Hood:
 
-2. **Design for Group Experiences with Communal Spaces**  
-   Prioritize open living areas, game rooms, and shared amenities over maximizing private bedrooms or baths per guest.
-
-3. **Invest in Premium Lifestyle Amenities Beyond Basics**  
-   Although all have hot tubs and pools, highlight features like chef’s kitchens, saunas, fireplaces, and curated outdoor spaces (firepits, grills) in your marketing.
-
-4. **Leverage Branding and Recognition**  
-   Seek local media features, awards, or partnerships to increase perceived value and justify higher rates.
-
-5. **Do Not Rely Solely on Proximity to Points of Interest**  
-   Since high earners are farther from POIs, focus on the property’s intrinsic appeal and guest experience rather than location alone.
+1. **Invest in Luxury Outdoor Amenities:** Add or highlight jacuzzis/hot tubs, firepits, grills, and saunas to create premium guest experiences.
+2. **Leverage Scenic Views:** Promote ocean or mountain views prominently in listings and photos.
+3. **Create Communal Spaces:** Design properties to encourage group interaction with large great rooms, game rooms, and shared amenities rather than maximizing private bedrooms per guest.
+4. **Highlight Unique Features & Media Exposure:** If applicable, mention any media features or unique architectural elements to differentiate your listing.
+5. **Emphasize Natural Surroundings:** Use language that evokes tranquility, nature, and exclusivity (e.g., private woodland, deck among evergreens) to attract premium guests.
 
 ---
 
 # Summary
 
-In Mt. Hood’s Airbnb market, **size-adjusted premium pricing is driven less by basic amenities or proximity and more by the quality of guest experience, unique branding, and communal space design**. Hosts aiming to increase ADR beyond size should focus on crafting memorable, luxurious stays that appeal to groups seeking social and scenic retreats.
+In Mt. Hood, properties that outperform their size-predicted ADR focus on **luxury outdoor amenities, scenic views, and group-friendly communal spaces**, rather than simply increasing bedrooms or beds per guest. Pools alone do not guarantee a premium, and pet policies appear neutral. Hosts aiming to increase rates should prioritize experiential and lifestyle features that resonate with the Mt. Hood market’s demand for upscale, nature-connected getaways.

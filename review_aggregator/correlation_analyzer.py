@@ -253,10 +253,10 @@ class CorrelationAnalyzer(BaseModel):
             if col not in high_tier.columns:
                 continue
 
-            # Count non-False values (amenity present)
-            # CSV stores the string "False", not Python bool False
-            high_count = (high_tier[col] != "False").sum()
-            low_count = (low_tier[col] != "False").sum()
+            # Count non-zero values (amenity present)
+            # Cleaned CSV stores 0/1 integers after clean_amenities_df()
+            high_count = (high_tier[col] != 0).sum()
+            low_count = (low_tier[col] != 0).sum()
 
             high_pct = (high_count / len(high_tier) * 100) if len(high_tier) > 0 else 0
             low_pct = (low_count / len(low_tier) * 100) if len(low_tier) > 0 else 0

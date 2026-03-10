@@ -24,32 +24,32 @@ class TestCorrelationAnalyzer:
                 return CorrelationAnalyzer(zone_name="97067")
 
     @pytest.fixture
-    def sample_tier_with_string_false(self):
-        """DataFrame where amenities use string 'False' (as loaded from CSV)."""
+    def sample_tier_int_amenities(self):
+        """DataFrame where amenities use 0/1 integers (as in cleaned CSV)."""
         return pd.DataFrame(
             {
-                "SYSTEM_JACUZZI": ["Private hot tub", "False", "Hot tub", "False"],
-                "SYSTEM_POOL": ["False", "False", "False", "False"],
-                "SYSTEM_FIREPIT": ["Fire pit", "Fire pit", "Fire pit", "False"],
+                "SYSTEM_JACUZZI": [1, 0, 1, 0],
+                "SYSTEM_POOL": [0, 0, 0, 0],
+                "SYSTEM_FIREPIT": [1, 1, 1, 0],
             },
             index=["prop_1", "prop_2", "prop_3", "prop_4"],
         )
 
-    def test_compute_amenity_prevalence_string_false(
-        self, analyzer, sample_tier_with_string_false
+    def test_compute_amenity_prevalence_int_amenities(
+        self, analyzer, sample_tier_int_amenities
     ):
-        """Amenity prevalence correctly handles string 'False' from CSV.
+        """Amenity prevalence correctly handles 0/1 integers from cleaned CSV.
 
-        When CSV is read, missing amenities are the string 'False', not Python bool.
-        The method must compare against 'False' (str) to get accurate counts.
+        After clean_amenities_df(), amenity columns contain integers (0/1).
+        The method must compare against 0 to get accurate counts.
         """
-        high_tier = sample_tier_with_string_false
+        high_tier = sample_tier_int_amenities
         # Low tier: no amenities at all
         low_tier = pd.DataFrame(
             {
-                "SYSTEM_JACUZZI": ["False", "False", "False"],
-                "SYSTEM_POOL": ["False", "False", "False"],
-                "SYSTEM_FIREPIT": ["False", "False", "False"],
+                "SYSTEM_JACUZZI": [0, 0, 0],
+                "SYSTEM_POOL": [0, 0, 0],
+                "SYSTEM_FIREPIT": [0, 0, 0],
             },
             index=["prop_5", "prop_6", "prop_7"],
         )
@@ -70,22 +70,22 @@ class TestCorrelationAnalyzer:
         assert result["SYSTEM_FIREPIT"]["low_tier_pct"] == 0.0
 
     def test_compute_amenity_prevalence_not_all_100(
-        self, analyzer, sample_tier_with_string_false
+        self, analyzer, sample_tier_int_amenities
     ):
-        """Amenities with string 'False' must NOT all show 100%.
+        """Amenities with integer 0 values must NOT all show 100%.
 
         This is the regression test for the bug where comparing against
-        Python bool False made every amenity appear present in every property.
+        string 'False' instead of integer 0 made every amenity appear present.
         """
-        high_tier = sample_tier_with_string_false
-        low_tier = sample_tier_with_string_false.copy()
+        high_tier = sample_tier_int_amenities
+        low_tier = sample_tier_int_amenities.copy()
 
         result = analyzer.compute_amenity_prevalence(high_tier, low_tier)
 
         # At least one amenity should NOT be 100% in high tier
         high_pcts = [v["high_tier_pct"] for v in result.values()]
         assert not all(pct == 100.0 for pct in high_pcts), (
-            "All amenities at 100% suggests string 'False' vs bool False bug"
+            "All amenities at 100% suggests comparison against wrong type"
         )
 
 
