@@ -28,7 +28,7 @@
     "force_refresh_details_results": false,
     "force_refresh_correlation_results": false,
     "force_refresh_description_analysis": false,
-    "force_refresh_machine_learning_model": false,
+    "force_refresh_machine_learning_model": true,
     "search_zone_name": "mt_hood",
     "start_lat": 45.347161,
     "start_long": -121.9646838,

@@ -50,7 +50,7 @@ DEFAULT_CSV_PATH = (
 DEFAULT_MODEL_DIR = Path(__file__).parent / "model"
 
 PARAM_GRID = {
-    "n_estimators": [100, 200, 300, 500],
+    "n_estimators": [500, 800, 1000],
     "max_depth": [2, 3, 4],
     "learning_rate": [0.01, 0.02, 0.03, 0.05],
     "reg_alpha": [1.0, 3.0, 5.0, 10.0],
