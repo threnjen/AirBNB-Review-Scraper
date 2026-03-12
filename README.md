@@ -1,6 +1,6 @@
 # AirBNB Review Scraper & Analyzer
 
-An end-to-end pipeline for short-term rental market analysis. Given a geographic center point (latitude/longitude) and search radius, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, enriches each listing with AirDNA financial metrics via per-listing rentalizer lookups, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, an ADR prediction model, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
+An end-to-end pipeline for short-term rental market analysis. Given a geographic center point (latitude/longitude) and search radius, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, enriches each listing with AirDNA financial metrics via per-listing rentalizer lookups, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi prevalence is +34.3pp higher among listings that outperform their size-predicted ADR"), description quality scoring via OLS regression, an ADR prediction model, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
 
 ## Prerequisites
 
@@ -103,29 +103,23 @@ This project is intended for personal market research. The scraping approach is 
 
 ## Example Output
 
-The `reports/` directory contains example analytical output from a full pipeline run on the Mount Hood, Oregon area (341 properties analyzed):
+The `reports/` directory contains example analytical output from a full pipeline run on the Mount Hood, Oregon area (843 properties analyzed):
 
 ### Area Summary — [`reports/area_summary_mt_hood.md`](reports/area_summary_mt_hood.md)
-Aggregated area-level insights from all property summaries. Identifies that listings are primarily cozy cabins, rustic chalets, and mountain homes near Mount Hood. Top positives: hot tubs, location, cleanliness, host communication. Top issues: hot tub maintenance, privacy concerns, WiFi reliability.
+Aggregated area-level insights from all property summaries. Identifies a diverse selection of accommodations — cabins, lodges, mountain homes, condos, chalets, yurts, tiny homes, treehouses, and glamping tents — set in forested, riverfront, and mountain settings. Top positives: hot tubs, location, cleanliness, host communication, well-stocked kitchens. Top issues: maintenance inconsistencies, hot tub problems, noise/privacy concerns, heating limitations, Wi-Fi reliability.
 
 ### ADR Correlation Analysis — [`reports/correlation_insights_adr_mt_hood.md`](reports/correlation_insights_adr_mt_hood.md)
-Identifies what drives higher nightly rates. Key finding: high-ADR properties ($378/night avg) vs low-ADR ($206/night) differ most in Jacuzzi prevalence (+57.5%), Grill (+28.7%), and guest capacity (10.3 vs 4.7 guests).
+Identifies what drives higher nightly rates after adjusting for property size. Uses XGBoost regression on capacity, bedrooms, beds, and bathrooms (R² = 0.747) to compute size-adjusted residuals, then compares the top 25% (residual +$42.98, n=207) against the bottom 25% (residual −$53.10, n=207). Key finding: luxury amenities and experiential features — not additional space per guest — drive premium pricing.
 
-> | Feature | Difference in Prevalence |
-> |---------|-------------------------|
-> | Jacuzzi | +57.5% |
-> | Grill | +28.7% |
-> | Ocean View | +27.6% |
-> | Dishwasher | +24.1% |
-> | Firepit | +20.7% |
+> | Feature | High Tier | Low Tier | Difference (pp) |
+> |---------|-----------|----------|------------------|
+> | Jacuzzi | 67.6% | 33.3% | +34.3% |
+> | Ocean View | 38.6% | 15.0% | +23.7% |
+> | Firepit | 59.4% | 44.9% | +14.5% |
+> | Grill | 82.6% | 69.1% | +13.5% |
+> | Dishwasher | 86.5% | 74.4% | +12.1% |
 
-### Occupancy Correlation Analysis
-Identifies what drives higher booking rates. Key finding: pet-friendly policies (+11.8%), dedicated workspaces (+9.4%), and mountain views (+8.5%) most distinguish high-occupancy properties. Mid-sized properties (~6 guests) outperform larger ones.
-
-### Description Quality Analysis
-Uses OLS regression (R² = 0.873 from 160 features) to isolate the ADR premium attributable to description quality vs. property size. Scores each listing's description on evocativeness, specificity, emotional appeal, storytelling, USP clarity, professionalism, and completeness. Estimates a **$100–150/night language premium** for top descriptions.
-
-> Improving Airbnb listing descriptions by focusing on **evocativeness**, **specificity**, and **emotional appeal** can unlock significant ADR premiums (~$100+ per night).
+The pipeline also generates **Occupancy Correlation Analysis** and **Description Quality Analysis** reports (see stages 8 and 9 in [Pipeline Flow](#pipeline-flow)), which are not included as checked-in examples.
 
 ## Configuration
 
