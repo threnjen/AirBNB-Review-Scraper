@@ -251,7 +251,7 @@ class TestLoadPropertyDataAirdnaFilter:
 
 
 class TestComputeMetricResiduals:
-    """Tests for compute_metric_residuals OLS regression."""
+    """Tests for compute_metric_residuals XGBoost regression."""
 
     @pytest.fixture
     def analyzer(self):
@@ -262,8 +262,8 @@ class TestComputeMetricResiduals:
 
                 return CorrelationAnalyzer(zone_name="97067")
 
-    def test_residuals_sum_near_zero(self, analyzer):
-        """OLS residuals should sum to approximately zero."""
+    def test_residuals_mean_near_zero(self, analyzer):
+        """Residuals should have a mean near zero."""
         df = pd.DataFrame(
             {
                 "ADR": [300, 250, 200, 180, 150, 120, 400, 350],
@@ -277,7 +277,7 @@ class TestComputeMetricResiduals:
 
         residuals, r_squared = analyzer.compute_metric_residuals(df, "adr")
 
-        assert abs(residuals.sum()) < 1e-6
+        assert abs(residuals.mean()) < 50
 
     def test_r_squared_between_zero_and_one(self, analyzer):
         """R-squared should be between 0 and 1."""
@@ -306,22 +306,37 @@ class TestComputeMetricResiduals:
 
     def test_uses_only_size_features(self, analyzer):
         """Residuals should only be computed from capacity, bedrooms, beds, bathrooms."""
+        # XGBoost needs enough samples to split (min_child_weight=10),
+        # so we use 30 rows with a clear linear pattern.
+        n = 30
+        capacity = list(range(2, 2 + n))
+        bedrooms = [c // 2 for c in capacity]
+        beds = [c // 2 + 1 for c in capacity]
+        bathrooms = [max(1, c // 4) for c in capacity]
+        # ADR is a strict linear function of size features
+        adr = [
+            50 + 20 * cap + 10 * bed + 5 * bath
+            for cap, bed, bath in zip(capacity, beds, bathrooms)
+        ]
+
         df = pd.DataFrame(
             {
-                "ADR": [200, 400, 600, 800, 1000, 1200],
-                "capacity": [2, 4, 6, 8, 10, 12],
-                "bedrooms": [1, 2, 3, 4, 5, 6],
-                "beds": [1, 2, 3, 4, 5, 6],
-                "bathrooms": [1, 2, 3, 4, 5, 6],
+                "ADR": adr,
+                "capacity": capacity,
+                "bedrooms": bedrooms,
+                "beds": beds,
+                "bathrooms": bathrooms,
             },
-            index=["a", "b", "c", "d", "e", "f"],
+            index=[f"p{i}" for i in range(n)],
         )
 
         residuals, r_squared = analyzer.compute_metric_residuals(df, "adr")
 
-        # Perfectly linear in size features → R² ≈ 1
-        assert r_squared > 0.99
-        assert all(abs(r) < 1e-6 for r in residuals)
+        # Strong linear pattern in size features → R² should be reasonably high
+        assert r_squared > 0.80
+        # Residuals should be small relative to the ADR range
+        adr_range = max(adr) - min(adr)
+        assert all(abs(r) < 0.25 * adr_range for r in residuals)
 
     def test_works_with_occupancy_metric(self, analyzer):
         """Should work for occupancy metric too."""
@@ -339,7 +354,7 @@ class TestComputeMetricResiduals:
         residuals, r_squared = analyzer.compute_metric_residuals(df, "occupancy")
 
         assert len(residuals) == 6
-        assert abs(residuals.sum()) < 1e-6
+        assert abs(residuals.mean()) < 50
 
 
 class TestNumericColumnsConstant:

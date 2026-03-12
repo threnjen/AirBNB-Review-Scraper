@@ -219,3 +219,4 @@ logs/
 
 # ML model artifacts
 ml/model/*.joblib
+*.joblib

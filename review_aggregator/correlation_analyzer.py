@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
+from xgboost import XGBRegressor
 
 from review_aggregator.openai_aggregator import OpenAIAggregator
 from utils.tiny_file_handler import load_json_file, save_json_file
@@ -63,7 +64,16 @@ AMENITY_COLUMNS = [
 ]
 
 # Raw size features used for OLS residualization (regressed out before analysis)
-SIZE_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms"]
+SIZE_FEATURES = [
+    "capacity",
+    "bedrooms",
+    "beds",
+    "bathrooms",
+    "BEDS_PER_PERSON",
+    "BATHS_PER_PERSON",
+    "BEDROOMS_PER_PERSON",
+    "DIST_TO_POI",
+]
 
 # Numeric columns for average comparison (post-residualization)
 NUMERIC_COLUMNS = [
@@ -131,7 +141,7 @@ class CorrelationAnalyzer(BaseModel):
         self, df: pd.DataFrame, metric: str
     ) -> tuple[pd.Series, float]:
         """
-        Fit OLS regression: metric ~ SIZE_FEATURES to remove property-size effect.
+        Fit XGBoost regression: metric ~ SIZE_FEATURES to remove property-size effect.
 
         Returns:
             (residual_series, r_squared)
@@ -153,7 +163,7 @@ class CorrelationAnalyzer(BaseModel):
         # Determine which size features are available
         features = [col for col in SIZE_FEATURES if col in valid.columns]
         if not features:
-            logger.warning("No size features found for OLS regression.")
+            logger.warning("No size features found for XGBoost regression.")
             return pd.Series(dtype=float), 0.0
 
         for col in features:
@@ -165,12 +175,21 @@ class CorrelationAnalyzer(BaseModel):
             return pd.Series(dtype=float), 0.0
 
         y = valid[column].values
-        X = np.column_stack(
-            [np.ones(len(valid))] + [valid[col].values for col in features]
-        )
+        X = valid[features].values
 
-        coeffs, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
-        predicted = X @ coeffs
+        model = XGBRegressor(
+            n_estimators=100,
+            max_depth=3,
+            learning_rate=0.05,
+            reg_alpha=5.0,
+            reg_lambda=10.0,
+            min_child_weight=10,
+            subsample=0.8,
+            colsample_bytree=0.6,
+            random_state=42,
+        )
+        model.fit(X, y)
+        predicted = model.predict(X)
         residuals = y - predicted
 
         ss_total = np.sum((y - np.mean(y)) ** 2)
@@ -182,12 +201,9 @@ class CorrelationAnalyzer(BaseModel):
         )
 
         logger.info(
-            f"Size OLS for {metric}: R² = {r_squared:.3f} | "
+            f"Size XGBoost for {metric}: R² = {r_squared:.3f} | "
             f"Features: {', '.join(features)} | "
-            f"Coefficients: intercept={coeffs[0]:.1f}, "
-            + ", ".join(
-                f"{feat}={coeffs[i + 1]:.1f}" for i, feat in enumerate(features)
-            )
+            f"n_estimators=100, max_depth=3, learning_rate=0.05"
         )
 
         return residual_series, r_squared
@@ -473,7 +489,7 @@ class CorrelationAnalyzer(BaseModel):
             f.write(f"# {config.get('display_name', metric)} Correlation Analysis\n\n")
             f.write(f"**Search Zone:** {self.zone_name}\n\n")
             f.write(
-                f"**Size Adjustment:** OLS regression on {', '.join(SIZE_FEATURES)} "
+                f"**Size Adjustment:** XGBoost regression on {', '.join(SIZE_FEATURES)} "
                 f"(R² = {r_squared:.3f})\n\n"
             )
             f.write(

@@ -45,13 +45,10 @@ def main(
     logger.info("Dataset: %d rows × %d columns", df.shape[0], df.shape[1])
 
     y = df["ADR"].copy()
-    print(y)
     logger.info(
         f"ADR stats: mean={y.mean():.1f}, median={y.median():.1f}, std={y.std():.1f}, skew={y.skew():.2f}"
     )
-    y = np.log(y + 1)
-    print(y)
-    return
+    # y = np.log(y)
 
     # Extract feature sets
     X_numeric = df[NUMERIC_FEATURES].copy()
