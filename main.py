@@ -22,6 +22,7 @@ PROCESSING_STEPS = [
     ("steps.07_details_results", "details_results"),
     ("steps.08_correlation_results", "correlation_results"),
     ("steps.09_description_analysis", "description_analysis"),
+    ("steps.10_ml_model", "machine_learning_model"),
 ]
 
 # Ordered (module_name, config_flag) pairs — executed top-to-bottom.

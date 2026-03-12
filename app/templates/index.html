@@ -115,12 +115,15 @@
     </style>
 </head>
 <body>
-    <h1>ADR Prediction Tool</h1>
+    <h1>ADR Prediction Tool — {{ zone_name }}</h1>
     <p class="subtitle">Predict the Average Daily Rate for an Airbnb property based on its amenities and characteristics.</p>
 
     {% if prediction %}
     <div class="result-box success">
         Predicted ADR: <span class="prediction-value">{{ prediction }}</span>
+        {% if mae_dollars %}
+        <div style="margin-top: 8px; font-size: 0.85em; color: #0f5132;">± {{ mae_dollars }} (mean absolute error)</div>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -140,7 +143,7 @@
                        id="{{ col }}"
                        name="{{ col }}"
                        value="{{ form_values.get(col, '') }}"
-                       step="{{ '0.5' if col == 'bathrooms' else '1' }}"
+                       step="{{ '0.5' if col == 'bathrooms' else ('any' if col in ('latitude', 'longitude') else '1') }}"
                        min="{{ numeric_ranges[col][0] }}"
                        max="{{ numeric_ranges[col][1] }}">
                 <div class="hint">Range: {{ numeric_ranges[col][2] }}</div>
@@ -158,7 +161,7 @@
                     <input type="checkbox"
                            name="{{ item.col }}"
                            value="on"
-                           {{ 'checked' if form_values.get(item.col) }}>
+                           {{ 'checked' if (not form_submitted) or form_values.get(item.col) }}>
                     {{ item.label }}
                 </label>
                 {% endfor %}

@@ -35,8 +35,6 @@ NUMERIC_FEATURES = [
 EXCLUDED_COLUMNS = {
     "property_id",
     "ADR",
-    "Days_Avail",
-    "has_airdna_data",
 }
 
 config = load_config()
@@ -247,46 +245,65 @@ def save_artifacts(
     logger.info("Saved model artifacts to %s", output_dir)
 
 
+def drop_exluded_columns(X: pd.DataFrame) -> pd.DataFrame:
+    """Drop columns that are in the EXCLUDED_COLUMNS set."""
+    cols_to_drop = [col for col in X.columns if col in EXCLUDED_COLUMNS]
+    if cols_to_drop:
+        logger.info(f"Dropping {len(cols_to_drop)} excluded columns: {cols_to_drop}")
+    return X.drop(columns=cols_to_drop)
+
+
 def filter_amenity_features(
-    X_amenity: pd.DataFrame, y_target: pd.Series
+    X_amenity: pd.DataFrame,
+    y_target: pd.Series,
+    prune_low_variance: bool = True,
+    prune_high_prevalence: bool = True,
+    prune_zero_importance_params: bool = True,
 ) -> pd.DataFrame:
     """Apply standard amenity feature filtering: low-variance, high-prevalence,
     correlation, and zero-importance pruning."""
+
+    X_amenity = X_amenity.copy()
+    X_amenity = drop_exluded_columns(X_amenity)
+
     system_cols = [c for c in X_amenity.columns if c.startswith("SYSTEM_")]
     prevalence = X_amenity[system_cols].mean()
 
-    # low_variance = prevalence[prevalence < LOW_VAR_THRESH].index.tolist()
-    # if low_variance:
-    #     logger.info(
-    #         "Dropping %d low-variance amenities (<5%%): %s",
-    #         len(low_variance),
-    #         low_variance,
-    #     )
-    #     X_amenity = X_amenity.drop(columns=low_variance)
+    if prune_low_variance:
+        low_variance = prevalence[prevalence < LOW_VAR_THRESH].index.tolist()
+        if low_variance:
+            logger.info(
+                "Dropping %d low-variance amenities (<5%%): %s",
+                len(low_variance),
+                low_variance,
+            )
+            X_amenity = X_amenity.drop(columns=low_variance)
 
-    high_prevalence = prevalence[prevalence > HIGH_PREV_THRESH].index.tolist()
-    if high_prevalence:
-        logger.info(
-            "Dropping %d near-ubiquitous amenities (>95%%): %s",
-            len(high_prevalence),
-            high_prevalence,
-        )
-        X_amenity = X_amenity.drop(
-            columns=[c for c in high_prevalence if c in X_amenity.columns]
-        )
+    if prune_high_prevalence:
+        high_prevalence = prevalence[prevalence > HIGH_PREV_THRESH].index.tolist()
+        if high_prevalence:
+            logger.info(
+                "Dropping %d near-ubiquitous amenities (>95%%): %s",
+                len(high_prevalence),
+                high_prevalence,
+            )
+            X_amenity = X_amenity.drop(
+                columns=[c for c in high_prevalence if c in X_amenity.columns]
+            )
 
     X_amenity = drop_correlated(X_amenity)
     logger.info("Amenity features after filtering: %d columns", X_amenity.shape[1])
 
-    keep_cols = prune_zero_importance(
-        X_amenity,
-        y_target,
-        {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05},
-    )
-    X_amenity = X_amenity[keep_cols]
-    logger.info(
-        "Amenity features after importance pruning: %d columns", X_amenity.shape[1]
-    )
+    if prune_zero_importance_params:
+        keep_cols = prune_zero_importance(
+            X_amenity,
+            y_target,
+            {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05},
+        )
+        X_amenity = X_amenity[keep_cols]
+        logger.info(
+            "Amenity features after importance pruning: %d columns", X_amenity.shape[1]
+        )
 
     return X_amenity
 

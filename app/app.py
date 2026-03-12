@@ -19,6 +19,7 @@ import joblib
 import numpy as np
 from flask import Flask, render_template, request
 
+from app.system_labels import SYSTEM_LABEL_MAP
 from utils.geo_utils import manhattan_surface_distance
 from utils.tiny_file_handler import load_config
 
@@ -49,9 +50,11 @@ NUMERIC_RANGES = {
 _config = load_config()
 POI_LAT = _config["poi_lat"]
 POI_LONG = _config["poi_long"]
+ZONE_NAME = _config["search_zone_name"].replace("_", " ").title()
 
 # Amenity categories for grouping checkboxes in the UI.
 # Keys are display names; values are lists of SYSTEM_ column names.
+# Order matches SYSTEM_LABEL_MAP categories in system_labels.py.
 AMENITY_CATEGORIES = {
     "Bathroom": [
         "SYSTEM_BATHTUB",
@@ -62,74 +65,57 @@ AMENITY_CATEGORIES = {
         "SYSTEM_TOILETRIES",
         "SYSTEM_SHOWER",
         "SYSTEM_TOILET_BIDET",
-        "SYSTEM_TOWEL",
     ],
     "Bedroom & Sleep": [
         "SYSTEM_BLANKETS",
         "SYSTEM_PILLOW",
         "SYSTEM_BLACKOUT_SHADES",
-        "SYSTEM_IRON",
         "SYSTEM_WARDROBE",
-        "SYSTEM_BED_KING",
-        "SYSTEM_SAFE",
-        "SYSTEM_HANGERS",
-        "SYSTEM_CLOCK",
     ],
-    "Kitchen": [
-        "SYSTEM_COOKING_BASICS",
-        "SYSTEM_REFRIGERATOR",
+    "Kitchen & Dining": [
+        "SYSTEM_MINI_BAR",
         "SYSTEM_MICROWAVE",
         "SYSTEM_DISHWASHER",
         "SYSTEM_STOVE",
         "SYSTEM_OVEN",
         "SYSTEM_TOASTER",
-        "SYSTEM_COFFEE_MAKER",
         "SYSTEM_BLENDER",
         "SYSTEM_RICE_COOKER",
         "SYSTEM_BAKING_SHEET",
         "SYSTEM_WATER_KETTLE",
         "SYSTEM_DISHES_AND_SILVERWARE",
         "SYSTEM_DINING_TABLE",
-        "SYSTEM_MINI_BAR",
         "SYSTEM_CHILD_UTENSILS",
     ],
-    "Safety": [
-        "SYSTEM_DETECTOR_SMOKE",
-        "SYSTEM_DETECTOR_CO",
-        "SYSTEM_FIRE_EXTINGUISHER",
-        "SYSTEM_FIRST_AID_KIT",
-        "SYSTEM_CAMERA",
-        "SYSTEM_SURVEILLANCE",
-        "SYSTEM_THERMOMETER",
-    ],
-    "Laundry": [
+    "Laundry & Cleaning": [
+        "SYSTEM_IRON",
+        "SYSTEM_HANGERS",
         "SYSTEM_WASHER",
         "SYSTEM_DRYER",
         "SYSTEM_LAUNDRY_SERVICE",
         "SYSTEM_CLEANING_SUPPLIES",
         "SYSTEM_CLEAN",
-        "SYSTEM_TRASH",
     ],
-    "Children & Baby": [
-        "SYSTEM_CRIB",
-        "SYSTEM_PACK_N_PLAY",
-        "SYSTEM_OUTLET_COVER",
-        "SYSTEM_BABY_GATE",
-        "SYSTEM_HIGH_CHAIR",
-        "SYSTEM_CHILD",
+    "Climate & Comfort": [
+        "SYSTEM_THERMOMETER",
+        "SYSTEM_SNOWFLAKE",
+        "SYSTEM_FAN_CEILING",
+        "SYSTEM_FAN_PORTABLE",
+    ],
+    "Safety & Security": [
+        "SYSTEM_DETECTOR_CO",
+        "SYSTEM_FIRE_EXTINGUISHER",
+        "SYSTEM_FIRST_AID_KIT",
+        "SYSTEM_SURVEILLANCE",
+        "SYSTEM_SAFE",
         "SYSTEM_FIREPLACE_GUARD",
-        "SYSTEM_TOYS",
-        "SYSTEM_PLAY_SLIDE",
-        "SYSTEM_FAMILY",
+        "SYSTEM_AV_VOLUME",
     ],
     "Tech & Work": [
-        "SYSTEM_WI_FI",
         "SYSTEM_WORKSPACE",
         "SYSTEM_TV",
         "SYSTEM_CABLE",
         "SYSTEM_SPEAKERS",
-        "SYSTEM_POWER_SWITCH",
-        "SYSTEM_NOTE_PAPER",
     ],
     "Entertainment": [
         "SYSTEM_PING_PONG",
@@ -142,58 +128,60 @@ AMENITY_CATEGORIES = {
         "SYSTEM_RECORD_PLAYER",
         "SYSTEM_VIDEO_GAME",
         "SYSTEM_ANIME",
-        "SYSTEM_AV_VOLUME",
     ],
-    "Outdoor & Views": [
+    "Children & Family": [
+        "SYSTEM_CRIB",
+        "SYSTEM_PACK_N_PLAY",
+        "SYSTEM_OUTLET_COVER",
+        "SYSTEM_BABY_GATE",
+        "SYSTEM_HIGH_CHAIR",
+        "SYSTEM_TOYS",
+        "SYSTEM_PLAY_SLIDE",
+    ],
+    "Outdoor & Recreation": [
         "SYSTEM_PATIO_BALCONY",
         "SYSTEM_GRILL",
         "SYSTEM_FIREPIT",
+        "SYSTEM_FIREPLACE",
         "SYSTEM_HAMMOCK",
         "SYSTEM_POOL",
         "SYSTEM_JACUZZI",
         "SYSTEM_GYM",
         "SYSTEM_BEACH",
         "SYSTEM_BIKE",
-        "SYSTEM_GOLF",
         "SYSTEM_SAUNA",
         "SYSTEM_SUN_DECK",
         "SYSTEM_ROOFTOP_DECK",
-        "SYSTEM_FIREPLACE",
-        "SYSTEM_FLOWER",
+    ],
+    "Views & Scenery": [
         "SYSTEM_VIEW_MOUNTAIN",
         "SYSTEM_VIEW_OCEAN",
-        "SYSTEM_EV_CHARGER",
-        "SYSTEM_SNOWFLAKE",
+        "SYSTEM_LAKE",
+        "SYSTEM_GOLF",
+        "SYSTEM_FLOWER",
     ],
     "Access & Check-in": [
         "SYSTEM_CHECK_IN",
-        "SYSTEM_KEY",
-        "SYSTEM_LOCK",
         "SYSTEM_LOCK_ON_DOOR",
         "SYSTEM_BUZZER",
         "SYSTEM_DOOR",
         "SYSTEM_LUGGAGE_DROP",
         "SYSTEM_NO_PRIVATE_ENTRANCE",
         "SYSTEM_NO_STAIRS",
+        "SYSTEM_EV_CHARGER",
     ],
-    "Host & Property": [
-        "SYSTEM_SUPERHOST",
-        "SYSTEM_HOST_OWNERS",
-        "SYSTEM_WHY_HOST",
-        "SYSTEM_GOLDEN_TROPHY",
-        "SYSTEM_CALENDAR",
-        "SYSTEM_MESSAGE_READ",
-        "SYSTEM_LOCATION",
-        "SYSTEM_MAPS_BAR",
-        "SYSTEM_MAPS_CAR_RENTAL",
-        "SYSTEM_MAPS_RESORT",
-        "SYSTEM_EVENING",
+    "House Rules": [
         "SYSTEM_NO_EVENTS",
         "SYSTEM_SMOKING_ALLOWED",
         "SYSTEM_PETS",
-        "SYSTEM_FAN_CEILING",
-        "SYSTEM_FAN_PORTABLE",
-        "SYSTEM_DRAFTING_TOOLS",
+        "SYSTEM_CAMERA",
+    ],
+    "Checkout Instructions": [
+        "SYSTEM_TOWEL",
+        "SYSTEM_POWER_SWITCH",
+        "SYSTEM_LOCK",
+        "SYSTEM_HOST_OWNERS",
+        "SYSTEM_TRASH",
     ],
 }
 
@@ -229,9 +217,23 @@ def _load_artifacts(model_dir: Path):
     return s1_model, s1_cols, s2_model, s2_cols
 
 
+def _load_mae(model_dir: Path) -> float:
+    """Load the combined test MAE from training_metrics.json."""
+    with open(Path(model_dir) / "training_metrics.json") as f:
+        metrics = json.load(f)
+    return metrics["combined_test_mae"]
+
+
 def _format_label(system_col: str) -> str:
-    """Convert SYSTEM_BATHTUB → Bathtub, SYSTEM_WI_FI → Wi Fi, etc."""
-    return system_col.replace("SYSTEM_", "").replace("_", " ").title()
+    """Convert a SYSTEM_ icon key to a human-readable display label.
+
+    Uses SYSTEM_LABEL_MAP for specific mappings sourced from Airbnb property data.
+    Falls back to naive title-casing for any unknown keys.
+    """
+    return SYSTEM_LABEL_MAP.get(
+        system_col,
+        system_col.replace("SYSTEM_", "").replace("_", " ").title(),
+    )
 
 
 def _build_category_map(feature_columns: list[str]) -> dict[str, list[dict]]:
@@ -270,6 +272,7 @@ stage1_model, stage1_feature_columns, stage2_model, stage2_feature_columns = (
     _load_artifacts(MODEL_DIR)
 )
 category_map = _build_category_map(stage2_feature_columns)
+MAE_DOLLARS = _load_mae(MODEL_DIR)
 
 app = Flask(__name__)
 
@@ -283,8 +286,11 @@ def index():
         numeric_features=NUMERIC_FEATURES,
         numeric_ranges=NUMERIC_RANGES,
         form_values={},
+        form_submitted=False,
         prediction=None,
+        mae_dollars=None,
         error=None,
+        zone_name=ZONE_NAME,
     )
 
 
@@ -302,8 +308,11 @@ def predict():
             numeric_features=NUMERIC_FEATURES,
             numeric_ranges=NUMERIC_RANGES,
             form_values=form_values,
+            form_submitted=True,
             prediction=None,
+            mae_dollars=None,
             error=msg,
+            zone_name=ZONE_NAME,
         )
 
     # Parse user-facing numeric inputs with validation
@@ -375,8 +384,11 @@ def predict():
         numeric_features=NUMERIC_FEATURES,
         numeric_ranges=NUMERIC_RANGES,
         form_values=form_values,
+        form_submitted=True,
         prediction=prediction,
+        mae_dollars=f"${MAE_DOLLARS:,.2f}" if prediction else None,
         error=error,
+        zone_name=ZONE_NAME,
     )
 
 

@@ -64,12 +64,14 @@ def app_client(
         app_module.stage2_model,
         app_module.stage2_feature_columns,
         app_module.category_map,
+        app_module.MAE_DOLLARS,
     )
     app_module.stage1_model = mock_stage1_model
     app_module.stage1_feature_columns = stage1_feature_columns
     app_module.stage2_model = mock_stage2_model
     app_module.stage2_feature_columns = stage2_feature_columns
     app_module.category_map = app_module._build_category_map(stage2_feature_columns)
+    app_module.MAE_DOLLARS = 30.0
 
     app_module.app.config["TESTING"] = True
     with app_module.app.test_client() as client:
@@ -81,6 +83,7 @@ def app_client(
         app_module.stage2_model,
         app_module.stage2_feature_columns,
         app_module.category_map,
+        app_module.MAE_DOLLARS,
     ) = original
 
 
@@ -119,12 +122,19 @@ class TestGetIndex:
         assert "SYSTEM_POOL" in html
         assert "SYSTEM_WI_FI" in html
 
+    def test_all_checkboxes_checked_by_default(self, app_client):
+        """GET / should render all amenity checkboxes pre-checked."""
+        response = app_client.get("/")
+        html = response.data.decode()
+        # All three amenities in our fixture should appear checked
+        assert html.count("checked") == 3
+
 
 class TestPostPredict:
     """Tests for POST /predict route."""
 
     def test_returns_200_with_prediction(self, app_client):
-        """POST /predict with valid data should return 200 with combined prediction."""
+        """POST /predict with valid data should return 200 with combined prediction and MAE."""
         response = app_client.post(
             "/predict",
             data={
@@ -139,6 +149,8 @@ class TestPostPredict:
         assert response.status_code == 200
         # Combined prediction: expm1(log1p(200)) + 50 = 200 + 50 = 250
         assert b"$250.00" in response.data
+        # MAE range should also appear
+        assert b"$30.00" in response.data
 
     def test_missing_numeric_defaults_to_zero(self, app_client, mock_stage1_model):
         """POST /predict with missing numeric fields should not crash."""
@@ -226,7 +238,7 @@ class TestPostPredict:
         assert row[2] == 1.0  # SYSTEM_WI_FI (checked)
 
     def test_preserves_form_state_after_predict(self, app_client):
-        """After POST, the form should show the values the user submitted."""
+        """After POST, checked boxes stay checked and unchecked boxes stay unchecked."""
         response = app_client.post(
             "/predict",
             data={
@@ -237,12 +249,14 @@ class TestPostPredict:
                 "latitude": "45.3",
                 "longitude": "-121.8",
                 "SYSTEM_POOL": "on",
+                # SYSTEM_BATHTUB and SYSTEM_WI_FI intentionally omitted (unchecked)
             },
         )
         html = response.data.decode()
         assert 'value="6"' in html
         assert 'value="3"' in html
-        assert "SYSTEM_POOL" in html
+        # Only SYSTEM_POOL was checked — exactly 1 checkbox should be checked
+        assert html.count("checked") == 1
 
     def test_invalid_numeric_shows_error(self, app_client):
         """Non-numeric capacity should render a validation error, not crash."""

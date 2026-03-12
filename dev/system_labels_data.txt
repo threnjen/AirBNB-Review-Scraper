@@ -1,0 +1,1538 @@
+Loading .env environment variables...
+
+SYSTEM_ANIME:
+  - Theme room
+
+SYSTEM_ARCADE_MACHINE:
+  - Arcade games
+
+SYSTEM_AV_VOLUME:
+  - Noise decibel monitors on property
+
+SYSTEM_BABY_BATH:
+  - Baby bath
+  - Baby bath - always at the listing
+
+SYSTEM_BABY_GATE:
+  - Baby safety gates
+
+SYSTEM_BABY_MONITOR:
+  - Baby monitor
+  - Baby monitor - always at the listing
+
+SYSTEM_BAKING_SHEET:
+  - Baking sheet
+  - Bread maker
+
+SYSTEM_BASEBALL:
+  - Batting cage
+
+SYSTEM_BATHTUB:
+  - Bathtub
+
+SYSTEM_BEACH:
+  - Beach access
+  - Beach access – Beachfront
+  - Beach view
+  - Private beach access
+  - Private beach access – Beachfront
+  - Shared beach access
+  - Shared beach access – Beachfront
+
+SYSTEM_BED_KING:
+  - Comfy bed for better sleep
+
+SYSTEM_BIKE:
+  - Bikes
+  - Children’s bikes
+
+SYSTEM_BLACKOUT_SHADES:
+  - Room-darkening shades
+
+SYSTEM_BLANKETS:
+  - Bed linens
+
+SYSTEM_BLENDER:
+  - Blender
+
+SYSTEM_BOARD_GAMES:
+  - Board games
+
+SYSTEM_BOAT_SAIL:
+  - Boat slip
+  - Marina view
+
+SYSTEM_BOOK:
+  - Books and reading material
+  - Featured in
+
+SYSTEM_BREAKFAST:
+  - Breakfast
+
+SYSTEM_BUZZER:
+  - Keypad
+
+SYSTEM_CABLE:
+  - Ethernet connection
+
+SYSTEM_CALENDAR:
+  - Long term stays allowed
+
+SYSTEM_CAMERA:
+  - Commercial photography allowed
+
+SYSTEM_CHECK_IN:
+  - 24-hour self check-in
+  - Self check-in
+  - Self check-in with building staff
+  - Self check-in with keypad
+  - Self check-in with lockbox
+  - Self check-in with smart lock
+  - Self check-in with smart lockkeypad
+
+SYSTEM_CHESS:
+  - Life size games
+
+SYSTEM_CHILD:
+  - Babysitter recommendations
+
+SYSTEM_CHILD_UTENSILS:
+  - Children’s dinnerware
+
+SYSTEM_CLEAN:
+  - Cleaning available during stay
+  - Housekeeping - available at extra cost
+  - Housekeeping available Monday to Friday - available at extra cost
+  - Housekeeping available every day - available at extra cost
+  - Housekeeping available from 7:00 AM to 5:00 PM, every day - available at extra cost
+  - Housekeeping available from 8:00 AM to 7:00 PM, every day - available at extra cost
+  - Housekeeping available from 9:00 AM to 5:00 PM, every day - available at extra cost
+
+SYSTEM_CLEANING_SUPPLIES:
+  - Cleaning products
+
+SYSTEM_CLIMBING_ROPE:
+  - Climbing wall
+
+SYSTEM_CLOCK:
+  - Check-in after 12:00 PM
+  - Check-in after 2:00 PM
+  - Check-in after 3:00 PM
+  - Check-in after 4:00 PM
+  - Check-in after 5:00 PM
+  - Check-in: 12:00 PM - 8:00 PM
+  - Check-in: 2:00 PM - 11:00 PM
+  - Check-in: 3:00 PM - 10:00 PM
+  - Check-in: 3:00 PM - 11:00 PM
+  - Check-in: 3:00 PM - 12:00 AM
+  - Check-in: 3:00 PM - 2:00 AM
+  - Check-in: 3:00 PM - 7:00 PM
+  - Check-in: 3:00 PM - 8:00 PM
+  - Check-in: 3:00 PM - 9:00 PM
+  - Check-in: 4:00 PM - 10:00 PM
+  - Check-in: 4:00 PM - 11:00 PM
+  - Check-in: 4:00 PM - 12:00 AM
+  - Check-in: 4:00 PM - 1:00 AM
+  - Check-in: 4:00 PM - 2:00 AM
+  - Check-in: 4:00 PM - 7:00 PM
+  - Check-in: 4:00 PM - 8:00 PM
+  - Check-in: 4:00 PM - 9:00 PM
+  - Check-in: 5:00 PM - 11:00 PM
+  - Check-in: 5:00 PM - 12:00 AM
+  - Check-in: 8:00 AM - 2:00 AM
+  - Checkout before 10:00 AM
+  - Checkout before 11:00 AM
+  - Checkout before 12:00 PM
+  - Checkout before 1:00 PM
+  - Checkout before 3:00 PM
+  - Checkout before 4:00 PM
+  - Checkout before 6:00 PM
+  - Flexible check-in
+
+SYSTEM_COFFEE_MAKER:
+  - At-home coffee
+  - Coffee
+  - Coffee maker
+  - Coffee maker: Keurig coffee machine
+  - Coffee maker: Keurig coffee machine, pour-over coffee
+  - Coffee maker: Nespresso
+  - Coffee maker: Nespresso, pour-over coffee
+  - Coffee maker: drip coffee maker
+  - Coffee maker: drip coffee maker, Keurig coffee machine
+  - Coffee maker: drip coffee maker, Keurig coffee machine, pour-over coffee
+  - Coffee maker: drip coffee maker, Nespresso
+  - Coffee maker: drip coffee maker, Nespresso, pour-over coffee
+  - Coffee maker: drip coffee maker, espresso machine
+  - Coffee maker: drip coffee maker, espresso machine, Keurig coffee machine
+  - Coffee maker: drip coffee maker, espresso machine, Nespresso
+  - Coffee maker: drip coffee maker, espresso machine, french press, pour-over coffee
+  - Coffee maker: drip coffee maker, french press
+  - Coffee maker: drip coffee maker, french press, Keurig coffee machine
+  - Coffee maker: drip coffee maker, french press, Keurig coffee machine, pour-over coffee
+  - Coffee maker: drip coffee maker, french press, pour-over coffee
+  - Coffee maker: drip coffee maker, pour-over coffee
+  - Coffee maker: espresso machine
+  - Coffee maker: espresso machine, Keurig coffee machine
+  - Coffee maker: espresso machine, french press, pour-over coffee
+  - Coffee maker: french press
+  - Coffee maker: french press, Keurig coffee machine
+  - Coffee maker: french press, Nespresso
+  - Coffee maker: french press, pour-over coffee
+  - Coffee maker: pour-over coffee
+
+SYSTEM_COOKING_BASICS:
+  - Cooking basics
+  - Kitchen
+  - Kitchenette
+
+SYSTEM_CORNER_GUARD:
+  - Table corner guards
+
+SYSTEM_CRIB:
+  - Crib
+  - Crib - always at the listing
+  - Crib - available upon request
+
+SYSTEM_DETECTOR_CO:
+  - Carbon monoxide alarm
+
+SYSTEM_DETECTOR_SMOKE:
+  - Smoke alarm
+
+SYSTEM_DIAPER:
+  - Changing table
+  - Changing table - always at the listing
+
+SYSTEM_DINING_TABLE:
+  - Dining table
+
+SYSTEM_DISHES_AND_SILVERWARE:
+  - Dishes and silverware
+
+SYSTEM_DISHWASHER:
+  - Dishwasher
+
+SYSTEM_DOOR:
+  - Private entrance
+
+SYSTEM_DOORMAN:
+  - Building staff
+
+SYSTEM_DRAFTING_TOOLS:
+  - Designed by
+
+SYSTEM_DRYER:
+  - Dryer
+  - Dryer – In building
+  - Dryer – In unit
+  - Free dryer
+  - Free dryer – In building
+  - Free dryer – In unit
+  - Paid dryer – In building
+  - Paid dryer – In unit
+
+SYSTEM_EARTH_HOUSE:
+  - Garden and lake views
+  - Garden view
+
+SYSTEM_ELEVATOR:
+  - Elevator
+
+SYSTEM_EVENING:
+  - Quiet hours
+
+SYSTEM_EV_CHARGER:
+  - EV charger
+  - EV charger - level 1
+  - EV charger - level 2
+  - EV charger - level 2, tesla only
+
+SYSTEM_FAMILY:
+  - 1 guest maximum
+  - 10 guests maximum
+  - 11 guests maximum
+  - 12 guests maximum
+  - 13 guests maximum
+  - 14 guests maximum
+  - 15 guests maximum
+  - 2 guests maximum
+  - 3 guests maximum
+  - 4 guests maximum
+  - 5 guests maximum
+  - 6 guests maximum
+  - 7 guests maximum
+  - 8 guests maximum
+  - 9 guests maximum
+
+SYSTEM_FAN_CEILING:
+  - Ceiling fan
+
+SYSTEM_FAN_PORTABLE:
+  - Portable fans
+
+SYSTEM_FIREPIT:
+  - Fire pit
+
+SYSTEM_FIREPLACE:
+  - Indoor fireplace
+  - Indoor fireplace: electric
+  - Indoor fireplace: electric, gas
+  - Indoor fireplace: electric, pellet stove
+  - Indoor fireplace: electric, wood-burning
+  - Indoor fireplace: gas
+  - Indoor fireplace: gas, pellet stove
+  - Indoor fireplace: gas, wood-burning
+  - Indoor fireplace: pellet stove
+  - Indoor fireplace: wood-burning
+
+SYSTEM_FIREPLACE_GUARD:
+  - Fireplace guards
+
+SYSTEM_FIRE_EXTINGUISHER:
+  - Fire extinguisher
+
+SYSTEM_FIRST_AID_KIT:
+  - First aid kit
+
+SYSTEM_FLOWER:
+  - Backyard
+  - Backyard - Fully fenced
+  - Backyard - Not fully fenced
+  - Courtyard view
+  - Garden view
+  - Park view
+  - Private backyard
+  - Private backyard – Fully fenced
+  - Private backyard – Not fully fenced
+  - Shared backyard
+  - Shared backyard – Fully fenced
+  - Shared backyard – Not fully fenced
+
+SYSTEM_GOLDEN_TROPHY:
+  - Top 1% of homes
+  - Top 10% of homes
+  - Top 5% of homes
+
+SYSTEM_GOLF:
+  - Golf course view
+  - Mini golf
+
+SYSTEM_GRILL:
+  - BBQ grill
+  - BBQ grill: charcoal
+  - BBQ grill: charcoal, gas
+  - BBQ grill: electric
+  - BBQ grill: gas
+  - BBQ grill: wood-burning
+  - Barbecue utensils
+  - Outdoor kitchen
+  - Outdoor kitchen with sink
+  - Private BBQ grill
+  - Private BBQ grill: charcoal
+  - Private BBQ grill: charcoal, gas
+  - Private BBQ grill: electric
+  - Private BBQ grill: electric, wood-burning
+  - Private BBQ grill: gas
+  - Private BBQ grill: wood-burning
+  - Private outdoor kitchen
+  - Shared BBQ grill: gas
+  - Shared BBQ grill: wood-burning
+  - Shared outdoor kitchen
+
+SYSTEM_GYM:
+  - At-home gym
+  - Exercise equipment
+  - Exercise equipment: elliptical
+  - Exercise equipment: free weights
+  - Exercise equipment: free weights, stationary bike, yoga mat
+  - Exercise equipment: free weights, yoga mat
+  - Exercise equipment: stationary bike
+  - Exercise equipment: stationary bike, treadmill
+  - Exercise equipment: stationary bike, yoga mat
+  - Exercise equipment: yoga mat
+  - Gym
+  - Private gym in building
+  - Private gym nearby
+  - Shared gym
+  - Shared gym in building
+  - Shared gym nearby
+
+SYSTEM_HAIRDRYER:
+  - Hair dryer
+
+SYSTEM_HAMMOCK:
+  - Hammock
+
+SYSTEM_HANGERS:
+  - Drying rack for clothing
+  - Hangers
+
+SYSTEM_HIGH_CHAIR:
+  - Booster seat high chair
+  - Booster seat high chair - always at the listing
+  - Clamp on table seat high chair
+  - Clamp on table seat high chair - always at the listing
+  - Clamp on table seat high chair - available upon request
+  - Folding or convertible high chair
+  - Folding or convertible high chair - always at the listing
+  - Folding or convertible high chair - available upon request
+  - High chair
+  - High chair - always at the listing
+  - Standalone high chair
+  - Standalone high chair - always at the listing
+  - Standalone high chair - available upon request
+
+SYSTEM_HOST_OWNERS:
+  - Host greets you
+  - Return keys
+
+SYSTEM_HOT_WATER:
+  - Hot water
+
+SYSTEM_IRON:
+  - Iron
+
+SYSTEM_JACUZZI:
+  - Hot tub
+  - Hot tub - available all year, open 24 hours
+  - Private hot tub
+  - Private hot tub - available all year
+  - Private hot tub - available all year, open 24 hours
+  - Private hot tub - available all year, open specific hours
+  - Private hot tub - available seasonally, open 24 hours
+  - Shared hot tub
+  - Shared hot tub - available all year
+  - Shared hot tub - available all year, open 24 hours
+  - Shared hot tub - available all year, open specific hours
+  - Your very own spa
+
+SYSTEM_KAYAK:
+  - Kayak
+
+SYSTEM_KEY:
+  - Exceptional check-in experience
+  - Great check-in experience
+  - Self check-in
+
+SYSTEM_LAKE:
+  - Lake view
+  - On the lake
+
+SYSTEM_LAPTOP:
+  - Dedicated workspace
+
+SYSTEM_LAUNDRY_SERVICE:
+  - Laundromat nearby
+
+SYSTEM_LIVING_ROOM:
+  - Private living room
+
+SYSTEM_LOCATION:
+  - Beautiful and walkable
+  - Beautiful area
+  - Calm and convenient location
+  - Great location
+  - Lots to do nearby
+  - Peace and quiet
+  - Private getaway
+  - Unbeatable location
+  - Walkable area
+
+SYSTEM_LOCK:
+  - Lock up
+
+SYSTEM_LOCK_ON_DOOR:
+  - Lock on bedroom door
+  - Smart lock
+
+SYSTEM_LUGGAGE_DROP:
+  - Luggage dropoff allowed
+
+SYSTEM_MAPS_BAR:
+  - Wine glasses
+
+SYSTEM_MAPS_CAR_RENTAL:
+  - Free carport on premises
+  - Free carport on premises – 2 spaces
+  - Free carport on premises – 3 spaces
+  - Free driveway parking on premises
+  - Free driveway parking on premises – 1 space
+  - Free driveway parking on premises – 10 spaces
+  - Free driveway parking on premises – 2 spaces
+  - Free driveway parking on premises – 20 spaces
+  - Free driveway parking on premises – 3 spaces
+  - Free driveway parking on premises – 4 spaces
+  - Free driveway parking on premises – 5 spaces
+  - Free driveway parking on premises – 6 spaces
+  - Free driveway parking on premises – 7 spaces
+  - Free parking garage on premises
+  - Free parking garage on premises – 1 space
+  - Free parking garage on premises – 2 spaces
+  - Free parking on premises
+  - Free parking on premises – 2 spaces
+  - Free residential garage on premises
+  - Free residential garage on premises – 1 space
+  - Free residential garage on premises – 2 spaces
+  - Free residential garage on premises – 6 spaces
+  - Free street parking
+  - Paid parking lot off premises
+  - Paid parking off premises
+  - Paid parking on premises
+  - Paid street parking off premises
+
+SYSTEM_MAPS_PARK:
+  - Park view
+
+SYSTEM_MAPS_RESORT:
+  - Beach essentials
+  - Free resort access
+  - Paid resort access
+  - Resort access
+  - Resort view
+
+SYSTEM_MESSAGE_READ:
+  - Exceptional host communication
+  - Great host communication
+
+SYSTEM_MICROWAVE:
+  - Microwave
+
+SYSTEM_MINI_BAR:
+  - Mini fridge
+
+SYSTEM_MOSQUITO_NET:
+  - Mosquito net
+
+SYSTEM_MOVIE:
+  - Movie theater
+
+SYSTEM_NOTE_PAPER:
+  - Additional requests
+
+SYSTEM_NO_AIR_CONDITIONING:
+  - Air conditioning
+  - Central air conditioning
+  - Portable air conditioning
+
+SYSTEM_NO_CAMERA:
+  - No commercial photography
+
+SYSTEM_NO_DETECTOR_CO2:
+  - Carbon monoxide alarm
+
+SYSTEM_NO_DETECTOR_SMOKE:
+  - Smoke alarm
+
+SYSTEM_NO_DRYER:
+  - Dryer
+  - Free dryer
+  - Free dryer – In unit
+  - Paid dryer – In building
+
+SYSTEM_NO_ESSENTIALS:
+  - Essentials
+
+SYSTEM_NO_EVENTS:
+  - No parties or events
+
+SYSTEM_NO_HAIR_DRYER:
+  - Hair dryer
+
+SYSTEM_NO_HEATER:
+  - Heating
+  - Heating - split type ductless system
+  - Portable heater
+
+SYSTEM_NO_HOT_WATER:
+  - Hot water
+
+SYSTEM_NO_KITCHEN:
+  - Kitchen
+
+SYSTEM_NO_LOCK_ON_DOOR:
+  - Lock on bedroom door
+
+SYSTEM_NO_PETS:
+  - No pets
+
+SYSTEM_NO_PRIVATE_ENTRANCE:
+  - Private entrance
+
+SYSTEM_NO_SERVICE:
+  - No in-home services allowed
+
+SYSTEM_NO_SHAMPOO:
+  - Shampoo
+  - Travel size shampoo
+
+SYSTEM_NO_STAIRS:
+  - Single level home
+
+SYSTEM_NO_SURVEILLANCE:
+  - Exterior security cameras on property
+
+SYSTEM_NO_TV:
+  - TV
+  - TV with Amazon Prime Video, Disney+, HBO Max, Netflix, Roku
+  - TV with standard cable
+
+SYSTEM_NO_WASHER:
+  - Free washer – In unit
+  - Washer
+  - Washer – In building
+
+SYSTEM_OFFLINE:
+  - Wifi
+
+SYSTEM_OUTLET_COVER:
+  - Outlet covers
+
+SYSTEM_OVEN:
+  - 1950's vintage Frigidaire (works great!) oven
+  - 1970's JENN-AIR oven & cooktop oven
+  - 4 single oven
+  - Bosch oven
+  - Bosch stainless steel oven
+  - Convection oven microwave combo stainless steel single oven
+  - Convection stainless steel oven
+  - Convection/Microwave stainless steel single oven
+  - Countertop oven stainless steel oven
+  - Double oven
+  - Fridgidaire single oven
+  - Frigidaire - Gas / Convection / Air Fryer stainless steel oven
+  - Frigidaire electric stainless steel oven
+  - Frigidaire oven
+  - Frigidaire single oven
+  - Frigidaire stainless steel oven
+  - GE Cafe stainless steel double oven
+  - GE Monogram stainless steel double oven
+  - GE single oven
+  - GE stainless steel double oven
+  - GE stainless steel oven
+  - GE stainless steel single oven
+  - Gas single oven
+  - Ge single oven
+  - Ge stainless steel single oven
+  - General Electric stainless steel oven
+  - Glass top range single oven
+  - IKEA (Whirlpool) stainless steel oven
+  - Jenn-Air stainless steel double oven
+  - Jenn-air stainless steel oven
+  - JennAir stainless steel oven
+  - Kenmore single oven
+  - Kenmore stainless steel single oven
+  - Kitchen Aid stainless steel double oven
+  - KitchenAid stainless steel oven
+  - KitchenAid, Convection, 5 burner stainless steel oven
+  - LG single oven
+  - LG stainless steel oven
+  - LG stainless steel single oven
+  - Oven
+  - Samsung single oven
+  - Samsung stainless steel oven
+  - Samsung stainless steel single oven
+  - Single oven
+  - Small countertop Wolf convection oven. Fits up to a 13X 9 rectangular pan stainless steel oven
+  - Stainless steel double oven
+  - Stainless steel oven
+  - Stainless steel single oven
+  - Tappan stainless steel single oven
+  - Whirlpool stainless steel oven
+  - Whirlpool stainless steel single oven
+  - Wolf oven
+  - Wolf stainless steel oven
+  - Wolf stainless steel single oven
+
+SYSTEM_PACK_N_PLAY:
+  - Pack ’n play/Travel crib
+  - Pack ’n play/Travel crib - always at the listing
+  - Pack ’n play/Travel crib - available upon request
+  - Paid pack ’n play/travel crib - available upon request
+
+SYSTEM_PARKING:
+  - Free parking on premises
+
+SYSTEM_PATIO_BALCONY:
+  - Patio or balcony
+  - Private patio or balcony
+  - Shared patio or balcony
+
+SYSTEM_PETS:
+  - Pets allowed
+
+SYSTEM_PIANO:
+  - Piano
+
+SYSTEM_PILLOW:
+  - Extra pillows and blankets
+
+SYSTEM_PING_PONG:
+  - Ping pong table
+
+SYSTEM_PLAY_SLIDE:
+  - Outdoor playground
+
+SYSTEM_POOL:
+  - Enjoy the pool and hot tub
+  - Outdoor pool
+  - Outdoor pool - available all year, heated
+  - Pool
+  - Pool view
+  - Private outdoor pool - available seasonally, open 24 hours
+  - Private outdoor pool - available seasonally, open specific hours, heated
+  - Private pool
+  - Shared indoor pool - open specific hours, heated
+  - Shared outdoor pool
+  - Shared outdoor pool - available all year, heated
+  - Shared outdoor pool - available all year, open specific hours
+  - Shared outdoor pool - available all year, open specific hours, heated
+  - Shared outdoor pool - available all year, open specific hours, heated, olympic-sized
+  - Shared outdoor pool - available all year, open specific hours, heated, pool cover
+  - Shared outdoor pool - available seasonally
+  - Shared outdoor pool - available seasonally, heated
+  - Shared outdoor pool - available seasonally, open specific hours
+  - Shared outdoor pool - available seasonally, open specific hours, heated
+  - Shared outdoor pool - available seasonally, open specific hours, heated, pool cover, pool toys
+  - Shared outdoor pool - available seasonally, open specific hours, heated, pool toys
+  - Shared outdoor pool - available seasonally, open specific hours, pool cover, pool toys
+  - Shared outdoor pool - available seasonally, open specific hours, pool toys
+  - Shared outdoor pool - heated
+  - Shared pool
+  - Shared pool - 
+  - Shared pool - available all year
+  - Shared pool - available all year, open specific hours
+  - Shared pool - available seasonally
+  - Shared pool - available seasonally, open specific hours
+
+SYSTEM_POOL_TABLE:
+  - Pool table
+
+SYSTEM_PORTABLE_WI_FI:
+  - Pocket wifi
+
+SYSTEM_POWER_SWITCH:
+  - Turn things off
+
+SYSTEM_PRIVATE_BEDROOM:
+  - Room in a bed and breakfast
+  - Room in a chalet
+  - Room in a cottage
+  - Room in a farm stay
+  - Room in a guest suite
+  - Room in a home
+  - Room in a rental unit
+  - Room in a yurt
+
+SYSTEM_RECORD_PLAYER:
+  - Record player
+
+SYSTEM_REFRIGERATOR:
+  - (Mini fridge) refrigerator
+  - 7.3 cubic feet, with a separate freezer compartment...this size of fridge is suitable for long-term stays... refrigerator
+  - Amana refrigerator
+  - Bosch refrigerator
+  - Dometic refrigerator w/freezer refrigerator
+  - Figidaire refrigerator
+  - Freezer
+  - Fridgedaire refrigerator
+  - Frigidaire - Stainless Steel refrigerator
+  - Frigidaire refrigerator
+  - Full fridge with freezer on top refrigerator
+  - Full-size refrigerator
+  - GE refrigerator
+  - Galanz refrigerator
+  - Ge refrigerator
+  - JennAir refrigerator
+  - Joy refrigerator
+  - Kenmore refrigerator
+  - Kitchen Aid refrigerator
+  - Kitchen aid refrigerator
+  - KitchenAid Stainless Steel refrigerator
+  - KitchenAid refrigerator
+  - Kitchinaid refrigerator
+  - LG refrigerator
+  - Magic Chef refrigerator
+  - Maytag refrigerator
+  - Midea refrigerator
+  - Mini refrigerator
+  - New refrigerator refrigerator
+  - Refrigerator
+  - Samsung - w Self-filling Water Infuser Pitcher & Water in Door refrigerator
+  - Samsung Bespoke refrigerator
+  - Samsung refrigerator
+  - Shared refrigerator
+  - Small apartment size refrigerator. It's larger than the little dorm sized units, but not a full size fridge. It has a proper freezer with ice cube trays. refrigerator
+  - Smeg refrigerator
+  - Standard Frig/Freezer refrigerator
+  - Thermador refrigerator
+  - This is a smaller fridge/freezer (not full size) refrigerator
+  - Whirlpool Stainless steel refrigerator
+  - Whirlpool refrigerator
+  - With ice maker refrigerator
+
+SYSTEM_RICE_COOKER:
+  - Rice maker
+
+SYSTEM_ROOFTOP_DECK:
+  - Outdoor dining area
+  - Outdoor furniture
+
+SYSTEM_SAFE:
+  - Lockbox
+  - Safe
+
+SYSTEM_SAUNA:
+  - Private sauna
+  - Sauna
+  - Shared sauna
+
+SYSTEM_SHAMPOO:
+  - Aesop conditioner
+  - Aesop shampoo
+  - Aussie conditioner
+  - Aussie shampoo
+  - Avalon Organics conditioner
+  - Avalon Organics shampoo
+  - Basic conditioner
+  - Basic shampoo
+  - Bergman Kelly (shampoo/conditioner) conditioner
+  - Bergman Kelly (shampoo/conditioner) shampoo
+  - Bergman Kelly conditioner
+  - Bergman Kelly shampoo
+  - Bondbar conditioner
+  - Bondbar shampoo
+  - Central Air conditioner
+  - Commercial shampoo
+  - Conditioner
+  - Costco conditioner
+  - EO Essentials w/botanical and essential oils. Paraben and cruelty free shampoo
+  - EO Essentials w/botanical and essential oils. Paraben and cruelty free. conditioner
+  - Eco conditioner
+  - Eco shampoo
+  - Eco- Friendly conditioner
+  - Eco-Friendly shampoo
+  - Everyone shampoo
+  - Generic conditioner
+  - Generic shampoo
+  - Gilchrist & Soames conditioner
+  - Ginger Lilly Farms Conditioner conditioner
+  - Ginger Lilly Farms Shampoo shampoo
+  - Ginger Lilly Farms conditioner
+  - Ginger Lilly Farms shampoo
+  - Ginger Lilly conditioner
+  - Ginger Lilly shampoo
+  - Ginger Lily Farms Botanical conditioner
+  - Ginger Lily Farms Botanical shampoo
+  - Ginger Lily Farms Botanicals Moisturizing Conditioner for Dry Hair, 100% Vegan & Cruelty-Free conditioner
+  - Ginger Lily Farms Botanicals Moisturizing Shampoo for Dry Hair, 100% Vegan & Cruelty-Free shampoo
+  - Ginger Lily Farms Botanicals conditioner
+  - Ginger Lily Farms Botanicals shampoo
+  - Ginger Lily Farms Conditioner conditioner
+  - Ginger Lily Farms Morocco Argan Oil conditioner
+  - Ginger Lily Farms Morocco Argan Oil shampoo
+  - Ginger Lily Farms Shampoo shampoo
+  - Ginger Lily Farms conditioner
+  - Ginger Lily Farms shampoo
+  - Ginger Lily Organic Farm conditioner
+  - Ginger Lily Organic Farm shampoo
+  - Ginger farms 100% vegan and cruelty free, no phosphates, parabenes or sulfates conditioner
+  - Ginger farms 100% vegan and cruelty free, no phosphates, parabenes or sulfates shampoo
+  - Ginger lily farms conditioner
+  - Ginger lily farms shampoo
+  - Giovanni Eco Chic Hair Care conditioner
+  - Giovanni Eco Chic Hair Care shampoo
+  - Lemongrass - Ginger conditioner
+  - Lemongrass - Ginger shampoo
+  - Local luxury small batch shampoo
+  - Malin & Goetz conditioner
+  - Malin & Goetz shampoo
+  - Muji conditioner
+  - Native conditioner
+  - Native shampoo
+  - Natural conditioner
+  - Natural products conditioner
+  - Natural shampoo
+  - Natural, not tested on animals brands conditioner
+  - Natural, not tested on animals brands shampoo
+  - Natural, plant based Citrus + Aloe conditioner
+  - Natural, plant-based Citrus + Aloe shampoo
+  - Natural, vegan bath products conditioner
+  - Nature's Gate conditioner
+  - Nature's Gate shampoo
+  - Nexxus conditioner
+  - Nexxus shampoo
+  - ORGANIC shampoo
+  - Olay conditioner
+  - Olay shampoo
+  - Organic brand shampoo
+  - Pantene Pro V conditioner
+  - Pantene Pro V shampoo
+  - Pantene conditioner
+  - Pantene or similar conditioner
+  - Pantene or similar shampoo
+  - Pantene shampoo
+  - Public Goods conditioner
+  - Public Goods shampoo
+  - Public goods conditioner
+  - Public goods shampoo
+  - Quality conditioner
+  - Quality shampoo
+  - Shampoo
+  - Shikai Tea Tree conditioner
+  - Shikai Tea Tree shampoo
+  - Suave conditioner
+  - Suave shampoo
+  - Sukin conditioner
+  - Sukin shampoo
+  - Super Leaves conditioner
+  - Super Leaves shampoo
+  - Terra Pure conditioner
+  - Trader Joe's Tea Tree Tingle conditioner
+  - Trader Joe's Tea Tree Tingle shampoo
+  - Unknown conditioner
+  - Unknown shampoo
+  - Varies conditioner
+  - Varies shampoo
+  - Various conditioner
+  - Varying conditioner
+  - Varying shampoo
+  - We strive for high quality non-toxic products shampoo
+  - We use all natural products made in the USA conditioner
+  - We use all natural products made in the USA shampoo
+  - Zogics Organics shampoo
+
+SYSTEM_SHARED_HOME:
+  - Shared common spaces
+
+SYSTEM_SHOWER:
+  - Outdoor shower
+  - Private attached bathroom
+
+SYSTEM_SKATEBOARDING:
+  - Skate ramp
+
+SYSTEM_SKI:
+  - Ski-in/Ski-out
+  - Ski-in/ski-out – near ski lifts
+  - Ski-in/ski-out – on a free shuttle line
+  - Ski-in/ski-out – on a ski run
+
+SYSTEM_SMOKING_ALLOWED:
+  - Smoking allowed
+  - Smoking is allowed
+
+SYSTEM_SMOKING_NOT_ALLOWED:
+  - No smoking
+
+SYSTEM_SNOWFLAKE:
+  - AC - split type ductless system
+  - Air conditioning
+  - Central air conditioning
+  - Portable air conditioning
+  - Window AC unit
+
+SYSTEM_SOAP:
+  - Aesop body soap
+  - Basic body soap
+  - Bathing culture body soap
+  - Bergman Kelly body soap
+  - Bergman Kelly individual Soap Bars body soap
+  - Body soap
+  - Body wash shampoo and conditioner body soap
+  - Boring Goat body soap
+  - Costco body soap
+  - Dial body soap
+  - Dove body soap
+  - Dove or similar body soap
+  - Dove, Suave, Dr. Bronner's body soap
+  - Dr. Bronner's body soap
+  - Dr. Bronners body soap
+  - EO Essentials w/botanical and essential oils. Paraben and cruelty free body soap
+  - EO body soap body soap
+  - Eco body soap
+  - Eco- friendly body soap
+  - Everybody Soap & Bubble bath body soap
+  - Everyone (EO) brand body soap
+  - Generic body soap
+  - Gilchrist & Soames body soap
+  - Ginger Lilly Farms Body Wash body soap
+  - Ginger Lilly Farms body soap
+  - Ginger Lilly body soap
+  - Ginger Lily Farms Body Wash body soap
+  - Ginger Lily Farms Botanical body soap
+  - Ginger Lily Farms Botanicals body soap
+  - Ginger Lily Farms Morocco Argan Oil body soap
+  - Ginger Lily Farms body soap
+  - Ginger Lily Farms or Irish Spring body soap
+  - Ginger Lily Organic Farm body soap
+  - Ginger farms 100% vegan and cruelty free, no phosphates, parabenes or sulfates body soap
+  - Ginger lily farms body soap
+  - Kirk's body soap
+  - Kirkland body soap
+  - Local luxury small batch body soap
+  - Malin and Goetz body soap
+  - Mary kay body soap
+  - Method body soap
+  - Native And Cera Ve body soap
+  - Native body soap
+  - Natural body soap
+  - Natural, not tested on animals brands body soap
+  - Natural, plant based Citrus + Aloe body soap
+  - Nature's Gate body soap
+  - Neutrogena body soap
+  - ORGANIC body soap
+  - Olay body soap
+  - Organic Lavander Castille Soap body soap
+  - Organic body soap
+  - Public Goods body soap
+  - Public goods body soap
+  - Pump dispenser body soap
+  - Quality body soap
+  - Septic System Friendly Dr. Bonner's body soap
+  - Shower gel
+  - Shower gel body soap
+  - Soft soap body soap
+  - Strive for all non-toxic brands body soap
+  - Suave body soap
+  - Suave, Dove body soap
+  - Sukin body soap
+  - Unknown body soap
+  - Varies body soap
+  - Various body soap
+  - Various body wash body soap
+  - Varying body soap
+  - We use all natural products made in the USA body soap
+
+SYSTEM_SPEAKERS:
+  - Alexa Bluetooth sound system
+  - Alexa sound system
+  - Bluetooth sound system
+  - Bose 300 smart speaker Bluetooth sound system
+  - Bose Bluetooth sound system
+  - Bose Micro Bluetooth sound system
+  - Bose and Pioneer Bluetooth sound system
+  - Bose bluetooth speaker Bluetooth sound system
+  - Crosley Bluetooth sound system
+  - Crosley sound system with Bluetooth and aux
+  - Fossi Audio sound system with Bluetooth and aux
+  - JBL Bluetooth sound system
+  - Klipsch sound system with Bluetooth and aux
+  - Marley Bluetooth sound system
+  - Marshall Bluetooth sound system
+  - Marshall sound system with Bluetooth and aux
+  - Massive 2022 Sony boom box Bluetooth sound system
+  - Onkyo Bluetooth sound system
+  - Onkyo sound system
+  - Record player sound system
+  - Samsung sound system with Bluetooth and aux
+  - Samsung sound system with aux
+  - Sonos Bluetooth sound system
+  - Sonos sound system
+  - Sonos sound system with Bluetooth and aux
+  - Sonos sound system with aux
+  - Sony Blue Tooth Potable Speaker & Samsung TV Sound Bar Bluetooth sound system
+  - Sony in garage, not sure on system in living room but it is high quality surround sound sound system with Bluetooth and aux
+  - Sound system
+  - Sound system with Bluetooth and aux
+  - Sound system with aux
+  - Speaker sound system with Bluetooth and aux
+  - Victrola Bluetooth sound system
+  - Vizio Bluetooth sound system
+  - Yamaha sound system with aux
+
+SYSTEM_STOVE:
+  - 1950's vintage Frigidaire (works great!) stove
+  - Bosch stainless steel electric stove
+  - Bosch stainless steel gas stove
+  - Bosch stainless steel stove
+  - Electric stove
+  - Elite Gourmet electric stove
+  - Frigidaire - with Cast Iron Griddle (only clean with water - NO SOAP) stainless steel gas stove
+  - Frigidaire electric stove
+  - Frigidaire induction stove
+  - Frigidaire stainless steel electric stove
+  - Frigidaire stainless steel gas stove
+  - Frigidaire stainless steel induction stove
+  - GE Monogram stainless steel gas stove
+  - GE electric stove
+  - GE induction stove
+  - GE stainless steel electric stove
+  - GE stainless steel gas stove
+  - Gas stove
+  - Induction stove
+  - Invection stainless steel stove
+  - Invection stove stainless steel stove
+  - Jenn-Air electric stove
+  - Jenn-Air stainless steel electric stove
+  - Jenn-air electric stove
+  - Kenmore electric stove
+  - Kenmore stainless steel electric stove
+  - KitchenAid stainless steel electric stove
+  - LG electric stove
+  - LG stainless steel electric stove
+  - LG stainless steel stove
+  - NXR stainless steel gas stove
+  - Other electric stove
+  - Roastmaster electric stove
+  - Samsung electric stove
+  - Samsung induction stove
+  - Samsung stainless steel electric stove
+  - Samsung stainless steel induction stove
+  - Samsung stainless steel stove
+  - Stainless steel electric stove
+  - Stainless steel gas stove
+  - Stainless steel induction stove
+  - Stainless steel stove
+  - Stove
+  - Summit glass cooktop electric stove
+  - Thermador stainless steel gas stove
+  - This is a smaller stove/oven. Can fit a large pizza but not a extra large/family size pizza electric stove
+  - Whirlpool electric stove
+  - Whirlpool gas stove
+  - Whirlpool stainless steel electric stove
+  - Wolf gas stove
+  - Wolf induction stove
+  - Wood-burning stove
+
+SYSTEM_SUN_DECK:
+  - Sun loungers
+
+SYSTEM_SUPERHOST:
+  - Alice is a Superhost
+  - Allison is a Superhost
+  - Amber is a Superhost
+  - Anna is a Superhost
+  - Arrived Your Vacation Rental Destination is a Superhost
+  - Audra is a Superhost
+  - Bradley James is a Superhost
+  - Carl is a Superhost
+  - Cascadia Getaways is a Superhost
+  - Chris And Janelle is a Superhost
+  - Cody is a Superhost
+  - Cora is a Superhost
+  - Cory & Rachel is a Superhost
+  - Dakota is a Superhost
+  - Dalton is a Superhost
+  - Daniel is a Superhost
+  - Danielle is a Superhost
+  - Dave is a Superhost
+  - Deena is a Superhost
+  - Elevated Escapes is a Superhost
+  - Elizabeth is a Superhost
+  - Elliott is a Superhost
+  - Eric is a Superhost
+  - Erik is a Superhost
+  - Fairly is a Superhost
+  - Hollie is a Superhost
+  - Hollis & Dave is a Superhost
+  - Hytte Haus is a Superhost
+  - Ian is a Superhost
+  - Jason is a Superhost
+  - Jeff & Jodi is a Superhost
+  - Jeff And Bridget is a Superhost
+  - Jesse is a Superhost
+  - Jessica is a Superhost
+  - Judy is a Superhost
+  - Julie is a Superhost
+  - Karen is a Superhost
+  - Kasey is a Superhost
+  - Katie is a Superhost
+  - Keri is a Superhost
+  - Kevin is a Superhost
+  - Kierra is a Superhost
+  - Kimberly Diane is a Superhost
+  - Lauren is a Superhost
+  - Leif is a Superhost
+  - Leilani is a Superhost
+  - Live Suite is a Superhost
+  - Magnum Management is a Superhost
+  - Malia is a Superhost
+  - Mallette is a Superhost
+  - Mark is a Superhost
+  - Max is a Superhost
+  - Meg is a Superhost
+  - Micah is a Superhost
+  - Michael is a Superhost
+  - Michelle is a Superhost
+  - Mike And Betsy is a Superhost
+  - Mimi is a Superhost
+  - Neil is a Superhost
+  - Polya is a Superhost
+  - Raylene is a Superhost
+  - Rebecca is a Superhost
+  - Sara is a Superhost
+  - Scott And Lise is a Superhost
+  - Serenity Compass is a Superhost
+  - Shannon is a Superhost
+  - StaySavvy LLC is a Superhost
+  - Stephanie is a Superhost
+  - Steven is a Superhost
+  - Sue is a Superhost
+  - Tedros is a Superhost
+  - Teresa is a Superhost
+  - Todd is a Superhost
+  - Tresa is a Superhost
+  - UrbanHost LLC is a Superhost
+  - Victoria is a Superhost
+  - Wendy is a Superhost
+  - Wilder And Pine Riverside is a Superhost
+  - William is a Superhost
+
+SYSTEM_SURVEILLANCE:
+  - Exterior security cameras on property
+
+SYSTEM_THERMOMETER:
+  - Central heating
+  - Heating
+  - Heating - split type ductless system
+  - Portable heater
+  - Radiant heating
+
+SYSTEM_TOASTER:
+  - Toaster
+
+SYSTEM_TOILETRIES:
+  - Essentials
+
+SYSTEM_TOILET_BIDET:
+  - Bidet
+
+SYSTEM_TOWEL:
+  - Gather used towels
+
+SYSTEM_TOYS:
+  - Children's playroom
+  - Children’s books and toys
+  - Children’s books and toys for ages 0-2 years old
+  - Children’s books and toys for ages 0-2 years old and 2-5 years old
+  - Children’s books and toys for ages 0-2 years old, 2-5 years old, 5-10 years old, and 10+ years old
+  - Children’s books and toys for ages 0-2 years old, 2-5 years old, and 5-10 years old
+  - Children’s books and toys for ages 10+ years old
+  - Children’s books and toys for ages 2-5 years old
+  - Children’s books and toys for ages 2-5 years old and 5-10 years old
+  - Children’s books and toys for ages 2-5 years old, 5-10 years old, and 10+ years old
+  - Children’s books and toys for ages 5-10 years old
+
+SYSTEM_TRASH:
+  - Throw trash away
+  - Trash compactor
+
+SYSTEM_TV:
+  - 24 inch TV
+  - 24 inch TV with Roku
+  - 28 inch HDTV with Roku
+  - 28 inch TV with Roku
+  - 30 inch HDTV with Amazon Prime Video, Hulu, Roku
+  - 32 inch HDTV
+  - 32 inch HDTV with Amazon Prime Video
+  - 32 inch HDTV with DVD player
+  - 32 inch HDTV with Fire TV
+  - 32 inch HDTV with HBO Max, premium cable, standard cable, DVD player
+  - 32 inch HDTV with Netflix
+  - 32 inch HDTV with Roku
+  - 32 inch TV with DVD player
+  - 32 inch TV with HBO Max, Netflix, DVD player
+  - 36 inch HDTV with standard cable
+  - 36 inch TV with Amazon Prime Video, Apple TV, Chromecast, Disney+, Fire TV, HBO Max, Hulu, Netflix
+  - 39 inch HDTV with Roku, DVD player
+  - 40 inch HDTV
+  - 40 inch HDTV with Apple TV, Roku
+  - 40 inch HDTV with Netflix, Amazon Prime Video, standard cable
+  - 40 inch HDTV with Netflix, Hulu, Amazon Prime Video, Disney+
+  - 40 inch HDTV with Roku
+  - 40 inch HDTV with standard cable
+  - 40 inch HDTV with standard cable, Chromecast
+  - 42 inch HDTV
+  - 42 inch HDTV with Amazon Prime Video
+  - 42 inch HDTV with Amazon Prime Video, Apple TV, Disney+, HBO Max, Hulu, Netflix, Roku
+  - 42 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Hulu, Netflix, HBO Max
+  - 42 inch HDTV with Amazon Prime Video, Fire TV, standard cable
+  - 42 inch HDTV with DVD player, Amazon Prime Video, Apple TV, Netflix, Roku
+  - 42 inch HDTV with Fire TV
+  - 42 inch HDTV with Fire TV, Netflix, Roku
+  - 42 inch HDTV with Hulu, Netflix, Roku
+  - 42 inch HDTV with Netflix, Disney+, Hulu, Amazon Prime Video
+  - 42 inch HDTV with Netflix, standard cable
+  - 42 inch HDTV with Roku
+  - 42 inch HDTV with Roku, DVD player
+  - 43 inch HDTV with Amazon Prime Video
+  - 43 inch HDTV with Netflix, DVD player
+  - 43 inch HDTV with Roku
+  - 44 inch HDTV
+  - 44 inch HDTV with Amazon Prime Video, Disney+, HBO Max, Netflix
+  - 45 inch TV with Roku, DVD player
+  - 46 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Fire TV, HBO Max, Hulu, Netflix
+  - 46 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Hulu, Netflix
+  - 46 inch HDTV with Fire TV, DVD player
+  - 47 inch HDTV with Amazon Prime Video, Disney+, HBO Max, Hulu, Netflix, DVD player
+  - 47 inch HDTV with Roku, standard cable, DVD player
+  - 48 inch HDTV with DVD player
+  - 48 inch HDTV with DVD player, Roku, Amazon Prime Video
+  - 48 inch TV with Roku
+  - 50 inch HDTV
+  - 50 inch HDTV with Amazon Prime Video, Disney+, HBO Max, Hulu, Netflix
+  - 50 inch HDTV with Amazon Prime Video, Fire TV, Netflix, standard cable
+  - 50 inch HDTV with Amazon Prime Video, Netflix, Roku, standard cable, premium cable
+  - 50 inch HDTV with Apple TV
+  - 50 inch HDTV with Chromecast
+  - 50 inch HDTV with DVD player, standard cable
+  - 50 inch HDTV with Disney+, HBO Max, Hulu, Netflix
+  - 50 inch HDTV with Disney+, HBO Max, Hulu, Netflix, standard cable
+  - 50 inch HDTV with Disney+, HBO Max, Netflix, Roku
+  - 50 inch HDTV with Disney+, Hulu, Roku
+  - 50 inch HDTV with Disney+, Netflix, Hulu, Roku
+  - 50 inch HDTV with Fire TV
+  - 50 inch HDTV with Fire TV, DVD player
+  - 50 inch HDTV with Hulu, Amazon Prime Video, Apple TV, HBO Max, Chromecast, Netflix
+  - 50 inch HDTV with Hulu, Netflix, Amazon Prime Video, Disney+, Roku
+  - 50 inch HDTV with Netflix, DVD player, Amazon Prime Video, Apple TV, Disney+, Hulu
+  - 50 inch HDTV with Roku
+  - 50 inch HDTV with Roku, DVD player
+  - 50 inch TV
+  - 50 inch TV with DVD player
+  - 52 inch HDTV
+  - 52 inch HDTV with Amazon Prime Video, Apple TV, standard cable
+  - 52 inch HDTV with Amazon Prime Video, Disney+, Netflix, Roku
+  - 52 inch HDTV with standard cable
+  - 55 inch HDTV
+  - 55 inch HDTV with Amazon Prime Video, Apple TV, Disney+, HBO Max
+  - 55 inch HDTV with Amazon Prime Video, Apple TV, Disney+, HBO Max, Hulu, Netflix, standard cable
+  - 55 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Hulu, Netflix
+  - 55 inch HDTV with Amazon Prime Video, Chromecast, Netflix
+  - 55 inch HDTV with Amazon Prime Video, Disney+, Hulu, Netflix
+  - 55 inch HDTV with Amazon Prime Video, Fire TV, Netflix, DVD player
+  - 55 inch HDTV with Amazon Prime Video, Roku, Disney+, HBO Max, Hulu, Netflix
+  - 55 inch HDTV with Amazon Prime Video, standard cable, DVD player
+  - 55 inch HDTV with DVD player
+  - 55 inch HDTV with Disney+, Fire TV, Netflix, standard cable, DVD player
+  - 55 inch HDTV with Fire TV, Roku
+  - 55 inch HDTV with Hulu
+  - 55 inch HDTV with Netflix
+  - 55 inch HDTV with Netflix, Roku, Amazon Prime Video
+  - 55 inch HDTV with Roku
+  - 55 inch HDTV with Roku, Chromecast
+  - 55 inch HDTV with Roku, Netflix
+  - 55 inch HDTV with premium cable, Amazon Prime Video, HBO Max, Disney+, Hulu, Roku, Netflix
+  - 55 inch TV with Amazon Prime Video, Disney+, Netflix
+  - 55 inch TV with Roku
+  - 56 inch HDTV with Amazon Prime Video, HBO Max, Disney+, Netflix, Hulu
+  - 58 inch HDTV with Roku
+  - 60 inch HDTV
+  - 60 inch HDTV with Netflix
+  - 60 inch HDTV with Roku
+  - 60 inch HDTV with Roku, Netflix
+  - 60 inch HDTV with standard cable, Amazon Prime Video, Apple TV
+  - 64 inch HDTV with Amazon Prime Video, Apple TV, Fire TV, HBO Max, Hulu, Netflix, Roku
+  - 65 inch HDTV
+  - 65 inch HDTV with Amazon Prime Video, Apple TV, Chromecast, Disney+, Fire TV, HBO Max, Hulu, Netflix, Roku
+  - 65 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Fire TV, HBO Max, Hulu, Netflix, standard cable
+  - 65 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Hulu, Netflix
+  - 65 inch HDTV with Amazon Prime Video, Apple TV, Disney+, Netflix
+  - 65 inch HDTV with Amazon Prime Video, Chromecast, HBO Max, Hulu, Netflix
+  - 65 inch HDTV with Apple TV
+  - 65 inch HDTV with Hulu, Disney+, Roku, Netflix, Chromecast
+  - 65 inch HDTV with Netflix
+  - 65 inch HDTV with Roku
+  - 65 inch HDTV with Roku, Amazon Prime Video, DVD player, Netflix
+  - 65 inch HDTV with premium cable
+  - 65 inch TV with Disney+, Amazon Prime Video, Netflix, DVD player, Roku
+  - 65 inch TV with Netflix
+  - 65 inch TV with Roku
+  - 70 inch HDTV
+  - 70 inch HDTV with Amazon Prime Video, Apple TV, Chromecast, Disney+, HBO Max, Hulu, Netflix, premium cable, standard cable
+  - 70 inch HDTV with Amazon Prime Video, Fire TV, HBO Max, Netflix, standard cable, Apple TV, Hulu, premium cable
+  - 70 inch HDTV with Fire TV, DVD player
+  - 70 inch HDTV with Netflix
+  - 70 inch HDTV with standard cable, DVD player, Roku
+  - 72 inch HDTV with premium cable
+  - 75 inch HDTV with Amazon Prime Video, Apple TV, Chromecast, Hulu, Netflix
+  - 75 inch HDTV with Amazon Prime Video, Apple TV, Disney+, HBO Max, Hulu, Netflix, Roku
+  - 75 inch HDTV with Roku
+  - 77 inch HDTV with Amazon Prime Video, Hulu, HBO Max, Disney+
+  - 80 inch HDTV
+  - HDTV
+  - HDTV with Amazon Prime Video, Apple TV, Disney+, Hulu, Netflix
+  - HDTV with Amazon Prime Video, Apple TV, Disney+, Hulu, Netflix, Roku
+  - HDTV with Amazon Prime Video, Disney+, HBO Max, Netflix, Roku
+  - HDTV with Amazon Prime Video, Disney+, Hulu, Netflix, Roku
+  - HDTV with Amazon Prime Video, Netflix
+  - HDTV with Apple TV, Netflix
+  - HDTV with DVD player
+  - HDTV with DVD player, Netflix
+  - HDTV with Disney+, DVD player, Netflix, HBO Max, Hulu
+  - HDTV with Disney+, Hulu, Netflix, DVD player, Amazon Prime Video, Roku, HBO Max
+  - HDTV with Fire TV
+  - HDTV with HBO Max, Hulu, Apple TV, Netflix
+  - HDTV with Hulu, Netflix, Amazon Prime Video, HBO Max, Disney+
+  - HDTV with Hulu, Netflix, Amazon Prime Video, Roku
+  - HDTV with Netflix, DVD player
+  - HDTV with Netflix, Hulu
+  - HDTV with Netflix, Roku
+  - HDTV with Netflix, standard cable
+  - HDTV with Netflix, standard cable, Roku
+  - HDTV with Roku
+  - HDTV with Roku, Fire TV
+  - HDTV with Roku, Netflix, Disney+, Hulu
+  - HDTV with Roku, standard cable
+  - HDTV with premium cable
+  - HDTV with standard cable
+  - TV
+  - TV with Amazon Prime Video
+  - TV with Amazon Prime Video, Apple TV, Hulu, Netflix, Disney+
+  - TV with Amazon Prime Video, Fire TV, HBO Max, Hulu, Apple TV, Disney+, Netflix
+  - TV with Amazon Prime Video, Netflix, Roku
+  - TV with Apple TV
+  - TV with DVD player
+  - TV with DVD player, Netflix
+  - TV with Fire TV
+  - TV with Hulu, Netflix, Amazon Prime Video, HBO Max
+  - TV with Netflix
+  - TV with Netflix, DVD player, Amazon Prime Video
+  - TV with Netflix, DVD player, Fire TV
+  - TV with Netflix, Fire TV
+  - TV with Roku
+  - TV with Roku, HBO Max, Hulu, Netflix, DVD player, Amazon Prime Video
+  - TV with Roku, Netflix, DVD player
+  - TV with premium cable
+  - TV with standard cable
+  - TV with standard cable, DVD player
+  - TV with standard cable, DVD player, Netflix
+  - TV with standard cable, Netflix
+
+SYSTEM_VIDEO_GAME:
+  - Game console
+  - Game console: Nintendo Switch
+  - Game console: Nintendo Wii
+  - Game console: Nintendo Wii U
+  - Game console: Nintendo Wii and PS5
+  - Game console: PS3
+  - Game console: PS4
+  - Game console: PS5
+  - Game console: Xbox 360
+  - Game console: Xbox One
+
+SYSTEM_VIEW_CITY:
+  - City skyline view
+
+SYSTEM_VIEW_MOUNTAIN:
+  - Mountain and garden views
+  - Mountain and park views
+  - Mountain and valley views
+  - Mountain view
+  - Valley view
+
+SYSTEM_VIEW_OCEAN:
+  - Lake access
+  - Lake view
+  - River view
+  - Waterfront
+
+SYSTEM_WARDROBE:
+  - Clothing storage
+  - Clothing storage: closet
+  - Clothing storage: closet and dresser
+  - Clothing storage: closet and wardrobe
+  - Clothing storage: closet, wardrobe, and dresser
+  - Clothing storage: dresser
+  - Clothing storage: walk-in closet
+  - Clothing storage: walk-in closet and closet
+  - Clothing storage: walk-in closet and dresser
+  - Clothing storage: walk-in closet, closet, and dresser
+  - Clothing storage: walk-in closet, closet, wardrobe, and dresser
+  - Clothing storage: wardrobe
+  - Clothing storage: wardrobe and dresser
+
+SYSTEM_WASHER:
+  - Free washer
+  - Free washer – In building
+  - Free washer – In unit
+  - Paid washer – In building
+  - Washer
+  - Washer – In building
+  - Washer – In unit
+
+SYSTEM_WATER_KETTLE:
+  - Hot water kettle
+
+SYSTEM_WHY_HOST:
+  - Extra spacious
+
+SYSTEM_WINDOW_GUARD:
+  - Window guards
+
+SYSTEM_WI_FI:
+  - Fast wifi
+  - Fast wifi – 101 Mbps
+  - Fast wifi – 115 Mbps
+  - Fast wifi – 128 Mbps
+  - Fast wifi – 138 Mbps
+  - Fast wifi – 142 Mbps
+  - Fast wifi – 147 Mbps
+  - Fast wifi – 176 Mbps
+  - Fast wifi – 185 Mbps
+  - Fast wifi – 187 Mbps
+  - Fast wifi – 198 Mbps
+  - Fast wifi – 224 Mbps
+  - Fast wifi – 229 Mbps
+  - Fast wifi – 235 Mbps
+  - Fast wifi – 237 Mbps
+  - Fast wifi – 238 Mbps
+  - Fast wifi – 242 Mbps
+  - Fast wifi – 244 Mbps
+  - Fast wifi – 249 Mbps
+  - Fast wifi – 251 Mbps
+  - Fast wifi – 260 Mbps
+  - Fast wifi – 274 Mbps
+  - Fast wifi – 283 Mbps
+  - Fast wifi – 285 Mbps
+  - Fast wifi – 307 Mbps
+  - Fast wifi – 318 Mbps
+  - Fast wifi – 333 Mbps
+  - Fast wifi – 349 Mbps
+  - Fast wifi – 350 Mbps
+  - Fast wifi – 392 Mbps
+  - Fast wifi – 409 Mbps
+  - Fast wifi – 421 Mbps
+  - Fast wifi – 422 Mbps
+  - Fast wifi – 424 Mbps
+  - Fast wifi – 480 Mbps
+  - Fast wifi – 508 Mbps
+  - Fast wifi – 52 Mbps
+  - Fast wifi – 530 Mbps
+  - Fast wifi – 533 Mbps
+  - Fast wifi – 539 Mbps
+  - Fast wifi – 54 Mbps
+  - Fast wifi – 549 Mbps
+  - Fast wifi – 550 Mbps
+  - Fast wifi – 571 Mbps
+  - Fast wifi – 583 Mbps
+  - Fast wifi – 626 Mbps
+  - Fast wifi – 63 Mbps
+  - Fast wifi – 65 Mbps
+  - Fast wifi – 66 Mbps
+  - Fast wifi – 71 Mbps
+  - Fast wifi – 723 Mbps
+  - Fast wifi – 82 Mbps
+  - Fast wifi – 88 Mbps
+  - Fast wifi – 89 Mbps
+  - Fast wifi – 91 Mbps
+  - Fast wifi – 93 Mbps
+  - Fast wifi – 94 Mbps
+  - Fast wifi – 96 Mbps
+  - Fast wifi – 97 Mbps
+  - Wifi
+  - Wifi – 16 Mbps
+  - Wifi – 25 Mbps
+  - Wifi – 29 Mbps
+  - Wifi – 33 Mbps
+  - Wifi – 36 Mbps
+  - Wifi – 37 Mbps
+  - Wifi – 39 Mbps
+  - Wifi – 45 Mbps
+  - Wifi – 48 Mbps
+  - Wifi – 7 Mbps
+  - Wifi – 8 Mbps
+
+SYSTEM_WORKSPACE:
+  - Dedicated workspace
+  - Great for remote work

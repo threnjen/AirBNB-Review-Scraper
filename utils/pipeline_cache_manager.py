@@ -37,12 +37,14 @@ class PipelineCacheManager(BaseModel):
         "area_summary",
         "correlation_results",
         "description_analysis",
+        "machine_learning_model",
     ]
 
     CASCADE_TARGET_STAGES: ClassVar[set[str]] = {
         "area_summary",
         "correlation_results",
         "description_analysis",
+        "machine_learning_model",
     }
 
     STAGE_OUTPUT_DIRS: ClassVar[dict[str, str]] = {
@@ -54,6 +56,7 @@ class PipelineCacheManager(BaseModel):
         "listing_summaries": "outputs/05_listing_summaries",
         "correlation_results": "outputs/08_correlation_results",
         "description_analysis": "outputs/09_description_analysis",
+        "machine_learning_model": "ml/model/residual",
     }
 
     ttl_hours: int = 24 * 7
@@ -88,6 +91,9 @@ class PipelineCacheManager(BaseModel):
                 ),
                 "description_analysis": config.get(
                     "force_refresh_description_analysis", False
+                ),
+                "machine_learning_model": config.get(
+                    "force_refresh_machine_learning_model", False
                 ),
             }
             self._apply_init_cascade()
@@ -210,6 +216,15 @@ class PipelineCacheManager(BaseModel):
             return [
                 os.path.join(da_dir, f"description_quality_stats_{zone_name}.json"),
                 f"reports/description_quality_{zone_name}.md",
+            ]
+
+        if stage_name == "machine_learning_model":
+            ml_dir = self.STAGE_OUTPUT_DIRS.get(
+                "machine_learning_model", "outputs/10_ml_model"
+            )
+            return [
+                os.path.join(ml_dir, "stage1_model.joblib"),
+                os.path.join(ml_dir, "stage2_model.joblib"),
             ]
 
         return []

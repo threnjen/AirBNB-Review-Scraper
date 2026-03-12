@@ -94,7 +94,12 @@ def main(
 
     # Filter amenity features using training residuals as target
     X_amen_full = X_amenity_all.iloc[idx_train].copy()
-    X_amen_full = filter_amenity_features(X_amen_full, residuals_train)
+    X_amen_full = filter_amenity_features(
+        X_amen_full,
+        residuals_train,
+        prune_low_variance=False,
+        prune_zero_importance_params=False,
+    )
     amenity_keep_cols = list(X_amen_full.columns)
 
     X_amen_train = X_amenity_all.iloc[idx_train][amenity_keep_cols]
@@ -146,7 +151,12 @@ def main(
     full_residuals = y - full_s1_pred
 
     # Re-filter amenities on full data
-    X_amen_full_refit = filter_amenity_features(X_amenity_all.copy(), full_residuals)
+    X_amen_full_refit = filter_amenity_features(
+        X_amenity_all.copy(),
+        full_residuals,
+        prune_low_variance=False,
+        prune_zero_importance_params=False,
+    )
     amenity_prod_cols = list(X_amen_full_refit.columns)
 
     prod_stage2 = refit_production_model(
