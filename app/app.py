@@ -1,8 +1,14 @@
 """
 Flask web application for ADR (Average Daily Rate) prediction.
 
-Loads a pre-trained XGBoost model at startup and serves an HTML form
-for interactive prediction based on property amenities and characteristics.
+Loads a pre-trained two-stage residual XGBoost model at startup and serves
+an HTML form for interactive prediction based on property amenities and
+characteristics.
+
+Stage 1: Numeric features (capacity, bedrooms, beds, bathrooms, distance,
+         per-person ratios) → ADR (log-transformed).
+Stage 2: SYSTEM_* amenity features → Stage 1 residuals.
+Combined prediction = Stage 1 + Stage 2.
 """
 
 import json
@@ -13,18 +19,36 @@ import joblib
 import numpy as np
 from flask import Flask, render_template, request
 
+from utils.geo_utils import manhattan_surface_distance
+from utils.tiny_file_handler import load_config
+
 logger = logging.getLogger(__name__)
 
-MODEL_DIR = Path(__file__).parent.parent / "ml" / "model"
+MODEL_DIR = Path(__file__).parent.parent / "ml" / "model" / "residual"
 
-NUMERIC_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms"]
+# User-facing input fields (shown in the form).
+NUMERIC_FEATURES = [
+    "capacity",
+    "bedrooms",
+    "beds",
+    "bathrooms",
+    "latitude",
+    "longitude",
+]
 
 NUMERIC_RANGES = {
     "capacity": (1, 50, "1–50 guests"),
     "bedrooms": (0, 20, "0–20"),
     "beds": (0, 50, "0–50"),
     "bathrooms": (0, 20, "0–20"),
+    "latitude": (-90, 90, "-90 to 90"),
+    "longitude": (-180, 180, "-180 to 180"),
 }
+
+# Load POI coordinates from config for DIST_TO_POI calculation.
+_config = load_config()
+POI_LAT = _config["poi_lat"]
+POI_LONG = _config["poi_long"]
 
 # Amenity categories for grouping checkboxes in the UI.
 # Keys are display names; values are lists of SYSTEM_ column names.
@@ -175,23 +199,34 @@ AMENITY_CATEGORIES = {
 
 
 def _load_artifacts(model_dir: Path):
-    """Load model and feature columns from disk."""
-    model_path = model_dir / "adr_model.joblib"
-    columns_path = model_dir / "feature_columns.json"
+    """Load both stage models and their feature columns from disk.
 
-    model = joblib.load(model_path)
+    Returns (stage1_model, stage1_columns, stage2_model, stage2_columns).
+    """
+    model_dir = Path(model_dir)
 
-    with open(columns_path) as f:
-        feature_columns = json.load(f)
+    s1_model = joblib.load(model_dir / "stage1_model.joblib")
+    with open(model_dir / "stage1_feature_columns.json") as f:
+        s1_cols = json.load(f)
 
-    if len(feature_columns) != model.n_features_in_:
+    s2_model = joblib.load(model_dir / "stage2_model.joblib")
+    with open(model_dir / "stage2_feature_columns.json") as f:
+        s2_cols = json.load(f)
+
+    if len(s1_cols) != s1_model.n_features_in_:
         raise ValueError(
-            f"Feature column count ({len(feature_columns)}) does not match "
-            f"model expectation ({model.n_features_in_}). "
+            f"Stage 1 column count ({len(s1_cols)}) does not match "
+            f"model expectation ({s1_model.n_features_in_}). "
+            "Retrain the model to sync artifacts."
+        )
+    if len(s2_cols) != s2_model.n_features_in_:
+        raise ValueError(
+            f"Stage 2 column count ({len(s2_cols)}) does not match "
+            f"model expectation ({s2_model.n_features_in_}). "
             "Retrain the model to sync artifacts."
         )
 
-    return model, feature_columns
+    return s1_model, s1_cols, s2_model, s2_cols
 
 
 def _format_label(system_col: str) -> str:
@@ -230,9 +265,11 @@ def _build_category_map(feature_columns: list[str]) -> dict[str, list[dict]]:
     return result
 
 
-# Load model at module scope (once at startup)
-model, feature_columns = _load_artifacts(MODEL_DIR)
-category_map = _build_category_map(feature_columns)
+# Load both stage models at module scope (once at startup).
+stage1_model, stage1_feature_columns, stage2_model, stage2_feature_columns = (
+    _load_artifacts(MODEL_DIR)
+)
+category_map = _build_category_map(stage2_feature_columns)
 
 app = Flask(__name__)
 
@@ -253,12 +290,23 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """Assemble feature vector from form data and return ADR prediction."""
+    """Assemble feature vectors and return combined two-stage ADR prediction."""
     form_values = {}
     error = None
     prediction = None
 
-    # Parse numeric features with validation
+    def _render_error(msg):
+        return render_template(
+            "index.html",
+            categories=category_map,
+            numeric_features=NUMERIC_FEATURES,
+            numeric_ranges=NUMERIC_RANGES,
+            form_values=form_values,
+            prediction=None,
+            error=msg,
+        )
+
+    # Parse user-facing numeric inputs with validation
     numeric_vals = {}
     for col in NUMERIC_FEATURES:
         raw = request.form.get(col, "").strip()
@@ -269,48 +317,54 @@ def predict():
         try:
             val = float(raw)
         except ValueError:
-            error = f"Invalid value for {col}: '{raw}'. Please enter a number."
-            return render_template(
-                "index.html",
-                categories=category_map,
-                numeric_features=NUMERIC_FEATURES,
-                numeric_ranges=NUMERIC_RANGES,
-                form_values=form_values,
-                prediction=None,
-                error=error,
+            return _render_error(
+                f"Invalid value for {col}: '{raw}'. Please enter a number."
             )
         min_val, max_val, _ = NUMERIC_RANGES[col]
         if not (min_val <= val <= max_val):
-            error = f"{col.title()} must be between {min_val} and {max_val}."
-            return render_template(
-                "index.html",
-                categories=category_map,
-                numeric_features=NUMERIC_FEATURES,
-                numeric_ranges=NUMERIC_RANGES,
-                form_values=form_values,
-                prediction=None,
-                error=error,
+            return _render_error(
+                f"{col.title()} must be between {min_val} and {max_val}."
             )
         numeric_vals[col] = val
 
+    # Compute derived features for Stage 1
+    capacity = max(numeric_vals["capacity"], 1)
+    derived = {
+        "DIST_TO_POI": manhattan_surface_distance(
+            numeric_vals["latitude"], numeric_vals["longitude"], POI_LAT, POI_LONG
+        ),
+        "BEDS_PER_PERSON": numeric_vals["beds"] / capacity,
+        "BATHS_PER_PERSON": numeric_vals["bathrooms"] / capacity,
+        "BEDROOMS_PER_PERSON": numeric_vals["bedrooms"] / capacity,
+    }
+
+    # Build Stage 1 feature vector (numeric features in training order)
+    s1_features = []
+    for col in stage1_feature_columns:
+        if col in numeric_vals:
+            s1_features.append(numeric_vals[col])
+        elif col in derived:
+            s1_features.append(derived[col])
+    s1_array = np.array([s1_features], dtype=np.float64)
+
     # Record which checkboxes are checked (for form state preservation)
-    for col in feature_columns:
-        if col.startswith("SYSTEM_") and request.form.get(col):
+    for col in stage2_feature_columns:
+        if request.form.get(col):
             form_values[col] = "on"
 
-    # Build feature vector in exact training column order
-    features = []
-    for col in feature_columns:
-        if col in NUMERIC_FEATURES:
-            features.append(numeric_vals[col])
-        else:
-            features.append(1.0 if request.form.get(col) else 0.0)
-
-    feature_array = np.array([features], dtype=np.float64)
+    # Build Stage 2 feature vector (amenity features in training order)
+    s2_features = [
+        1.0 if request.form.get(col) else 0.0 for col in stage2_feature_columns
+    ]
+    s2_array = np.array([s2_features], dtype=np.float64)
 
     try:
-        pred = model.predict(feature_array)
-        prediction = f"${pred[0]:,.2f}"
+        # Stage 1 is log-transformed: apply expm1 to get dollar predictions
+        s1_pred = np.expm1(stage1_model.predict(s1_array))[0]
+        # Stage 2 predicts residuals in dollar space
+        s2_pred = stage2_model.predict(s2_array)[0]
+        combined = s1_pred + s2_pred
+        prediction = f"${combined:,.2f}"
     except Exception as e:
         logger.exception("Prediction failed")
         error = f"Prediction error: {e}"
