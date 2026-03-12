@@ -116,13 +116,14 @@ def prune_zero_importance(X: pd.DataFrame, y_log: pd.Series, params: dict) -> li
     model = XGBRegressor(**params, random_state=42)
     model.fit(X, y_log)
     importances = model.feature_importances_
+    no_keep = [col for col, imp in zip(X.columns, importances) if imp == 0]
     keep = [col for col, imp in zip(X.columns, importances) if imp > 0]
     n_dropped = X.shape[1] - len(keep)
     if n_dropped:
         logger.info(
             "Pruning %d zero-importance features (keeping %d)",
-            n_dropped,
-            len(keep),
+            f"Dropped {n_dropped}: {sorted(no_keep)}",
+            f"Keeping {len(keep)}",
         )
     return keep
 
