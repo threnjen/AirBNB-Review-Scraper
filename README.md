@@ -1,6 +1,6 @@
 # AirBNB Review Scraper & Analyzer
 
-An end-to-end pipeline for short-term rental market analysis. Given a zip code, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, enriches each listing with AirDNA financial metrics via per-listing rentalizer lookups, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
+An end-to-end pipeline for short-term rental market analysis. Given a geographic center point (latitude/longitude) and search radius, it scrapes hundreds of Airbnb listings and their reviews, generates AI-powered summaries using GPT-4.1-mini, enriches each listing with AirDNA financial metrics via per-listing rentalizer lookups, and produces market-intelligence reports that identify what drives higher nightly rates and occupancy. The final output includes correlation analyses (e.g., "Jacuzzi presence correlates with +57.5% higher ADR"), description quality scoring via OLS regression, an ADR prediction model, and actionable recommendations for hosts — all generated automatically from a single `config.json`.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ The pipeline automatically looks up each listing discovered in the Airbnb search
 ## Features
 
 - **AirDNA Per-Listing Lookup** — Enrich each listing with ADR, Occupancy, Revenue, and Days Available via Playwright/CDP rentalizer pages
-- **Property Search** — Find Airbnb listings within a geographic area using zip code and `pyairbnb`
+- **Property Search** — Find Airbnb listings within a geographic area using lat/long center + radius via `pyairbnb`
 - **Review Scraping** — Pull all reviews for discovered listings with per-file caching
 - **Property Details Scraping** — Scrape amenities, descriptions, house rules, and neighborhood info
 - **Details Fileset Build** — Transform raw details + AirDNA financials into structured CSVs (amenity matrix, descriptions, house rules)
@@ -42,6 +42,8 @@ The pipeline automatically looks up each listing discovered in the Airbnb search
 - **Data Extraction** — LLM-powered parsing of summaries into structured numeric data with sentiment categories
 - **Correlation Analysis** — Statistical comparison of top/bottom percentile tiers by ADR or Occupancy, with LLM-generated market insights
 - **Description Quality Analysis** — OLS regression of ADR against 160+ features, LLM scoring of descriptions on 7 quality dimensions, and correlation of language quality with pricing premiums
+- **ADR Prediction Model** — Two-stage residual XGBoost model predicting nightly rates from property features and amenities
+- **Prediction Web App** — Flask UI for interactive ADR predictions using the trained model
 - **TTL-Based Caching** — Pipeline cache with cascade invalidation prevents redundant scraping and API calls
 - **Cost Tracking** — Monitor OpenAI API usage and costs per session
 
@@ -93,7 +95,7 @@ This pipeline automates data collection, but it is designed to browse no faster 
 Key principles:
 
 - **Human-speed pacing** — Randomized pauses between every request ensure automated browsing is no faster than manual browsing. There is no parallel request fan-out; listings are visited one at a time.
-- **Caching prevents redundant requests** — TTL-based caching means previously scraped listings are never re-fetched unless their cache expires. A second run against the same zip code hits zero external endpoints if all data is still fresh.
+- **Caching prevents redundant requests** — TTL-based caching means previously scraped listings are never re-fetched unless their cache expires. A second run against the same search area hits zero external endpoints if all data is still fresh.
 - **Backoff on rate-limit signals** — If the pipeline detects signs of rate limiting (e.g., AirDNA returning empty results), it pauses for an extended cooldown period before retrying, rather than retrying immediately.
 - **No API abuse** — OpenAI calls use exponential backoff with retry limits. Token usage and costs are tracked per-session so users can monitor spend.
 
@@ -101,12 +103,12 @@ This project is intended for personal market research. The scraping approach is 
 
 ## Example Output
 
-The `reports/` directory contains example analytical output from a full pipeline run on zipcode 97067 (Mount Hood, Oregon — 341 properties analyzed):
+The `reports/` directory contains example analytical output from a full pipeline run on the Mount Hood, Oregon area (341 properties analyzed):
 
-### Area Summary — [`reports/area_summary_97067.json`](reports/area_summary_97067.json)
+### Area Summary — [`reports/area_summary_mt_hood.md`](reports/area_summary_mt_hood.md)
 Aggregated area-level insights from all property summaries. Identifies that listings are primarily cozy cabins, rustic chalets, and mountain homes near Mount Hood. Top positives: hot tubs, location, cleanliness, host communication. Top issues: hot tub maintenance, privacy concerns, WiFi reliability.
 
-### ADR Correlation Analysis — [`reports/correlation_insights_adr_97067.md`](reports/correlation_insights_adr_97067.md)
+### ADR Correlation Analysis — [`reports/correlation_insights_adr_mt_hood.md`](reports/correlation_insights_adr_mt_hood.md)
 Identifies what drives higher nightly rates. Key finding: high-ADR properties ($378/night avg) vs low-ADR ($206/night) differ most in Jacuzzi prevalence (+57.5%), Grill (+28.7%), and guest capacity (10.3 vs 4.7 guests).
 
 > | Feature | Difference in Prevalence |
@@ -117,10 +119,10 @@ Identifies what drives higher nightly rates. Key finding: high-ADR properties ($
 > | Dishwasher | +24.1% |
 > | Firepit | +20.7% |
 
-### Occupancy Correlation Analysis — [`reports/correlation_insights_occupancy_97067.md`](reports/correlation_insights_occupancy_97067.md)
+### Occupancy Correlation Analysis
 Identifies what drives higher booking rates. Key finding: pet-friendly policies (+11.8%), dedicated workspaces (+9.4%), and mountain views (+8.5%) most distinguish high-occupancy properties. Mid-sized properties (~6 guests) outperform larger ones.
 
-### Description Quality Analysis — [`reports/description_quality_97067.md`](reports/description_quality_97067.md)
+### Description Quality Analysis
 Uses OLS regression (R² = 0.873 from 160 features) to isolate the ADR premium attributable to description quality vs. property size. Scores each listing's description on evocativeness, specificity, emotional appeal, storytelling, USP clarity, professionalism, and completeness. Estimates a **$100–150/night language premium** for top descriptions.
 
 > Improving Airbnb listing descriptions by focusing on **evocativeness**, **specificity**, and **emotional appeal** can unlock significant ADR premiums (~$100+ per night).
@@ -133,35 +135,43 @@ Edit `config.json` to configure the pipeline. All pipeline behavior is controlle
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `search_results` | bool | Search for Airbnb listings by zipcode |
+| `search_results` | bool | Search for Airbnb listings by lat/long bounding box |
 | `details_scrape` | bool | Scrape property details (amenities, rules) |
-| `airdna_data` | bool | Scrape AirDNA comp sets for property metrics |
-| `reviews_scrape` | bool | Scrape reviews for listings in the zipcode |
+| `airdna_data` | bool | Scrape AirDNA per-listing metrics |
+| `reviews_scrape` | bool | Scrape reviews for discovered listings |
 | `details_results` | bool | Transform scraped details + AirDNA financials into structured datasets |
 | `listing_summaries` | bool | Generate AI summaries for each property |
 | `area_summary` | bool | Generate area-level summary + extract structured data from summaries |
 | `correlation_results` | bool | Run correlation analysis of amenities/capacity vs. ADR and Occupancy |
 | `description_analysis` | bool | Run description quality scoring and regression analysis |
+| `machine_learning_model` | bool | Train two-stage XGBoost ADR prediction model |
 
-**Stage dependencies:** Stages run in order and depend on upstream outputs. Stages 1–5 produce the raw data; stages 6–9 consume it. For example, `listing_summaries` (6) requires `search_results` (1) and `reviews_scrape` (4); `correlation_results` (8) and `description_analysis` (9) require `details_results` (5) and `airdna_data` (3). If you enable a downstream stage without having run its upstream stages first, the pipeline will fail or produce empty results.
+**Stage dependencies:** Stages run in order and depend on upstream outputs. Stages 1–5 produce the raw data; stages 6–9 consume it. Stage 10 (ML model) depends on stage 5. For example, `listing_summaries` (6) requires `search_results` (1) and `reviews_scrape` (4); `correlation_results` (8) and `description_analysis` (9) require `details_results` (5) and `airdna_data` (3). If you enable a downstream stage without having run its upstream stages first, the pipeline will fail or produce empty results.
 
 **AirDNA data required for stages 8–9:** The `correlation_results` and `description_analysis` stages silently filter out properties without AirDNA financial data. If you skip the `airdna_data` stage, these analysis stages will have no properties to analyze. Run `airdna_data` first to populate AirDNA metrics.
 
 **Entire-home filter:** The `details_results` stage only includes listings with room type "Entire home/apt". Shared rooms, private rooms, and hotel rooms are silently excluded. All downstream analysis operates on entire-home listings only.
 
-**Minimum property requirements:** The correlation analyzer requires at least 4 properties with valid metric values per tier. The description analyzer's OLS regression requires more properties than features (~161+ for the full amenity set). Small zip codes with few listings may produce empty or degraded results.
+**Minimum property requirements:** The correlation analyzer requires at least 4 properties with valid metric values per tier. The description analyzer's OLS regression requires more properties than features (~161+ for the full amenity set). Small search areas with few listings may produce empty or degraded results.
 
 ### Search Parameters
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `zipcode` | string | Target zip code (e.g., `"97067"`) |
+| `search_zone_name` | string | **Required.** A label for this search area (e.g., `"mt_hood"`). Used in output filenames. Alphanumeric, underscores, and hyphens only. |
+| `start_lat` | float | **Required.** Center latitude of the search area (e.g., `45.347161`) |
+| `start_long` | float | **Required.** Center longitude of the search area (e.g., `-121.9646838`) |
+| `search_radius_miles` | float | **Required.** Search radius in miles from the center point (e.g., `15`) |
+| `poi_lat` | float | Point-of-interest latitude, used for distance calculations in the ML model |
+| `poi_long` | float | Point-of-interest longitude |
 | `iso_code` | string | Country code (e.g., `"us"`) |
 | `num_listings_to_search` | int | Max listings to find in search |
 | `num_listings_to_summarize` | int | Max listings to process with AI |
 | `review_thresh_to_include_prop` | int | Minimum reviews required to process a listing |
 | `num_summary_to_process` | int | Max property summaries to process in downstream stages |
 | `dataset_use_categoricals` | bool | Use categorical encoding for amenity features in analysis |
+
+> **Tip:** To find coordinates for your area, right-click any location in Google Maps and select the lat/long values.
 
 ### AirDNA Settings
 
@@ -196,7 +206,7 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `pipeline_cache_enabled` | bool | `true` | Enable/disable pipeline-level TTL caching |
-| `pipeline_cache_ttl_days` | int | `30` | Number of days before cached outputs expire |
+| `pipeline_cache_ttl_days` | int | `90` | Number of days before cached outputs expire |
 | `force_refresh_search_results` | bool | `false` | Force re-run area search |
 | `force_refresh_details_scrape` | bool | `false` | Force re-scrape all property details |
 | `force_refresh_details_results` | bool | `false` | Force rebuild details fileset |
@@ -206,6 +216,7 @@ The pipeline includes a TTL-based cache that prevents redundant scraping and pro
 | `force_refresh_area_summary` | bool | `false` | Force regenerate area summary + data extraction |
 | `force_refresh_correlation_results` | bool | `false` | Force re-run correlation analysis |
 | `force_refresh_description_analysis` | bool | `false` | Force re-run description quality analysis |
+| `force_refresh_machine_learning_model` | bool | `false` | Force retrain ADR prediction model |
 
 **How it works:**
 - Freshness is determined by file existence and `os.path.getmtime()` — each stage declares its expected output files, and a stage is fresh when all files exist with mtime within the TTL
@@ -265,22 +276,27 @@ The scraper visits `https://app.airdna.co/data/rentalizer?&listing_id=abnb_{id}`
 ```
 
 > **Note:** `LY_Revenue` (Last Year Revenue) is a placeholder field — it is always `0.0` in the current implementation and can be ignored.
-```
 
 **Inspect mode:** If selectors break (AirDNA UI changes), enable `"airdna_inspect_mode": true` to pause the browser and use Playwright Inspector to discover new selectors.
 
 ### Basic Workflow
 
 ```bash
-# 1. Scrape reviews for a zip code
-# Set config.json: "reviews_scrape": true, "zipcode": "97067"
+# 1. Configure your search area in config.json:
+#    "search_zone_name": "my_area",
+#    "start_lat": 45.347161,
+#    "start_long": -121.9646838,
+#    "search_radius_miles": 15
+
+# 2. Scrape listings and reviews
+# Set config.json: "search_results": true, "reviews_scrape": true
 pipenv run python main.py
 
-# 2. Generate property summaries
+# 3. Generate property summaries
 # Set config.json: "listing_summaries": true
 pipenv run python main.py
 
-# 3. Generate area summary
+# 4. Generate area summary
 # Set config.json: "area_summary": true
 pipenv run python main.py
 ```
@@ -291,16 +307,20 @@ Enable all stages in `config.json`:
 
 ```json
 {
+  "search_zone_name": "mt_hood",
+  "start_lat": 45.347161,
+  "start_long": -121.9646838,
+  "search_radius_miles": 15,
   "search_results": true,
   "details_scrape": true,
-  "details_results": true,
-  "reviews_scrape": true,
   "airdna_data": true,
+  "reviews_scrape": true,
+  "details_results": true,
   "listing_summaries": true,
   "area_summary": true,
   "correlation_results": true,
   "description_analysis": true,
-  "zipcode": "97067"
+  "machine_learning_model": true
 }
 ```
 
@@ -312,11 +332,11 @@ pipenv run python main.py
 ## Pipeline Flow
 
 ```
-Zip Code + config.json
+Lat/Long + config.json
         ↓
 ┌───────────────────────────────────────┐
 │  1. Search Results                    │
-│     pyairbnb.search_all() by zipcode  │
+│     pyairbnb.search_all() by lat/long│
 │     → outputs/01_search_results/      │
 └───────────────────────────────────────┘
         ↓
@@ -370,61 +390,72 @@ Zip Code + config.json
 │     → outputs/09_description_analysis/│
 │     → reports/description_quality_*   │
 └───────────────────────────────────────┘
+        ↓
+┌───────────────────────────────────────┐
+│  10. ML Model (XGBoost)                │
+│      Two-stage residual ADR predictor │
+│      → ml/model/residual/             │
+└───────────────────────────────────────┘
 ```
 
 ## Output Files
 
 | Directory | Content |
 |-----------|---------|
-| `outputs/01_search_results/` | Search results by zipcode |
+| `outputs/01_search_results/` | Search results by geographic area |
 | `outputs/02_details_scrape/` | Property details (amenities, rules, descriptions) |
-| `outputs/03_airdna_data/` | AirDNA per-listing metrics (ADR, Occupancy, Days Available) + master comp set |
+| `outputs/03_airdna_data/` | AirDNA per-listing metrics (ADR, Occupancy, Revenue, Days Available) + master comp set |
 | `outputs/04_reviews_scrape/` | Raw review JSON per listing |
 | `outputs/07_details_results/` | Structured CSVs and JSON: amenity matrix, house rules, descriptions, neighborhood highlights |
 | `outputs/05_listing_summaries/` | AI-generated summary per property |
 | `outputs/08_correlation_results/` | Correlation statistics (JSON) for each metric |
 | `outputs/09_description_analysis/` | Description quality statistics (JSON) |
 | `reports/` | Markdown and JSON reports: area summaries, correlation insights, description quality analysis |
+| `ml/model/residual/` | Trained XGBoost model artifacts and metrics |
 | `logs/cost_tracking.json` | OpenAI API cost logs per session |
 
 ## Architecture
-
-For a detailed module map, data flow reference, and key patterns guide, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ```
 main.py                          # Entry point — config-driven pipeline orchestrator
 ├── steps/
 │   ├── __init__.py              # Shared helper (load_search_results)
-│   ├── 01_search_results.py     # Listing discovery by zipcode
+│   ├── 01_search_results.py     # Listing discovery by lat/long bounding box
 │   ├── 02_details_scrape.py     # Scrape property details
-│   ├── 03_airdna_data.py          # AirDNA per-listing lookup + master comp set
+│   ├── 03_airdna_data.py        # AirDNA per-listing lookup + master comp set
 │   ├── 04_reviews_scrape.py     # Scrape reviews per listing
 │   ├── 07_details_results.py    # Transform details + AirDNA → structured data
 │   ├── 05_listing_summaries.py  # Per-property AI summaries
 │   ├── 06_area_summary.py       # Area-level AI summary
 │   ├── 08_correlation_results.py # Percentile-based metric correlation
-│   └── 09_description_analysis.py # OLS regression + description scoring
+│   ├── 09_description_analysis.py # OLS regression + description scoring
+│   └── 10_ml_model.py           # Two-stage XGBoost ADR prediction model
 ├── scraper/
-│   ├── airbnb_searcher.py       # Zip code → geo bounding box → listing search
+│   ├── airbnb_searcher.py       # Lat/long center → bounding box → listing search
 │   ├── airdna_scraper.py        # AirDNA per-listing rentalizer scraper (Playwright/CDP)
 │   ├── reviews_scraper.py       # Fetch reviews per listing
 │   ├── details_scraper.py       # Fetch property details
 │   ├── details_fileset_build.py # Transform to structured data + merge AirDNA financials
-│   └── location_calculator.py   # Zip code → lat/lon → bounding box
+│   └── location_calculator.py   # Lat/long + radius → bounding box
 ├── review_aggregator/
 │   ├── property_review_aggregator.py  # Per-property AI summaries
 │   ├── area_review_aggregator.py      # Area-level AI summaries
 │   ├── openai_aggregator.py           # OpenAI client with chunking, retry, cost tracking
 │   ├── correlation_analyzer.py        # Percentile-based metric correlation analysis
 │   └── description_analyzer.py        # OLS regression + LLM description quality scoring
+├── ml/
+│   ├── train_2_level.py         # Two-stage residual XGBoost training pipeline
+│   └── ml_utils.py              # Shared ML utilities (train, save, refit)
+├── app/
+│   └── app.py                   # Flask web app — ADR prediction UI
 ├── utils/
 │   ├── cost_tracker.py          # OpenAI API cost tracking (per-session)
 │   ├── pipeline_cache_manager.py # TTL-based caching with cascade invalidation
 │   ├── local_file_handler.py    # File system utilities
-│   └── tiny_file_handler.py     # JSON I/O helpers
+│   └── tiny_file_handler.py     # JSON I/O + config validation
 └── prompts/
     ├── prompt.json              # Property-level prompt template
-    ├── zipcode_prompt.json      # Area-level prompt template
+    ├── zone_prompt.json         # Area-level prompt template
     ├── correlation_prompt.json  # Correlation analysis prompts (ADR + Occupancy)
     └── description_analysis_prompt.json # Description scoring + synthesis prompts
 ```
@@ -456,13 +487,29 @@ make coverage
 | `make coverage` | Generate HTML coverage report |
 | `make chrome-debug` | Launch Chrome with remote debugging port for AirDNA scraping |
 | `make scrape-airdna` | Run AirDNA scraper standalone |
+| `make train` | Train the ADR prediction model |
+| `make run-app` | Start the ADR prediction web app |
 
 ## Notebooks
 
 | Notebook | Purpose |
 |----------|---------|
-| `eda_property_details.ipynb` | Exploratory data analysis of scraped property details and AirDNA metrics |
 | `model_notebook.ipynb` | Modeling experiments on listing features and pricing relationships |
+
+## Web Application
+
+The project includes a Flask web app that serves interactive ADR (Average Daily Rate) predictions using the trained two-stage XGBoost model.
+
+**Prerequisites:** Train the model first by running pipeline step 10 (`"machine_learning_model": true`) or directly via `make train`. This produces model artifacts in `ml/model/residual/`.
+
+**Run:**
+```bash
+make run-app
+# Or manually:
+pipenv run flask --app app/app run --debug
+```
+
+The app provides a form where you enter property features (bedrooms, bathrooms, capacity, amenity categories) and returns a predicted ADR with error margin. See `app/RUNNING.md` for production deployment options.
 
 ## Troubleshooting
 
@@ -470,9 +517,9 @@ make coverage
 |---------|-------|----------|
 | AirDNA scraper can't connect | Chrome not running with `--remote-debugging-port` or regular Chrome already open | Quit Chrome fully (Cmd+Q), then `make chrome-debug` |
 | AirDNA returns empty results | Rate limiting or session expired | Wait 3 minutes and retry; re-login to AirDNA in the debug Chrome window |
-| Correlation/description analysis produces empty results | Missing AirDNA data or too few properties | Ensure `airdna_data` stage ran first; check that the zip code has enough entire-home listings (4+ for correlation, 161+ for full OLS regression) |
+| Correlation/description analysis produces empty results | Missing AirDNA data or too few properties | Ensure `airdna_data` stage ran first; check that the search area has enough entire-home listings (4+ for correlation, 161+ for full OLS regression) |
 | OpenAI API errors | Insufficient credits or rate limits | Check your OpenAI balance; the pipeline retries 3x with exponential backoff automatically |
-| Search returns fewer listings than expected | `pyairbnb` caps at ~280 listings per geographic bounding box | This is a library limitation; choose smaller/more specific zip codes if needed |
+| Search returns fewer listings than expected | `pyairbnb` caps at ~280 listings per geographic bounding box | This is a library limitation; the pipeline subdivides the search area into a 2×2 grid automatically, but very dense areas may still hit caps |
 | `make chrome-debug` hangs | Chrome debug port already in use | Quit all Chrome processes and retry |
 
 ## Data Privacy
