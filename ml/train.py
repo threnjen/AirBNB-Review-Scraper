@@ -24,7 +24,16 @@ from utils.tiny_file_handler import load_config
 
 logger = logging.getLogger(__name__)
 
-NUMERIC_FEATURES = ["capacity", "bedrooms", "beds", "bathrooms", "DIST_TO_POI"]
+NUMERIC_FEATURES = [
+    "capacity",
+    "bedrooms",
+    "beds",
+    "bathrooms",
+    "DIST_TO_POI",
+    "BEDS_PER_PERSON",
+    "BATHS_PER_PERSON",
+    "BEDROOMS_PER_PERSON",
+]
 EXCLUDED_COLUMNS = {
     "property_id",
     "ADR",
@@ -61,9 +70,9 @@ PARAM_GRID = {
     "learning_rate": [0.01, 0.02, 0.03, 0.05],
     "reg_alpha": [1.0, 3.0, 5.0, 10.0],
     "reg_lambda": [5.0, 10.0, 20.0, 50.0],
-    "min_child_weight": [3, 5, 10, 20],
+    "min_child_weight": [10, 20, 30, 50],
     "subsample": [0.6, 0.7, 0.8, 1.0],
-    "colsample_bytree": [0.5, 0.6, 0.7, 1.0],
+    "colsample_bytree": [0.3, 0.4, 0.5, 0.6],
 }
 
 
@@ -102,6 +111,22 @@ def drop_correlated(X: pd.DataFrame, threshold: float = 0.9) -> pd.DataFrame:
     return X.drop(columns=to_drop)
 
 
+def prune_zero_importance(X: pd.DataFrame, y_log: pd.Series, params: dict) -> list[str]:
+    """Train a quick model and return columns with non-zero feature importance."""
+    model = XGBRegressor(**params, random_state=42)
+    model.fit(X, y_log)
+    importances = model.feature_importances_
+    keep = [col for col, imp in zip(X.columns, importances) if imp > 0]
+    n_dropped = X.shape[1] - len(keep)
+    if n_dropped:
+        logger.info(
+            "Pruning %d zero-importance features (keeping %d)",
+            n_dropped,
+            len(keep),
+        )
+    return keep
+
+
 def train_model(
     X: pd.DataFrame, y: pd.Series, n_search_iter: int = 50
 ) -> tuple[XGBRegressor, dict]:
@@ -134,12 +159,12 @@ def train_model(
 
     # Determine optimal n_estimators via early stopping on a held-out split
     X_fit, X_es, y_fit, y_es = train_test_split(
-        X, y_log, test_size=0.15, random_state=42
+        X, y_log, test_size=0.20, random_state=42
     )
     es_model = XGBRegressor(
         **best_params,
         random_state=42,
-        early_stopping_rounds=10,
+        early_stopping_rounds=20,
         eval_metric="rmse",
     )
     es_model.fit(X_fit, y_fit, eval_set=[(X_es, y_es)], verbose=False)
@@ -189,6 +214,7 @@ def train_model(
         "n_samples": X.shape[0],
         "best_params": {k: _jsonable(v) for k, v in best_params.items()},
         "n_search_iter": n_search_iter,
+        "optimal_n_estimators": optimal_n,
     }
     return model, metrics
 
@@ -243,14 +269,14 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
     # Drop near-zero-variance and near-ubiquitous amenities
     system_cols = [c for c in X.columns if c.startswith("SYSTEM_")]
     prevalence = X[system_cols].mean()
-    # low_variance = prevalence[prevalence < 0.05].index.tolist()
-    # if low_variance:
-    #     logger.info(
-    #         "Dropping %d low-variance amenities (<5%%): %s",
-    #         len(low_variance),
-    #         low_variance,
-    #     )
-    #     X = X.drop(columns=low_variance)
+    low_variance = prevalence[prevalence < 0.05].index.tolist()
+    if low_variance:
+        logger.info(
+            "Dropping %d low-variance amenities (<5%%): %s",
+            len(low_variance),
+            low_variance,
+        )
+        X = X.drop(columns=low_variance)
     high_prevalence = prevalence[prevalence > 0.95].index.tolist()
     if high_prevalence:
         logger.info(
@@ -261,10 +287,34 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
         X = X.drop(columns=[c for c in high_prevalence if c in X.columns])
 
     # Drop highly correlated amenity pairs
-    X = drop_correlated(X, threshold=0.9)
+    X = drop_correlated(X, threshold=0.8)
     logger.info("Features after filtering: %d columns", X.shape[1])
 
-    model, metrics = train_model(X, y)
+    # Prune zero-importance features via a preliminary model
+    y_log = np.log1p(y)
+    keep_cols = prune_zero_importance(
+        X, y_log, {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05}
+    )
+    X = X[keep_cols]
+    logger.info("Features after importance pruning: %d columns", X.shape[1])
+
+    # Hold out a test set for independent evaluation
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.15, random_state=42
+    )
+    logger.info(
+        "Train/test split: %d train, %d test", X_train.shape[0], X_test.shape[0]
+    )
+
+    model, metrics = train_model(X_train, y_train)
+
+    # Evaluate on held-out test set
+    test_pred_log = model.predict(X_test)
+    test_pred = np.expm1(test_pred_log)
+    test_rmse = float(np.sqrt(np.mean((y_test - test_pred) ** 2)))
+    test_mae = float(np.mean(np.abs(y_test - test_pred)))
+    metrics["test_rmse"] = test_rmse
+    metrics["test_mae"] = test_mae
 
     # Report metrics
     logger.info("--- Training Metrics ---")
@@ -275,8 +325,12 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
     logger.info(
         "CV MAE:      $%.2f ± $%.2f", metrics["cv_mae_mean"], metrics["cv_mae_std"]
     )
+    logger.info("Test RMSE:   $%.2f", test_rmse)
+    logger.info("Test MAE:    $%.2f", test_mae)
     logger.info("Features:    %d", metrics["n_features"])
-    logger.info("Samples:     %d", metrics["n_samples"])
+    logger.info(
+        "Samples:     %d (train) / %d (test)", X_train.shape[0], X_test.shape[0]
+    )
     logger.info("Search iters: %d", metrics["n_search_iter"])
     logger.info("Best params: %s", metrics["best_params"])
 
@@ -290,7 +344,18 @@ def main(csv_path: Path = DEFAULT_CSV_PATH, output_dir: Path = DEFAULT_MODEL_DIR
             "Potential overfitting: train/CV RMSE gap is %.1f%% (>30%%)", gap
         )
 
-    save_artifacts(model, list(X.columns), output_dir=output_dir)
+    # Refit on full data for production model (features already selected)
+    y_log_full = np.log1p(y)
+    final_params = {
+        **metrics["best_params"],
+        "n_estimators": metrics.get(
+            "optimal_n_estimators", metrics["best_params"]["n_estimators"]
+        ),
+    }
+    production_model = XGBRegressor(**final_params, random_state=42)
+    production_model.fit(X, y_log_full)
+
+    save_artifacts(production_model, list(X.columns), output_dir=output_dir)
 
     # Save metrics alongside artifacts
     with open(Path(output_dir) / "training_metrics.json", "w") as f:

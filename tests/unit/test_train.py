@@ -22,6 +22,10 @@ def _make_sample_df(n_rows=50, n_amenities=10):
         "bathrooms": rng.uniform(0.5, 5, n_rows).round(1),
         "DIST_TO_POI": rng.uniform(0.5, 30, n_rows).round(2),
     }
+    cap = np.maximum(data["capacity"], 1)
+    data["BEDS_PER_PERSON"] = (data["beds"] / cap).round(2)
+    data["BATHS_PER_PERSON"] = (data["bathrooms"] / cap).round(2)
+    data["BEDROOMS_PER_PERSON"] = (data["bedrooms"] / cap).round(2)
     for i in range(n_amenities):
         data[f"SYSTEM_AMENITY_{i}"] = rng.choice([0, 1], n_rows)
     data["ADR"] = rng.uniform(50, 500, n_rows).round(2)
@@ -46,13 +50,21 @@ class TestSelectFeatures:
         assert "has_airdna_data" not in X.columns
 
     def test_includes_numeric_features(self):
-        """Feature whitelist must include capacity, bedrooms, beds, bathrooms."""
+        """Feature whitelist must include capacity, bedrooms, beds, bathrooms, ratios."""
         from ml.train import select_features
 
         df = _make_sample_df()
         X, y = select_features(df)
 
-        for col in ["capacity", "bedrooms", "beds", "bathrooms"]:
+        for col in [
+            "capacity",
+            "bedrooms",
+            "beds",
+            "bathrooms",
+            "BEDS_PER_PERSON",
+            "BATHS_PER_PERSON",
+            "BEDROOMS_PER_PERSON",
+        ]:
             assert col in X.columns
 
     def test_includes_all_system_columns(self):
@@ -76,13 +88,13 @@ class TestSelectFeatures:
         pd.testing.assert_series_equal(y, df["ADR"], check_names=False)
 
     def test_feature_count_matches(self):
-        """Feature count should be 5 numeric + N system columns."""
+        """Feature count should be 8 numeric + N system columns."""
         from ml.train import select_features
 
         df = _make_sample_df(n_amenities=10)
         X, y = select_features(df)
 
-        assert X.shape[1] == 5 + 10  # 5 numeric + 10 amenities
+        assert X.shape[1] == 8 + 10  # 8 numeric + 10 amenities
 
 
 class TestTrainModel:
