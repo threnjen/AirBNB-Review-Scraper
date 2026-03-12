@@ -39,7 +39,7 @@ class TestSelectFeatures:
 
     def test_excludes_leaked_columns(self):
         """Feature whitelist must exclude property_id, ADR, Days_Avail, has_airdna_data."""
-        from ml.train import select_features
+        from ml.train_1_level import select_features
 
         df = _make_sample_df()
         X, y = select_features(df)
@@ -51,7 +51,7 @@ class TestSelectFeatures:
 
     def test_includes_numeric_features(self):
         """Feature whitelist must include capacity, bedrooms, beds, bathrooms, ratios."""
-        from ml.train import select_features
+        from ml.train_1_level import select_features
 
         df = _make_sample_df()
         X, y = select_features(df)
@@ -69,7 +69,7 @@ class TestSelectFeatures:
 
     def test_includes_all_system_columns(self):
         """Feature whitelist must include all SYSTEM_ columns from the DataFrame."""
-        from ml.train import select_features
+        from ml.train_1_level import select_features
 
         df = _make_sample_df(n_amenities=15)
         X, y = select_features(df)
@@ -80,7 +80,7 @@ class TestSelectFeatures:
 
     def test_target_is_adr(self):
         """Target variable y must be the ADR column."""
-        from ml.train import select_features
+        from ml.train_1_level import select_features
 
         df = _make_sample_df()
         X, y = select_features(df)
@@ -89,7 +89,7 @@ class TestSelectFeatures:
 
     def test_feature_count_matches(self):
         """Feature count should be 8 numeric + N system columns."""
-        from ml.train import select_features
+        from ml.train_1_level import select_features
 
         df = _make_sample_df(n_amenities=10)
         X, y = select_features(df)
@@ -102,7 +102,8 @@ class TestTrainModel:
 
     def test_returns_model_and_metrics(self):
         """train_model returns a fitted model and a metrics dict."""
-        from ml.train import select_features, train_model
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -117,7 +118,8 @@ class TestTrainModel:
 
     def test_model_feature_count_matches_input(self):
         """Trained model must expect the same number of features as X."""
-        from ml.train import select_features, train_model
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -127,7 +129,8 @@ class TestTrainModel:
 
     def test_prediction_returns_float(self):
         """Model.predict on a single row should return a numeric value."""
-        from ml.train import select_features, train_model
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -143,7 +146,8 @@ class TestSaveArtifacts:
 
     def test_saves_model_and_columns(self, tmp_path):
         """save_artifacts writes adr_model.joblib and feature_columns.json."""
-        from ml.train import select_features, train_model, save_artifacts
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model, save_artifacts
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -156,7 +160,8 @@ class TestSaveArtifacts:
 
     def test_feature_columns_json_matches_model(self, tmp_path):
         """Saved feature_columns.json length must equal model.n_features_in_."""
-        from ml.train import select_features, train_model, save_artifacts
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model, save_artifacts
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -171,7 +176,8 @@ class TestSaveArtifacts:
 
     def test_feature_columns_order_preserved(self, tmp_path):
         """Saved feature_columns.json must preserve the exact training column order."""
-        from ml.train import select_features, train_model, save_artifacts
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model, save_artifacts
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -189,7 +195,8 @@ class TestSaveArtifacts:
         """Saved model should load and produce valid predictions."""
         import joblib
 
-        from ml.train import select_features, train_model, save_artifacts
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model, save_artifacts
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -207,7 +214,7 @@ class TestDropCorrelated:
 
     def test_drops_perfectly_correlated_column(self):
         """A duplicated SYSTEM_ column should be dropped."""
-        from ml.train import drop_correlated
+        from ml.ml_utils import drop_correlated
 
         df = _make_sample_df(n_rows=50, n_amenities=3)
         # Make SYSTEM_AMENITY_2 identical to SYSTEM_AMENITY_0
@@ -220,7 +227,7 @@ class TestDropCorrelated:
 
     def test_keeps_uncorrelated_columns(self):
         """Independent columns should all be retained."""
-        from ml.train import drop_correlated
+        from ml.ml_utils import drop_correlated
 
         rng = np.random.RandomState(99)
         data = {
@@ -234,7 +241,7 @@ class TestDropCorrelated:
 
     def test_returns_unchanged_with_no_system_cols(self):
         """Non-SYSTEM columns should pass through untouched."""
-        from ml.train import drop_correlated
+        from ml.ml_utils import drop_correlated
 
         X = pd.DataFrame({"capacity": [1, 2, 3], "bedrooms": [1, 1, 2]})
         result = drop_correlated(X, threshold=0.9)
@@ -246,7 +253,8 @@ class TestLogTransform:
 
     def test_predictions_are_positive(self):
         """Inverse log-transform of model output should give positive dollar values."""
-        from ml.train import select_features, train_model
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)
@@ -257,7 +265,8 @@ class TestLogTransform:
 
     def test_metrics_in_dollar_space(self):
         """CV RMSE should be in plausible dollar range, not log-space."""
-        from ml.train import select_features, train_model
+        from ml.train_1_level import select_features
+        from ml.ml_utils import train_model
 
         df = _make_sample_df(n_rows=50, n_amenities=5)
         X, y = select_features(df)

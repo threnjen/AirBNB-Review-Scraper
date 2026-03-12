@@ -5,9 +5,9 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def load_config() -> dict:
+def load_config(path: str = str(_REPO_ROOT / "config.json")) -> dict:
     """Load config.json from the repo root, regardless of working directory."""
-    return load_json_file(str(_REPO_ROOT / "config.json"))
+    return load_json_file(path)
 
 
 def validate_config(config: dict) -> None:

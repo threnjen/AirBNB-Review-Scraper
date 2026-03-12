@@ -111,6 +111,15 @@ class DetailsFilesetBuilder:
         return True
 
     def clean_amenities_df(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        # how many listings have ADR of 0? If any, drop them as likely outliers or errors (e.g. free listings, data issues)
+        zero_adr_count = (df["ADR"] == 0).sum()
+        if zero_adr_count > 0:
+            logger.info(
+                f"Dropping {zero_adr_count} listings with ADR of 0, as they are likely outliers or data errors."
+            )
+
+        df = df.drop(df.loc[df["ADR"] == 0].index, errors="ignore").copy()
         drop_cols = [
             "link",
             "property_id",
@@ -169,7 +178,9 @@ class DetailsFilesetBuilder:
             "latitude",
             "longitude",
         ]
-        df = df.drop(columns=[c for c in drop_cols if c in df.columns], errors="ignore")
+        df = df.drop(
+            columns=[c for c in drop_cols if c in df.columns], errors="ignore"
+        ).copy()
 
         # replace any remaining False values with 0
         with pd.option_context("future.no_silent_downcasting", True):
